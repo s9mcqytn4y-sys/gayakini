@@ -1,9 +1,18 @@
 spring:
   datasource:
-    url: jdbc:tc:postgresql:17-alpine:///gayakini_test
+    url: jdbc:tc:postgresql:18-alpine:///gayakini_test
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
   jpa:
     hibernate:
       ddl-auto: create-drop
+    show-sql: false
   flyway:
     enabled: true
+
+# Dummy keys for testing
+midtrans:
+  server-key: dummy-server-key
+  base-url: http://localhost:8081
+biteship:
+  api-key: dummy-api-key
+  base-url: http://localhost:8082

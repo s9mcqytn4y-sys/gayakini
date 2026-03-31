@@ -32,8 +32,13 @@ class SecurityConfig {
                     .requestMatchers("/api/v1/webhooks/**").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
-                    // Boundary for MVP: allow most for now, tighten later with JWT Filter
-                    .anyRequest().permitAll() 
+                    
+                    // Protected endpoints (require authentication in production)
+                    // For now, permit all to unblock frontend, but documented as protected
+                    .requestMatchers("/api/v1/orders/**").permitAll()
+                    .requestMatchers("/api/v1/cart/**").permitAll()
+                    
+                    .anyRequest().authenticated()
             }
         
         return http.build()
