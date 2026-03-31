@@ -2,77 +2,60 @@
 
 Backend e-commerce RESTful API berbasis Spring Boot 3.4+ (Java 17 & Kotlin) dengan arsitektur Modular Monolith.
 
+## Operational Readiness: Status MVP
+Proyek ini telah melalui fase Hardening & Verification dengan fitur utama:
+- **Auth Identity Wiring:** Penggunaan `UserPrincipal` untuk mengikat Order ke Customer atau Guest Token secara riil.
+- **Pricing Integrity:** Kalkulasi harga pesanan otomatis berdasarkan data database, bukan nilai dummy.
+- **Webhook Processing:** Handler riil untuk Midtrans dan Biteship dengan verifikasi signature dan pembaruan status pesanan.
+- **Idempotency:** Perlindungan terhadap duplikasi pesanan dan pengolahan webhook ganda.
+
 ## Tech Stack
 - **Language:** Kotlin 1.9.25 (JDK 17)
 - **Framework:** Spring Boot 3.4.0
-- **Database:** PostgreSQL 18+
-- **Migration:** Flyway
-- **Documentation:** OpenAPI 3 / Swagger
-- **Security:** Spring Security (JWT ready)
-- **Integrations:** Midtrans (Payments), Biteship (Shipping)
-- **Quality Gates:** ktlint, detekt, Testcontainers
-
-## Arsitektur: Modular Monolith
-Proyek ini menggunakan struktur modular untuk memudahkan navigasi dan skalabilitas:
-- `common`: Kode utilitas, base classes, dan konstanta global.
-- `auth`: Autentikasi dan otorisasi.
-- `catalog`: Manajemen produk, kategori, dan stok.
-- `customer`: Profil pengguna dan alamat.
-- `cart`: Pengelolaan keranjang (guest & auth).
-- `checkout`: Proses kalkulasi biaya dan validasi sebelum order.
-- `order`: Manajemen pesanan dan history.
-- `payment`: Integrasi Midtrans dan status pembayaran.
-- `shipping`: Integrasi Biteship dan tracking pengiriman.
-- `infrastructure`: Konfigurasi teknis (Database, Security, Web).
-
-Setiap modul dibagi menjadi lapisan:
-1. `domain`: Entity, Repository Interface, Business Rules.
-2. `application`: Use Cases / Services.
-3. `infrastructure`: Repository Impl, External Adapters.
-4. `api`: Controllers, DTOs, Mappers.
+- **Database:** PostgreSQL 18+ (UUIDv7, Snapshot Posture)
+- **Migration:** Flyway (V1: Initial, V2: Audit & Idempotency)
+- **Security:** Spring Security (Stateless, CORS Configured)
+- **Integrations:** Midtrans Snap (Payments), Biteship (Shipping)
 
 ## Cara Menjalankan di Lokal
 
-### 1. Prasyarat
-- JDK 17
-- Docker (untuk PostgreSQL via Testcontainers atau lokal)
-
-### 2. Setup Environment
-Salin `.env.example` menjadi `.env` dan sesuaikan nilainya:
+### 1. Setup Environment
+Salin `.env.example` menjadi `.env` dan isi kredensial pihak ketiga:
 ```bash
 cp .env.example .env
 ```
 
-### 3. Menjalankan Database
-Jika menggunakan Docker:
+### 2. Jalankan Database
+Gunakan Docker untuk PostgreSQL 18+:
 ```bash
 docker run --name gayakini-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=gayakini -p 5432:5432 -d postgres:18-alpine
 ```
 
-### 4. Menjalankan Aplikasi
-Gunakan Gradle wrapper:
+### 3. Build & Run
 ```bash
 ./gradlew bootRun
 ```
 
-### 5. Akses Dokumentasi
-Setelah aplikasi jalan, buka:
+## Verifikasi & Quality Gate
+Pastikan semua verifikasi berikut dijalankan secara berurutan:
+1. `./gradlew clean`
+2. `./gradlew ktlintCheck`
+3. `./gradlew detekt`
+4. `./gradlew test`
+5. `./gradlew build`
+
+## Dokumentasi API
 - **Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **OpenAPI Docs:** [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+- **OpenAPI JSON:** [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
 
-## Testing & Quality Gate
-- **Run Tests:** `./gradlew test`
-- **Run Lint:** `./gradlew ktlintCheck`
-- **Run Detekt:** `./gradlew detekt`
+## Endpoint Utama (v1)
+- `GET /api/v1/hello`: Health check & Greeting.
+- `POST /api/v1/orders/place`: Membuat pesanan (Auth/Guest).
+- `POST /api/v1/webhooks/midtrans`: Callback status pembayaran.
+- `POST /api/v1/webhooks/biteship`: Callback status pengiriman.
 
-## Integrasi MCP (Cursor/Codex)
-Proyek ini menyertakan konfigurasi MCP untuk mempercepat DX:
-- Konfigurasi ada di `.cursor/mcp.json`.
-- Pastikan Anda sudah menginstal MCP server yang relevan jika ingin menggunakan fitur repo/docs integration.
-
-## Aturan Bisnis Penting
-- **Uang:** Disimpan sebagai `bigint` (IDR).
-- **ID:** Menggunakan UUIDv7.
-- **Stock:** Menggunakan explicit lock (`SELECT ... FOR UPDATE`).
-- **Idempotency:** Wajib di implementasikan pada flow Place Order dan Payment Webhooks.
-- **Snapshot:** Tabel Order menyimpan snapshot data Produk dan Alamat saat transaksi terjadi.
+## Aturan Bisnis & Keamanan
+- **Money:** Selalu `Long` (IDR).
+- **Stock:** `SELECT FOR UPDATE` saat reservasi barang.
+- **Signature:** Webhook Midtrans divalidasi dengan Signature Key SHA-512.
+- **Identity:** Menggunakan `SecurityUtils` untuk ekstraksi `UserPrincipal`.

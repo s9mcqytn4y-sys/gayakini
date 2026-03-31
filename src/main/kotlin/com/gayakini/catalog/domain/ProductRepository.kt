@@ -15,4 +15,6 @@ interface ProductVariantRepository : JpaRepository<ProductVariant, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findWithLockById(id: UUID): Optional<ProductVariant>
+
+    fun findAllByIdIn(ids: List<UUID>): List<ProductVariant>
 }

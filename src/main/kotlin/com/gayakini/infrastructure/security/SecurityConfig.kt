@@ -29,9 +29,10 @@ class SecurityConfig {
                 auth
                     // Public endpoints
                     .requestMatchers("/api/v1/hello").permitAll()
+                    .requestMatchers("/api/v1/webhooks/**").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
-                    // Boundary for MVP: allow most for now, tighten later
+                    // Boundary for MVP: allow most for now, tighten later with JWT Filter
                     .anyRequest().permitAll() 
             }
         
@@ -41,7 +42,6 @@ class SecurityConfig {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        // In production, this should be more restrictive and come from environment variables
         configuration.allowedOriginPatterns = listOf("*") 
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
