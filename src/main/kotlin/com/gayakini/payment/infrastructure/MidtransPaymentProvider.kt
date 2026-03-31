@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
@@ -33,15 +34,10 @@ class MidtransPaymentProvider(
                 "first_name" to customerDetails.fullName,
                 "email" to customerDetails.email,
                 "phone" to customerDetails.phone
-            ),
-            "usage_limit" to 1
+            )
         )
 
-        val headers = HttpHeaders().apply {
-            contentType = MediaType.APPLICATION_JSON
-            setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
-        }
-
+        val headers = createHeaders()
         val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
 
         if (response.statusCode.is2xxSuccessful) {
@@ -52,15 +48,15 @@ class MidtransPaymentProvider(
                 externalId = orderId.toString()
             )
         } else {
-            logger.error("Gagal membuat sesi pembayaran Midtrans: \${response.statusCode}")
+            logger.error("Gagal membuat sesi pembayaran Midtrans: \${response.statusCode} - \${response.body}")
             throw IllegalStateException("Gagal membuat sesi pembayaran. Silakan coba lagi.")
         }
     }
 
     override fun verifyWebhook(payload: Map<String, Any>, signature: String): Boolean {
-        val orderId = payload["order_id"] as String
-        val statusCode = payload["status_code"] as String
-        val grossAmount = payload["gross_amount"] as String
+        val orderId = payload["order_id"] as? String ?: return false
+        val statusCode = payload["status_code"] as? String ?: return false
+        val grossAmount = payload["gross_amount"] as? String ?: return false
         val rawData = orderId + statusCode + grossAmount + serverKey
         
         val calculatedSignature = sha512(rawData)
@@ -70,17 +66,25 @@ class MidtransPaymentProvider(
     override fun getPaymentStatus(externalId: String): PaymentStatus {
         val url = "\$baseUrl/v2/\$externalId/status"
         
-        val headers = HttpHeaders().apply {
-            setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
-        }
-
-        val response = restTemplate.getForEntity(url, Map::class.java, headers)
-        
-        return if (response.statusCode.is2xxSuccessful) {
-            val body = response.body as Map<*, *>
-            mapStatus(body["transaction_status"] as String)
-        } else {
+        val headers = createHeaders()
+        return try {
+            val response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity<Any>(headers), Map::class.java)
+            if (response.statusCode.is2xxSuccessful) {
+                val body = response.body as Map<*, *>
+                mapStatus(body["transaction_status"] as String)
+            } else {
+                PaymentStatus.PENDING
+            }
+        } catch (e: Exception) {
+            logger.error("Gagal mengambil status pembayaran dari Midtrans: \${e.message}")
             PaymentStatus.PENDING
+        }
+    }
+
+    private fun createHeaders(): HttpHeaders {
+        return HttpHeaders().apply {
+            contentType = MediaType.APPLICATION_JSON
+            setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
         }
     }
 

@@ -21,26 +21,36 @@ class PaymentService(
 
     @Transactional
     fun processMidtransWebhook(payload: Map<String, Any>, signature: String) {
-        // 1. Verify Signature
+        // 1. Verify Signature (Midtrans SHA-512 Signature Key)
         if (!paymentProvider.verifyWebhook(payload, signature)) {
             logger.error("Signature Midtrans tidak valid untuk payload: {}", payload)
             throw IllegalArgumentException("Signature tidak valid")
         }
 
+        // Midtrans order_id can be UUID or custom string
         val orderIdStr = payload["order_id"] as String
-        val orderId = UUID.fromString(orderIdStr)
         val transactionStatus = payload["transaction_status"] as String
 
-        // 2. Find Order and Payment
-        val order = orderRepository.findById(orderId)
-            .orElseThrow { NoSuchElementException("Order dengan ID $orderId tidak ditemukan.") }
+        // 2. Find Order and Payment (lookup by our internal UUID orderId)
+        val orderId = try { UUID.fromString(orderIdStr) } catch (e: Exception) { null }
+        
+        val order = if (orderId != null) {
+            orderRepository.findById(orderId).orElse(null)
+        } else {
+            // Fallback: in case order_id in Midtrans is orderNumber
+            orderRepository.findByOrderNumber(orderIdStr).orElse(null)
+        }
 
-        val payment = paymentRepository.findByOrderId(orderId)
+        if (order == null) {
+            logger.error("Order tidak ditemukan untuk order_id: {}", orderIdStr)
+            return
+        }
+
+        val payment = paymentRepository.findByOrderId(order.id)
             .orElseGet {
-                // If payment record doesn't exist yet, create it (idempotency safety)
                 Payment(
                     id = UUID.randomUUID(),
-                    orderId = orderId,
+                    orderId = order.id,
                     externalId = payload["transaction_id"] as String?,
                     provider = "MIDTRANS",
                     status = PaymentStatus.PENDING,
@@ -53,7 +63,6 @@ class PaymentService(
         // 3. Update Status Idempotently
         val newStatus = mapMidtransStatus(transactionStatus)
         
-        // Only update if status is different or record is new
         if (payment.status != newStatus) {
             payment.status = newStatus
             payment.externalId = payload["transaction_id"] as String?
@@ -62,16 +71,14 @@ class PaymentService(
             payment.updatedAt = Instant.now()
             paymentRepository.save(payment)
 
-            // Update Order Status based on Payment
             if (newStatus == PaymentStatus.SETTLED) {
                 order.status = OrderStatus.PAID
                 order.updatedAt = Instant.now()
                 orderRepository.save(order)
             } else if (newStatus == PaymentStatus.CANCELLED || newStatus == PaymentStatus.EXPIRED) {
-                order.status = OrderStatus.CANCELLED // Or EXPIRED if available
+                order.status = OrderStatus.CANCELLED
                 order.updatedAt = Instant.now()
                 orderRepository.save(order)
-                // Note: In production, consider releasing stock here
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.gayakini.order.api
 
 import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.util.HashUtils
 import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.order.application.OrderService
 import io.swagger.v3.oas.annotations.Operation
@@ -25,7 +26,8 @@ class OrderController(
         val currentUser = SecurityUtils.getCurrentUser()
         
         val customerId = currentUser?.id
-        val guestTokenHash = if (customerId == null) guestToken else null
+        // Hashing guest token to ensure we don't store/leak raw token
+        val guestTokenHash = if (customerId == null && guestToken != null) HashUtils.sha256(guestToken) else null
 
         if (customerId == null && guestTokenHash == null) {
             return ApiResponse.error("Identitas pembeli tidak ditemukan (User atau Guest Token).")
@@ -41,7 +43,7 @@ class OrderController(
                 totalAmount = order.totalAmount,
                 shippingCost = order.shippingCost,
                 grandTotal = order.grandTotal,
-                items = emptyList() // Map items if needed
+                items = emptyList()
             ),
             message = "Pesanan berhasil dibuat. Silakan selesaikan pembayaran."
         )
