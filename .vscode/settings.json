@@ -1,0 +1,12 @@
+{
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "kotlin.formatting.ktlint.enabled": true,
+  "editor.formatOnSave": true,
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "java.compile.nullAnalysis.mode": "automatic",
+  "spring-boot.ls.symbols.enabled": true
+}

@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "GayakiniApplication",
+      "request": "launch",
+      "mainClass": "com.gayakini.GayakiniApplicationKt",
+      "projectName": "gayakini",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "local"
+      }
+    },
+    {
+      "type": "java",
+      "name": "Debug Tests",
+      "request": "launch",
+      "mainClass": "org.junit.platform.console.ConsoleLauncher",
+      "projectName": "gayakini",
+      "args": "--scan-classpath"
+    }
+  ]
+}

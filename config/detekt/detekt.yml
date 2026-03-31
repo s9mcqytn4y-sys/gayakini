@@ -1,0 +1,32 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+  weights:
+    # complexity: 2
+    # LongParameterList: 1
+    # style: 1
+    # comments: 1
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2', '200', '201', '204', '400', '401', '403', '404', '500']
+  WildcardImport:
+    active: true
+    excludeImports: ['java.util.*', 'kotlinx.android.synthetic.*']
+
+complexity:
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 15
+    thresholdInInterfaces: 15
+    thresholdInObjects: 15
+    thresholdInEnums: 15
+  LongParameterList:
+    active: true
+    functionThreshold: 10
+    constructorThreshold: 10

@@ -1,7 +1,12 @@
-﻿.vscode/
-.idea/
+﻿.idea/
 .gradle/
 build/
 out/
 *.log
 .env
+
+# Allow shared VS Code config
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
