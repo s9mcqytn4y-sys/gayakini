@@ -14,17 +14,16 @@ import java.util.*
 @RequestMapping("/api/v1/orders")
 @Tag(name = "Orders", description = "Manajemen pesanan")
 class OrderController(
-    private val orderService: OrderService
+    private val orderService: OrderService,
 ) {
-
     @PostMapping("/place")
     @Operation(summary = "Membuat pesanan baru dari keranjang")
     fun placeOrder(
         @Valid @RequestBody request: PlaceOrderRequest,
-        @RequestHeader(value = "X-Guest-Token", required = false) guestToken: String?
+        @RequestHeader(value = "X-Guest-Token", required = false) guestToken: String?,
     ): ApiResponse<OrderResponse> {
         val currentUser = SecurityUtils.getCurrentUser()
-        
+
         val customerId = currentUser?.id
         // Hashing guest token to ensure we don't store/leak raw token
         val guestTokenHash = if (customerId == null && guestToken != null) HashUtils.sha256(guestToken) else null
@@ -34,18 +33,19 @@ class OrderController(
         }
 
         val order = orderService.placeOrder(customerId, guestTokenHash, request)
-        
+
         return ApiResponse.success(
-            data = OrderResponse(
-                id = order.id,
-                orderNumber = order.orderNumber,
-                status = order.status,
-                totalAmount = order.totalAmount,
-                shippingCost = order.shippingCost,
-                grandTotal = order.grandTotal,
-                items = emptyList()
-            ),
-            message = "Pesanan berhasil dibuat. Silakan selesaikan pembayaran."
+            data =
+                OrderResponse(
+                    id = order.id,
+                    orderNumber = order.orderNumber,
+                    status = order.status,
+                    totalAmount = order.totalAmount,
+                    shippingCost = order.shippingCost,
+                    grandTotal = order.grandTotal,
+                    items = emptyList(),
+                ),
+            message = "Pesanan berhasil dibuat. Silakan selesaikan pembayaran.",
         )
     }
 }

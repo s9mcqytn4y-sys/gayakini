@@ -15,12 +15,15 @@ class PaymentService(
     private val paymentRepository: PaymentRepository,
     private val orderRepository: OrderRepository,
     private val paymentProvider: PaymentProvider,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
     @Transactional
-    fun processMidtransWebhook(payload: Map<String, Any>, signature: String) {
+    fun processMidtransWebhook(
+        payload: Map<String, Any>,
+        signature: String,
+    ) {
         // 1. Verify Signature (Midtrans SHA-512 Signature Key)
         if (!paymentProvider.verifyWebhook(payload, signature)) {
             logger.error("Signature Midtrans tidak valid untuk payload: {}", payload)
@@ -32,37 +35,44 @@ class PaymentService(
         val transactionStatus = payload["transaction_status"] as String
 
         // 2. Find Order and Payment (lookup by our internal UUID orderId)
-        val orderId = try { UUID.fromString(orderIdStr) } catch (e: Exception) { null }
-        
-        val order = if (orderId != null) {
-            orderRepository.findById(orderId).orElse(null)
-        } else {
-            // Fallback: in case order_id in Midtrans is orderNumber
-            orderRepository.findByOrderNumber(orderIdStr).orElse(null)
-        }
+        val orderId =
+            try {
+                UUID.fromString(orderIdStr)
+            } catch (e: Exception) {
+                null
+            }
+
+        val order =
+            if (orderId != null) {
+                orderRepository.findById(orderId).orElse(null)
+            } else {
+                // Fallback: in case order_id in Midtrans is orderNumber
+                orderRepository.findByOrderNumber(orderIdStr).orElse(null)
+            }
 
         if (order == null) {
             logger.error("Order tidak ditemukan untuk order_id: {}", orderIdStr)
             return
         }
 
-        val payment = paymentRepository.findByOrderId(order.id)
-            .orElseGet {
-                Payment(
-                    id = UUID.randomUUID(),
-                    orderId = order.id,
-                    externalId = payload["transaction_id"] as String?,
-                    provider = "MIDTRANS",
-                    status = PaymentStatus.PENDING,
-                    amount = order.grandTotal,
-                    paymentType = payload["payment_type"] as String?,
-                    rawResponse = null
-                )
-            }
+        val payment =
+            paymentRepository.findByOrderId(order.id)
+                .orElseGet {
+                    Payment(
+                        id = UUID.randomUUID(),
+                        orderId = order.id,
+                        externalId = payload["transaction_id"] as String?,
+                        provider = "MIDTRANS",
+                        status = PaymentStatus.PENDING,
+                        amount = order.grandTotal,
+                        paymentType = payload["payment_type"] as String?,
+                        rawResponse = null,
+                    )
+                }
 
         // 3. Update Status Idempotently
         val newStatus = mapMidtransStatus(transactionStatus)
-        
+
         if (payment.status != newStatus) {
             payment.status = newStatus
             payment.externalId = payload["transaction_id"] as String?

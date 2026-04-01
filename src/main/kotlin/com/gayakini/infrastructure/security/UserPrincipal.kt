@@ -6,5 +6,5 @@ data class UserPrincipal(
     val id: UUID,
     val email: String,
     val role: String,
-    val isGuest: Boolean = false
+    val isGuest: Boolean = false,
 )

@@ -8,7 +8,6 @@ import java.time.Duration
 
 @Configuration
 class AppConfig {
-
     @Bean
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
         return builder

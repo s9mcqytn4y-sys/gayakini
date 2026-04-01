@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS products (
     slug VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    base_price BIGINT NOT NULL, -- IDR in cents/full amount as per requirements (bigint)
+    base_price BIGINT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS orders (
     shipping_cost BIGINT NOT NULL,
     service_fee BIGINT NOT NULL DEFAULT 0,
     grand_total BIGINT NOT NULL,
-    shipping_address_snapshot JSONB NOT NULL,
+    shipping_address_snapshot JSON NOT NULL, -- Using JSON for broader compatibility (H2/Postgres)
     payment_method VARCHAR(100),
     idempotency_key VARCHAR(255) UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -86,16 +86,16 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE TABLE IF NOT EXISTS payments (
     id UUID PRIMARY KEY,
     order_id UUID NOT NULL REFERENCES orders(id),
-    external_id VARCHAR(255), -- Midtrans Order ID / Snap Token
+    external_id VARCHAR(255),
     provider VARCHAR(50) NOT NULL,
     status VARCHAR(50) NOT NULL,
     amount BIGINT NOT NULL,
     payment_type VARCHAR(100),
-    raw_response JSONB,
+    raw_response JSON, -- Using JSON for broader compatibility
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_products_slug ON products(slug);
-CREATE INDEX idx_order_customer ON orders(customer_id) WHERE customer_id IS NOT NULL;
-CREATE INDEX idx_order_guest ON orders(guest_token_hash) WHERE guest_token_hash IS NOT NULL;
+CREATE INDEX idx_order_customer ON orders(customer_id);
+CREATE INDEX idx_order_guest ON orders(guest_token_hash);

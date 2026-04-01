@@ -1,21 +1,26 @@
 package com.gayakini.infrastructure.security
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.HttpStatusEntryPoint
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-class SecurityConfig {
-
+class SecurityConfig(
+    @Value("\${jwt.secret:default-secret-key-change-it-now}") private val jwtSecret: String
+) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
 
@@ -27,31 +32,34 @@ class SecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    // Public endpoints
                     .requestMatchers("/api/v1/hello").permitAll()
                     .requestMatchers("/api/v1/webhooks/**").permitAll()
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
-                    
-                    // Protected endpoints (require authentication in production)
-                    // For now, permit all to unblock frontend, but documented as protected
-                    .requestMatchers("/api/v1/orders/**").permitAll()
-                    .requestMatchers("/api/v1/cart/**").permitAll()
-                    
+                    .requestMatchers("/api/v1/orders/place").permitAll()
+                    .requestMatchers("/api/v1/orders/**").authenticated()
+                    .requestMatchers("/api/v1/cart/**").authenticated()
                     .anyRequest().authenticated()
             }
-        
+            .exceptionHandling {
+                it.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+            }
+            .addFilterBefore(
+                JwtAuthenticationFilter(jwtSecret),
+                UsernamePasswordAuthenticationFilter::class.java
+            )
+
         return http.build()
     }
 
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("*") 
+        configuration.allowedOriginPatterns = listOf("*")
         configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
         configuration.allowedHeaders = listOf("*")
         configuration.allowCredentials = true
-        
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

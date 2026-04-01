@@ -17,25 +17,31 @@ import java.util.*
 class MidtransPaymentProvider(
     @Value("\${midtrans.server-key}") private val serverKey: String,
     @Value("\${midtrans.base-url}") private val baseUrl: String,
-    private val restTemplate: RestTemplate
+    private val restTemplate: RestTemplate,
 ) : PaymentProvider {
-
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
 
-    override fun createPaymentSession(orderId: UUID, amount: Long, customerDetails: CustomerPaymentDetails): PaymentSession {
+    override fun createPaymentSession(
+        orderId: UUID,
+        amount: Long,
+        customerDetails: CustomerPaymentDetails,
+    ): PaymentSession {
         val url = "\$baseUrl/snap/v1/transactions"
 
-        val requestBody = mapOf(
-            "transaction_details" to mapOf(
-                "order_id" to orderId.toString(),
-                "gross_amount" to amount
-            ),
-            "customer_details" to mapOf(
-                "first_name" to customerDetails.fullName,
-                "email" to customerDetails.email,
-                "phone" to customerDetails.phone
+        val requestBody =
+            mapOf(
+                "transaction_details" to
+                    mapOf(
+                        "order_id" to orderId.toString(),
+                        "gross_amount" to amount,
+                    ),
+                "customer_details" to
+                    mapOf(
+                        "first_name" to customerDetails.fullName,
+                        "email" to customerDetails.email,
+                        "phone" to customerDetails.phone,
+                    ),
             )
-        )
 
         val headers = createHeaders()
         val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
@@ -45,7 +51,7 @@ class MidtransPaymentProvider(
             return PaymentSession(
                 token = body["token"] as String,
                 redirectUrl = body["redirect_url"] as String,
-                externalId = orderId.toString()
+                externalId = orderId.toString(),
             )
         } else {
             logger.error("Gagal membuat sesi pembayaran Midtrans: \${response.statusCode} - \${response.body}")
@@ -53,19 +59,22 @@ class MidtransPaymentProvider(
         }
     }
 
-    override fun verifyWebhook(payload: Map<String, Any>, signature: String): Boolean {
+    override fun verifyWebhook(
+        payload: Map<String, Any>,
+        signature: String,
+    ): Boolean {
         val orderId = payload["order_id"] as? String ?: return false
         val statusCode = payload["status_code"] as? String ?: return false
         val grossAmount = payload["gross_amount"] as? String ?: return false
         val rawData = orderId + statusCode + grossAmount + serverKey
-        
+
         val calculatedSignature = sha512(rawData)
         return calculatedSignature.equals(signature, ignoreCase = true)
     }
 
     override fun getPaymentStatus(externalId: String): PaymentStatus {
         val url = "\$baseUrl/v2/\$externalId/status"
-        
+
         val headers = createHeaders()
         return try {
             val response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity<Any>(headers), Map::class.java)

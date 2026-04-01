@@ -14,6 +14,15 @@
 - **Security First:** Never store raw guest tokens. Use `HashUtils.sha256()`.
 - **Consistency:** Ensure DTOs, Entities, and OpenAPI specs are aligned.
 
+## RC2: Frontend Integration Contract
+- **Auth:** Protected routes require `Authorization: Bearer <token>`. Sandbox token: `sandbox-test-token`.
+- **Error Response:** Always RFC 7807 (ProblemDetail). Check `docs/API_ERROR_REFERENCE.md`.
+- **Flow Docs:** Refer to `docs/FRONTEND_SANDBOX_INTEGRATION.md`.
+
+## Sandbox Staging Readiness
+- **Midtrans:** Use `MIDTRANS_SERVER_KEY` from sandbox. Webhook requires SHA-512 signature key.
+- **Biteship:** Use `BITESHIP_API_KEY` from sandbox. Webhook requires matching event types.
+
 ## Development Verification Flow
 Before finishing any task, run:
 1. `./gradlew clean`

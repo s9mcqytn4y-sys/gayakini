@@ -19,22 +19,27 @@ class OrderService(
     private val cartRepository: CartRepository,
     private val variantRepository: ProductVariantRepository,
     private val inventoryService: InventoryService,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
-
     @Transactional
-    fun placeOrder(customerId: UUID?, guestTokenHash: String?, request: PlaceOrderRequest): Order {
+    fun placeOrder(
+        customerId: UUID?,
+        guestTokenHash: String?,
+        request: PlaceOrderRequest,
+    ): Order {
         // Idempotency check
-        orderRepository.findByIdempotencyKey(request.idempotencyKey).ifPresent {
-            return it
+        val existingOrder = orderRepository.findByIdempotencyKey(request.idempotencyKey)
+        if (existingOrder.isPresent) {
+            return existingOrder.get()
         }
 
         // 1. Get Cart
-        val cart = if (customerId != null) {
-            cartRepository.findByCustomerIdAndIsActiveTrue(customerId)
-        } else {
-            cartRepository.findByGuestTokenHashAndIsActiveTrue(guestTokenHash!!)
-        }.orElseThrow { NoSuchElementException("Keranjang aktif tidak ditemukan.") }
+        val cart =
+            if (customerId != null) {
+                cartRepository.findByCustomerIdAndIsActiveTrue(customerId)
+            } else {
+                cartRepository.findByGuestTokenHashAndIsActiveTrue(guestTokenHash!!)
+            }.orElseThrow { NoSuchElementException("Keranjang aktif tidak ditemukan.") }
 
         if (cart.items.isEmpty()) {
             throw IllegalStateException("Keranjang kosong.")
@@ -44,64 +49,57 @@ class OrderService(
         val variantIds = cart.items.map { it.variantId }
         val variants = variantRepository.findAllByIdIn(variantIds).associateBy { it.id }
 
-        var totalAmount = 0L
-        val orderItems = cart.items.map { cartItem ->
-            val variant = variants[cartItem.variantId] 
-                ?: throw NoSuchElementException("Varian produk \${cartItem.variantId} tidak ditemukan.")
-            
+        // 3. Prepare Order Metadata
+        val totalAmount =
+            cart.items.sumOf { cartItem ->
+                val variant =
+                    variants[cartItem.variantId]
+                        ?: throw NoSuchElementException("Varian produk ${cartItem.variantId} tidak ditemukan.")
+                variant.price * cartItem.quantity
+            }
+        val grandTotal = totalAmount + request.shippingCost
+
+        val orderId = UuidV7Generator.generate()
+        val order =
+            Order(
+                id = orderId,
+                orderNumber = "ORD-${System.currentTimeMillis()}-${Random().nextInt(999)}",
+                customerId = customerId,
+                guestTokenHash = guestTokenHash,
+                status = OrderStatus.PENDING_PAYMENT,
+                totalAmount = totalAmount,
+                shippingCost = request.shippingCost,
+                grandTotal = grandTotal,
+                shippingAddressSnapshot = objectMapper.writeValueAsString(request.shippingAddress),
+                paymentMethod = request.paymentMethod,
+                idempotencyKey = request.idempotencyKey,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+
+        val savedOrder = orderRepository.save(order)
+
+        // 4. Create and Save Order Items
+        cart.items.forEach { cartItem ->
+            val variant = variants[cartItem.variantId]!!
+
             // Explicit Stock Lock & Decrease
             inventoryService.lockAndDecreaseStock(cartItem.variantId, cartItem.quantity)
 
             val itemSubtotal = variant.price * cartItem.quantity
-            totalAmount += itemSubtotal
 
-            OrderItem(
-                id = UuidV7Generator.generate(),
-                order = null as Any as Order, // Will be set after order creation or handled by JPA
-                variantId = variant.id,
-                skuSnapshot = variant.sku,
-                nameSnapshot = variant.name,
-                priceSnapshot = variant.price,
-                quantity = cartItem.quantity,
-                subtotal = itemSubtotal
-            )
-        }
-
-        val grandTotal = totalAmount + request.shippingCost
-
-        // 3. Create Order
-        val orderId = UuidV7Generator.generate()
-        val order = Order(
-            id = orderId,
-            orderNumber = "ORD-\${System.currentTimeMillis()}-\${Random().nextInt(999)}",
-            customerId = customerId,
-            guestTokenHash = guestTokenHash,
-            status = OrderStatus.PENDING_PAYMENT,
-            totalAmount = totalAmount,
-            shippingCost = request.shippingCost,
-            grandTotal = grandTotal,
-            shippingAddressSnapshot = objectMapper.writeValueAsString(request.shippingAddress),
-            paymentMethod = request.paymentMethod,
-            idempotencyKey = request.idempotencyKey,
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
-
-        val savedOrder = orderRepository.save(order)
-
-        // 4. Save Order Items with reference to savedOrder
-        orderItems.forEach { item ->
-            val finalItem = OrderItem(
-                id = item.id,
-                order = savedOrder,
-                variantId = item.variantId,
-                skuSnapshot = item.skuSnapshot,
-                nameSnapshot = item.nameSnapshot,
-                priceSnapshot = item.priceSnapshot,
-                quantity = item.quantity,
-                subtotal = item.subtotal
-            )
-            orderItemRepository.save(finalItem)
+            val orderItem =
+                OrderItem(
+                    id = UuidV7Generator.generate(),
+                    order = savedOrder,
+                    variantId = variant.id,
+                    skuSnapshot = variant.sku,
+                    nameSnapshot = variant.name,
+                    priceSnapshot = variant.price,
+                    quantity = cartItem.quantity,
+                    subtotal = itemSubtotal,
+                )
+            orderItemRepository.save(orderItem)
         }
 
         // 5. Deactivate Cart

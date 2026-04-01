@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/v1/hello")
 @Tag(name = "Hello", description = "Endpoint penanda sistem aktif")
 class HelloController {
-
     @GetMapping
     @Operation(summary = "Cek status layanan")
     fun hello(): ApiResponse<String> {

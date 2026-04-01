@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*
 @Tag(name = "Webhooks", description = "Endpoint untuk menerima notifikasi dari pihak ketiga")
 class WebhookController(
     private val paymentService: PaymentService,
-    private val shippingService: ShippingService
+    private val shippingService: ShippingService,
 ) {
     private val logger = LoggerFactory.getLogger(WebhookController::class.java)
 
@@ -21,12 +21,12 @@ class WebhookController(
     @Operation(summary = "Menerima notifikasi status pembayaran dari Midtrans")
     fun handleMidtransWebhook(
         @RequestBody payload: Map<String, Any>,
-        @RequestHeader("X-Callback-Signature", required = false) signature: String?
+        @RequestHeader("X-Callback-Signature", required = false) signature: String?,
     ): ResponseEntity<String> {
         logger.info("Menerima webhook Midtrans: {}", payload)
-        
+
         val signatureKey = payload["signature_key"] as? String ?: signature ?: ""
-        
+
         return try {
             paymentService.processMidtransWebhook(payload, signatureKey)
             ResponseEntity.ok("OK")
@@ -39,7 +39,7 @@ class WebhookController(
     @PostMapping("/biteship")
     @Operation(summary = "Menerima notifikasi status pengiriman dari Biteship")
     fun handleBiteshipWebhook(
-        @RequestBody payload: Map<String, Any>
+        @RequestBody payload: Map<String, Any>,
     ): ResponseEntity<String> {
         logger.info("Menerima webhook Biteship: {}", payload)
         return try {

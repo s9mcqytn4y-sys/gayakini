@@ -14,7 +14,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class HelloControllerTest {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 

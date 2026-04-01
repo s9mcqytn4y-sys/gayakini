@@ -9,7 +9,7 @@ data class PlaceOrderRequest(
     val shippingService: String,
     val shippingCost: Long,
     val paymentMethod: String,
-    val idempotencyKey: String
+    val idempotencyKey: String,
 )
 
 data class ShippingAddressDto(
@@ -20,7 +20,7 @@ data class ShippingAddressDto(
     val city: String,
     val province: String,
     val zipCode: String,
-    val areaId: String? = null
+    val areaId: String? = null,
 )
 
 data class OrderResponse(
@@ -30,7 +30,7 @@ data class OrderResponse(
     val totalAmount: Long,
     val shippingCost: Long,
     val grandTotal: Long,
-    val items: List<OrderItemResponse>
+    val items: List<OrderItemResponse>,
 )
 
 data class OrderItemResponse(
@@ -39,5 +39,5 @@ data class OrderItemResponse(
     val sku: String,
     val price: Long,
     val quantity: Int,
-    val subtotal: Long
+    val subtotal: Long,
 )

@@ -10,27 +10,29 @@ import org.springframework.web.filter.OncePerRequestFilter
 import java.util.*
 
 class JwtAuthenticationFilter(
-    private val jwtSecret: String
+    private val jwtSecret: String,
 ) : OncePerRequestFilter() {
-
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
-        filterChain: FilterChain
+        filterChain: FilterChain,
     ) {
         val authHeader = request.getHeader("Authorization")
-        
+
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             val token = authHeader.substring(7)
             try {
                 // Baseline: In a real app, use a JWT library like jjwt or auth0 to parse/verify
                 // For this sandbox baseline, we'll demonstrate the structure
                 val principal = verifyToken(token)
-                
+
                 if (principal != null) {
-                    val authentication = UsernamePasswordAuthenticationToken(
-                        principal, null, listOf(SimpleGrantedAuthority("ROLE_\${principal.role}"))
-                    )
+                    val authentication =
+                        UsernamePasswordAuthenticationToken(
+                            principal,
+                            null,
+                            listOf(SimpleGrantedAuthority("ROLE_\${principal.role}")),
+                        )
                     SecurityContextHolder.getContext().authentication = authentication
                 }
             } catch (e: Exception) {
@@ -38,7 +40,7 @@ class JwtAuthenticationFilter(
                 SecurityContextHolder.clearContext()
             }
         }
-        
+
         filterChain.doFilter(request, response)
     }
 
@@ -49,7 +51,7 @@ class JwtAuthenticationFilter(
             return UserPrincipal(
                 id = UUID.fromString("00000000-0000-0000-0000-000000000001"),
                 email = "sandbox@gayakini.com",
-                role = "CUSTOMER"
+                role = "CUSTOMER",
             )
         }
         return null
