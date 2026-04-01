@@ -2,13 +2,12 @@ package com.gayakini.catalog.api
 
 import com.gayakini.catalog.domain.VariantStatus
 import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.ApiResponse
 import java.util.UUID
 
 data class ProductPageResponse(
     val message: String,
     val data: List<ProductSummaryResponse>,
-    val meta: ApiMeta
+    val meta: ApiMeta,
 )
 
 data class ProductSummaryResponse(
@@ -20,22 +19,22 @@ data class ProductSummaryResponse(
     val categorySlug: String,
     val primaryImageUrl: String?,
     val priceRange: PriceRangeResponse,
-    val inStock: Boolean
+    val inStock: Boolean,
 )
 
 data class PriceRangeResponse(
     val min: MoneyResponse,
-    val max: MoneyResponse
+    val max: MoneyResponse,
 )
 
 data class MoneyResponse(
     val currency: String = "IDR",
-    val amount: Long
+    val amount: Long,
 )
 
 data class ProductDetailResponse(
     val message: String,
-    val data: ProductDetailData
+    val data: ProductDetailData,
 )
 
 data class ProductDetailData(
@@ -51,7 +50,7 @@ data class ProductDetailData(
     val description: String,
     val collections: List<String>,
     val media: List<ProductMediaResponse>,
-    val variants: List<ProductVariantResponse>
+    val variants: List<ProductVariantResponse>,
 )
 
 data class ProductMediaResponse(
@@ -59,7 +58,7 @@ data class ProductMediaResponse(
     val url: String,
     val altText: String,
     val sortOrder: Int,
-    val isPrimary: Boolean
+    val isPrimary: Boolean,
 )
 
 data class ProductVariantResponse(
@@ -71,16 +70,16 @@ data class ProductVariantResponse(
     val inventory: InventorySummaryResponse,
     val attributes: List<ProductVariantAttributeResponse>,
     val weightGrams: Int,
-    val primaryImageUrl: String?
+    val primaryImageUrl: String?,
 )
 
 data class InventorySummaryResponse(
     val stockOnHand: Int,
     val stockReserved: Int,
-    val stockAvailable: Int
+    val stockAvailable: Int,
 )
 
 data class ProductVariantAttributeResponse(
     val name: String,
-    val value: String
+    val value: String,
 )

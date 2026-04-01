@@ -7,7 +7,7 @@ import java.time.Instant
 import java.util.UUID
 
 data class CreateCheckoutRequest(
-    val cartId: UUID
+    val cartId: UUID,
 )
 
 data class CheckoutResponse(
@@ -24,7 +24,7 @@ data class CheckoutResponse(
     val subtotal: MoneyResponse,
     val shippingCost: MoneyResponse,
     val total: MoneyResponse,
-    val expiresAt: Instant?
+    val expiresAt: Instant?,
 )
 
 data class CheckoutAddressResponse(
@@ -36,7 +36,7 @@ data class CheckoutAddressResponse(
     val city: String,
     val province: String,
     val postalCode: String,
-    val countryCode: String
+    val countryCode: String,
 )
 
 data class ShippingQuoteResponse(
@@ -46,12 +46,12 @@ data class ShippingQuoteResponse(
     val courierName: String,
     val serviceCode: String,
     val serviceName: String,
-    val cost: MoneyResponse
+    val cost: MoneyResponse,
 )
 
 data class CheckoutShippingAddressRequest(
     val addressId: UUID? = null,
-    val guestAddress: GuestAddressRequest? = null
+    val guestAddress: GuestAddressRequest? = null,
 )
 
 data class GuestAddressRequest(
@@ -63,9 +63,9 @@ data class GuestAddressRequest(
     val city: String,
     val province: String,
     val postalCode: String,
-    val countryCode: String = "ID"
+    val countryCode: String = "ID",
 )
 
 data class SelectShippingQuoteRequest(
-    val quoteId: UUID
+    val quoteId: UUID,
 )

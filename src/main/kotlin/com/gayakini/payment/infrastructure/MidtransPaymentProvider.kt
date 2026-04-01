@@ -1,7 +1,9 @@
 package com.gayakini.payment.infrastructure
 
 import com.gayakini.order.domain.PaymentStatus
-import com.gayakini.payment.domain.*
+import com.gayakini.payment.domain.CustomerPaymentDetails
+import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentSession
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
@@ -12,7 +14,7 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.util.*
+import java.util.UUID
 
 @Component
 class MidtransPaymentProvider(
@@ -27,25 +29,28 @@ class MidtransPaymentProvider(
         providerOrderId: String,
         amount: Long,
         customerDetails: CustomerPaymentDetails,
-    ): com.gayakini.payment.domain.PaymentSession {
-        val requestBody = mapOf(
-            "transaction_details" to mapOf(
-                "order_id" to providerOrderId,
-                "gross_amount" to amount,
-            ),
-            "customer_details" to mapOf(
-                "first_name" to customerDetails.fullName,
-                "email" to customerDetails.email,
-                "phone" to customerDetails.phone,
-            ),
-        )
+    ): PaymentSession {
+        val requestBody =
+            mapOf(
+                "transaction_details" to
+                    mapOf(
+                        "order_id" to providerOrderId,
+                        "gross_amount" to amount,
+                    ),
+                "customer_details" to
+                    mapOf(
+                        "first_name" to customerDetails.fullName,
+                        "email" to customerDetails.email,
+                        "phone" to customerDetails.phone,
+                    ),
+            )
 
         val headers = createHeaders()
         val response = restTemplate.postForEntity(baseUrl, HttpEntity(requestBody, headers), Map::class.java)
 
         if (response.statusCode.is2xxSuccessful) {
             val body = response.body as Map<*, *>
-            return com.gayakini.payment.domain.PaymentSession(
+            return PaymentSession(
                 token = body["token"] as String,
                 redirectUrl = body["redirect_url"] as String,
                 providerOrderId = providerOrderId,

@@ -1,15 +1,16 @@
 package com.gayakini.shipping.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
-import com.gayakini.order.domain.FulfillmentStatus
-import com.gayakini.shipping.domain.*
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.*
+import java.util.NoSuchElementException
+import java.util.Optional
+import java.util.UUID
 
 @Service
 class ShippingService(
@@ -26,15 +27,16 @@ class ShippingService(
 
         logger.info("Memproses webhook Biteship event: {} untuk order: {}", event, orderIdStr)
 
-        val shipment = shipmentRepository.findByProviderOrderId(orderIdStr)
-            .orElseGet {
-                try {
-                    val orderId = UUID.fromString(orderIdStr)
-                    shipmentRepository.findByOrderId(orderId).orElse(null)
-                } catch (e: Exception) {
-                    null
+        val shipment =
+            shipmentRepository.findByProviderOrderId(orderIdStr)
+                .orElseGet {
+                    try {
+                        val orderId = UUID.fromString(orderIdStr)
+                        shipmentRepository.findByOrderId(orderId).orElse(null)
+                    } catch (e: Exception) {
+                        null
+                    }
                 }
-            }
 
         if (shipment == null) {
             logger.warn("Shipment tidak ditemukan untuk external_id/order_id: {}", orderIdStr)
@@ -50,12 +52,16 @@ class ShippingService(
         shipmentRepository.save(shipment)
     }
 
-    private fun handleStatusUpdate(shipment: Shipment, payload: Map<String, Any>) {
+    private fun handleStatusUpdate(
+        shipment: Shipment,
+        payload: Map<String, Any>,
+    ) {
         val status = payload["status"] as? String ?: return
         shipment.rawProviderStatus = status
 
-        val order = orderRepository.findById(shipment.orderId)
-            .orElseThrow { NoSuchElementException("Order tidak ditemukan") }
+        val order =
+            orderRepository.findById(shipment.orderId)
+                .orElseThrow { NoSuchElementException("Order tidak ditemukan") }
 
         when (status) {
             "picked", "shipped" -> {
@@ -72,7 +78,10 @@ class ShippingService(
         orderRepository.save(order)
     }
 
-    private fun handleWaybillUpdate(shipment: Shipment, payload: Map<String, Any>) {
+    private fun handleWaybillUpdate(
+        shipment: Shipment,
+        payload: Map<String, Any>,
+    ) {
         val waybillId = payload["waybill_id"] as? String
         if (waybillId != null) {
             shipment.trackingNumber = waybillId
@@ -81,8 +90,11 @@ class ShippingService(
 }
 
 interface ShipmentRepository : org.springframework.data.jpa.repository.JpaRepository<Shipment, UUID> {
-    @org.springframework.data.jpa.repository.Query("SELECT s FROM Shipment s WHERE s.providerOrderId = :providerOrderId")
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT s FROM Shipment s WHERE s.providerOrderId = :providerOrderId",
+    )
     fun findByProviderOrderId(providerOrderId: String): Optional<Shipment>
+
     fun findByOrderId(orderId: UUID): Optional<Shipment>
 }
 

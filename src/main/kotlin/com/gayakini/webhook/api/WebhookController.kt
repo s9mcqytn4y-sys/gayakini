@@ -4,10 +4,14 @@ import com.gayakini.common.api.ApiResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/v1/webhooks")
+@RequestMapping("/api/v1/webhooks")
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
@@ -24,10 +28,10 @@ class WebhookController(
         val signatureKey = payload["signature_key"] as? String ?: signature ?: ""
 
         paymentService.processMidtransWebhook(payload, signatureKey)
-        
+
         return ApiResponse.success(
             message = "Webhook berhasil diterima.",
-            data = WebhookAckData(accepted = true)
+            data = WebhookAckData(accepted = true),
         )
     }
 
@@ -36,12 +40,12 @@ class WebhookController(
         @RequestBody payload: Map<String, Any>,
     ): ApiResponse<WebhookAckData> {
         logger.info("Menerima webhook Biteship: {}", payload)
-        
+
         shippingService.processBiteshipWebhook(payload)
-        
+
         return ApiResponse.success(
             message = "Webhook berhasil diterima.",
-            data = WebhookAckData(accepted = true)
+            data = WebhookAckData(accepted = true),
         )
     }
 }

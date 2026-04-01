@@ -1,7 +1,10 @@
 package com.gayakini.common.api
 
 import org.slf4j.LoggerFactory
-import org.springframework.http.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
+import org.springframework.http.ResponseEntity
 import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -21,66 +24,80 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
         status: HttpStatusCode,
         request: WebRequest,
     ): ResponseEntity<Any>? {
-        val fieldErrors = ex.bindingResult.allErrors.map { error ->
-            ProblemFieldError(
-                field = (error as? FieldError)?.field ?: "unknown",
-                message = error.defaultMessage ?: "Kesalahan validasi",
-                userMessage = error.defaultMessage ?: "Data tidak valid."
-            )
-        }
+        val fieldErrors =
+            ex.bindingResult.allErrors.map { error ->
+                ProblemFieldError(
+                    field = (error as? FieldError)?.field ?: "unknown",
+                    message = error.defaultMessage ?: "Kesalahan validasi",
+                    userMessage = error.defaultMessage ?: "Data tidak valid.",
+                )
+            }
 
-        val problem = ProblemDetails(
-            type = URI.create("https://api.example.com/probs/validation-error"),
-            title = "Bad Request",
-            status = HttpStatus.BAD_REQUEST.value(),
-            detail = "Data yang Anda kirimkan tidak valid atau tidak lengkap.",
-            userMessage = "Maaf, data yang Anda kirim belum lengkap. Silakan cek lagi.",
-            fieldErrors = fieldErrors,
-            instance = URI.create((request as ServletWebRequest).request.requestURI)
-        )
+        val problem =
+            ProblemDetails(
+                type = URI.create("https://api.example.com/probs/validation-error"),
+                title = "Bad Request",
+                status = HttpStatus.BAD_REQUEST.value(),
+                detail = "Data yang Anda kirimkan tidak valid atau tidak lengkap.",
+                userMessage = "Maaf, data yang Anda kirim belum lengkap. Silakan cek lagi.",
+                fieldErrors = fieldErrors,
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+            )
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
     }
 
     @ExceptionHandler(IllegalStateException::class)
-    fun handleIllegalState(ex: IllegalStateException, request: WebRequest): ResponseEntity<ProblemDetails> {
+    fun handleIllegalState(
+        ex: IllegalStateException,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
         val status = if (ex.message?.contains("stok", ignoreCase = true) == true) HttpStatus.CONFLICT else HttpStatus.BAD_REQUEST
-        
-        val problem = ProblemDetails(
-            type = URI.create("https://api.example.com/probs/business-rule-violation"),
-            title = if (status == HttpStatus.CONFLICT) "Conflict" else "Bad Request",
-            status = status.value(),
-            detail = ex.message ?: "Permintaan tidak dapat diproses karena aturan bisnis.",
-            userMessage = ex.message ?: "Maaf, permintaan Anda tidak dapat diproses saat ini.",
-            instance = URI.create((request as ServletWebRequest).request.requestURI)
-        )
+
+        val problem =
+            ProblemDetails(
+                type = URI.create("https://api.example.com/probs/business-rule-violation"),
+                title = if (status == HttpStatus.CONFLICT) "Conflict" else "Bad Request",
+                status = status.value(),
+                detail = ex.message ?: "Permintaan tidak dapat diproses karena aturan bisnis.",
+                userMessage = ex.message ?: "Maaf, permintaan Anda tidak dapat diproses saat ini.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+            )
         return ResponseEntity.status(status).body(problem)
     }
 
     @ExceptionHandler(NoSuchElementException::class)
-    fun handleNotFound(ex: NoSuchElementException, request: WebRequest): ResponseEntity<ProblemDetails> {
-        val problem = ProblemDetails(
-            type = URI.create("https://api.example.com/probs/not-found"),
-            title = "Not Found",
-            status = HttpStatus.NOT_FOUND.value(),
-            detail = ex.message ?: "Resource yang dicari tidak ditemukan.",
-            userMessage = "Data yang Anda cari tidak dapat kami temukan.",
-            instance = URI.create((request as ServletWebRequest).request.requestURI)
-        )
+    fun handleNotFound(
+        ex: NoSuchElementException,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
+        val problem =
+            ProblemDetails(
+                type = URI.create("https://api.example.com/probs/not-found"),
+                title = "Not Found",
+                status = HttpStatus.NOT_FOUND.value(),
+                detail = ex.message ?: "Resource yang dicari tidak ditemukan.",
+                userMessage = "Data yang Anda cari tidak dapat kami temukan.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+            )
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem)
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleAllOtherExceptions(ex: Exception, request: WebRequest): ResponseEntity<ProblemDetails> {
+    fun handleAllOtherExceptions(
+        ex: Exception,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
         log.error("Unhandled exception: ${ex.message}", ex)
-        val problem = ProblemDetails(
-            type = URI.create("https://api.example.com/probs/internal-server-error"),
-            title = "Internal Server Error",
-            status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
-            detail = "Terjadi kesalahan sistem yang tidak terduga.",
-            userMessage = "Terjadi gangguan teknis. Tim kami sedang menanganinya.",
-            instance = URI.create((request as ServletWebRequest).request.requestURI)
-        )
+        val problem =
+            ProblemDetails(
+                type = URI.create("https://api.example.com/probs/internal-server-error"),
+                title = "Internal Server Error",
+                status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                detail = "Terjadi kesalahan sistem yang tidak terduga.",
+                userMessage = "Terjadi gangguan teknis. Tim kami sedang menanganinya.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+            )
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem)
     }
 }
@@ -94,11 +111,11 @@ data class ProblemDetails(
     val code: String? = null,
     val requestId: String? = null,
     val userMessage: String,
-    val fieldErrors: List<ProblemFieldError>? = null
+    val fieldErrors: List<ProblemFieldError>? = null,
 )
 
 data class ProblemFieldError(
     val field: String,
     val message: String,
-    val userMessage: String
+    val userMessage: String,
 )

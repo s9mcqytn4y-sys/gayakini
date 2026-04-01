@@ -2,7 +2,21 @@ package com.gayakini.cart.domain
 
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
-import jakarta.persistence.*
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
+import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
@@ -10,7 +24,7 @@ import java.util.UUID
 @Table(name = "carts", schema = "commerce")
 class Cart(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    private val id: UUID,
     @Column(name = "customer_id")
     var customerId: UUID? = null,
     @Enumerated(EnumType.STRING)
@@ -32,7 +46,20 @@ class Cart(
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    override fun getId(): UUID = id
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 enum class CartStatus { ACTIVE, CHECKOUT_IN_PROGRESS, CONVERTED, EXPIRED }
 
@@ -67,7 +94,7 @@ class CartItem(
     @Column(name = "primary_image_url", columnDefinition = "TEXT")
     var primaryImageUrl: String? = null,
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    val lineTotalAmount: Long = 0, // Generated in DB
+    val lineTotalAmount: Long = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")

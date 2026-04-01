@@ -2,39 +2,39 @@ package com.gayakini.customer.api
 
 import com.gayakini.customer.domain.CustomerRole
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 data class RegisterRequest(
     val email: String,
     val phone: String?,
     val fullName: String,
-    val password: String
+    val password: String,
 )
 
 data class LoginRequest(
     val email: String,
-    val password: String
+    val password: String,
 )
 
 data class RefreshTokenRequest(
-    val refreshToken: String
+    val refreshToken: String,
 )
 
 data class AuthTokensResponse(
     val message: String,
-    val data: AuthTokensData
+    val data: AuthTokensData,
 )
 
 data class AuthTokensData(
     val tokens: JwtTokenPair,
-    val customer: CustomerProfileResponse
+    val customer: CustomerProfileResponse,
 )
 
 data class JwtTokenPair(
     val accessToken: String,
     val refreshToken: String,
     val tokenType: String = "Bearer",
-    val expiresIn: Int
+    val expiresIn: Int,
 )
 
 data class CustomerProfileResponse(
@@ -43,7 +43,7 @@ data class CustomerProfileResponse(
     val phone: String?,
     val fullName: String,
     val role: CustomerRole,
-    val createdAt: Instant
+    val createdAt: Instant,
 )
 
 data class AddressResponse(
@@ -59,7 +59,7 @@ data class AddressResponse(
     val province: String,
     val postalCode: String,
     val countryCode: String,
-    val isDefault: Boolean
+    val isDefault: Boolean,
 )
 
 data class AddressUpsertRequest(
@@ -74,5 +74,5 @@ data class AddressUpsertRequest(
     val province: String,
     val postalCode: String,
     val countryCode: String = "ID",
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
 )

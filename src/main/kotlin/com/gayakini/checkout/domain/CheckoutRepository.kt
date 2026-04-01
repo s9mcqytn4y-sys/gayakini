@@ -6,6 +6,7 @@ import java.util.UUID
 
 interface CheckoutRepository : JpaRepository<Checkout, UUID> {
     fun findByAccessTokenHash(accessTokenHash: String): Optional<Checkout>
+
     fun findByCartId(cartId: UUID): Optional<Checkout>
 }
 

@@ -5,34 +5,39 @@ import com.gayakini.customer.application.CustomerService
 import com.gayakini.infrastructure.security.SecurityUtils
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
-import java.util.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/v1/me/addresses")
 class AddressController(private val customerService: CustomerService) {
-
     @GetMapping
     fun listMyAddresses(): ApiResponse<List<AddressResponse>> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
         val addresses = customerService.getAddresses(currentUser.id)
-        
+
         return ApiResponse.success(
             message = "Daftar alamat berhasil diambil.",
-            data = addresses.map { mapToResponse(it) }
+            data = addresses.map { mapToResponse(it) },
         )
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun createAddress(@Valid @RequestBody request: AddressUpsertRequest): ApiResponse<AddressResponse> {
+    fun createAddress(
+        @Valid @RequestBody request: AddressUpsertRequest,
+    ): ApiResponse<AddressResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
-        
+
         val saved = customerService.upsertAddress(currentUser.id, request)
-        
+
         return ApiResponse.success(
             message = "Alamat berhasil disimpan.",
-            data = mapToResponse(saved)
+            data = mapToResponse(saved),
         )
     }
 
@@ -50,7 +55,7 @@ class AddressController(private val customerService: CustomerService) {
             province = address.province,
             postalCode = address.postalCode,
             countryCode = address.countryCode,
-            isDefault = address.isDefault
+            isDefault = address.isDefault,
         )
     }
 }

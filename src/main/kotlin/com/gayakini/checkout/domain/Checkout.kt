@@ -3,7 +3,24 @@ package com.gayakini.checkout.domain
 import com.gayakini.cart.domain.Cart
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
-import jakarta.persistence.*
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.MapsId
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.PrimaryKeyJoinColumn
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
+import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
@@ -11,7 +28,7 @@ import java.util.UUID
 @Table(name = "checkouts", schema = "commerce")
 class Checkout(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    private val id: UUID,
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false, unique = true)
     val cart: Cart,
@@ -43,7 +60,20 @@ class Checkout(
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    override fun getId(): UUID = id
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 enum class CheckoutStatus { ACTIVE, READY_FOR_ORDER, ORDER_CREATED, EXPIRED }
 
@@ -121,7 +151,20 @@ class CheckoutShippingAddress(
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    override fun getId(): UUID = checkoutId
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 @Entity
 @Table(name = "checkout_shipping_quotes", schema = "commerce")

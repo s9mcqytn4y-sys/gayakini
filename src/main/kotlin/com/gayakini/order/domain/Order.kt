@@ -2,7 +2,24 @@ package com.gayakini.order.domain
 
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
-import jakarta.persistence.*
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.MapsId
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.PrimaryKeyJoinColumn
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
+import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
@@ -10,7 +27,7 @@ import java.util.UUID
 @Table(name = "orders", schema = "commerce")
 class Order(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    private val id: UUID,
     @Column(name = "order_number", unique = true, nullable = false, length = 50)
     val orderNumber: String,
     @Column(name = "checkout_id", nullable = false, unique = true)
@@ -37,7 +54,7 @@ class Order(
     @Column(name = "shipping_cost_amount", nullable = false)
     val shippingCostAmount: Long,
     @Column(name = "total_amount", insertable = false, updatable = false)
-    val totalAmount: Long = 0, // Generated in DB
+    private val _totalAmount: Long = 0,
     @Column(name = "current_payment_id")
     var currentPaymentId: UUID? = null,
     @Column(name = "customer_notes", length = 500)
@@ -50,22 +67,37 @@ class Order(
     var cancelledAt: Instant? = null,
     @Column(name = "cancellation_reason", length = 300)
     var cancellationReason: String? = null,
-
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItem> = mutableListOf(),
-
     @OneToOne(mappedBy = "order", cascade = [CascadeType.ALL])
     @PrimaryKeyJoinColumn
     var shippingAddress: OrderShippingAddress? = null,
-
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    val totalAmount: Long
+        get() = subtotalAmount + shippingCostAmount
+
+    override fun getId(): UUID = id
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 enum class OrderStatus { PENDING_PAYMENT, PAID, READY_TO_SHIP, SHIPPED, COMPLETED, CANCELLED }
+
 enum class PaymentStatus { PENDING, PAID, FAILED, EXPIRED, CANCELLED, REFUNDED }
+
 enum class FulfillmentStatus { UNFULFILLED, BOOKED, IN_TRANSIT, DELIVERED, RETURNED, CANCELLED }
 
 @Entity
@@ -95,10 +127,13 @@ class OrderItem(
     @Column(name = "unit_price_amount", nullable = false)
     val unitPriceAmount: Long,
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    val lineTotalAmount: Long = 0, // Generated in DB
+    private val _lineTotalAmount: Long = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
-)
+) {
+    val lineTotalAmount: Long
+        get() = unitPriceAmount * quantity
+}
 
 @Entity
 @Table(name = "order_shipping_addresses", schema = "commerce")
@@ -117,9 +152,9 @@ class OrderShippingAddress(
     @Column(nullable = false, length = 200)
     val line1: String,
     @Column(length = 200)
-    val line2: String?,
+    var line2: String?,
     @Column(length = 200)
-    val notes: String?,
+    var notes: String?,
     @Column(name = "area_id", nullable = false, length = 100)
     val areaId: String,
     @Column(nullable = false, length = 120)
@@ -134,4 +169,17 @@ class OrderShippingAddress(
     val countryCode: String = "ID",
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    override fun getId(): UUID = orderId
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}

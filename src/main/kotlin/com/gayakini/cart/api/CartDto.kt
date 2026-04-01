@@ -5,16 +5,16 @@ import java.time.Instant
 import java.util.UUID
 
 data class CreateCartRequest(
-    val currency: String = "IDR"
+    val currency: String = "IDR",
 )
 
 data class AddCartItemRequest(
     val variantId: UUID,
-    val quantity: Int
+    val quantity: Int,
 )
 
 data class UpdateCartItemRequest(
-    val quantity: Int
+    val quantity: Int,
 )
 
 data class CartResponse(
@@ -25,7 +25,7 @@ data class CartResponse(
     val accessToken: String? = null,
     val expiresAt: Instant?,
     val items: List<CartItemResponse>,
-    val summary: CartSummaryResponse
+    val summary: CartSummaryResponse,
 )
 
 data class CartItemResponse(
@@ -39,20 +39,20 @@ data class CartItemResponse(
     val unitPrice: MoneyResponse,
     val compareAtPrice: MoneyResponse? = null,
     val lineTotal: MoneyResponse,
-    val primaryImageUrl: String?
+    val primaryImageUrl: String?,
 )
 
 data class CartSummaryResponse(
     val subtotal: MoneyResponse,
-    val itemCount: Int
+    val itemCount: Int,
 )
 
 data class MoneyResponse(
     val currency: String = "IDR",
-    val amount: Long
+    val amount: Long,
 )
 
 data class ProductVariantAttributeResponse(
     val name: String,
-    val value: String
+    val value: String,
 )

@@ -1,6 +1,12 @@
 package com.gayakini.shipping.infrastructure
 
-import com.gayakini.shipping.domain.*
+import com.gayakini.shipping.domain.ContactInfo
+import com.gayakini.shipping.domain.ShipmentBooking
+import com.gayakini.shipping.domain.ShipmentTracking
+import com.gayakini.shipping.domain.ShippingItem
+import com.gayakini.shipping.domain.ShippingProvider
+import com.gayakini.shipping.domain.ShippingRate
+import com.gayakini.shipping.domain.TrackingEvent
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
@@ -22,7 +28,7 @@ class BiteshipShippingProvider(
         destination: String,
         items: List<ShippingItem>,
     ): List<ShippingRate> {
-        val url = "\$baseUrl/v1/rates/couriers"
+        val url = "$baseUrl/v1/rates/couriers"
 
         val requestBody =
             mapOf(
@@ -43,7 +49,7 @@ class BiteshipShippingProvider(
         val headers =
             HttpHeaders().apply {
                 contentType = MediaType.APPLICATION_JSON
-                set("Authorization", "Bearer \$apiKey")
+                set("Authorization", "Bearer $apiKey")
             }
 
         return try {
@@ -76,7 +82,7 @@ class BiteshipShippingProvider(
         receiver: ContactInfo,
         items: List<ShippingItem>,
     ): ShipmentBooking {
-        val url = "\$baseUrl/v1/orders"
+        val url = "$baseUrl/v1/orders"
 
         // rateId in internal model is courier_service_code
         // This is a simplified mapping for MVP
@@ -113,7 +119,7 @@ class BiteshipShippingProvider(
         val headers =
             HttpHeaders().apply {
                 contentType = MediaType.APPLICATION_JSON
-                set("Authorization", "Bearer \$apiKey")
+                set("Authorization", "Bearer $apiKey")
             }
 
         return try {
@@ -136,11 +142,11 @@ class BiteshipShippingProvider(
     }
 
     override fun trackShipment(waybillId: String): ShipmentTracking {
-        val url = "\$baseUrl/v1/trackings/\$waybillId"
+        val url = "$baseUrl/v1/trackings/$waybillId"
 
         val headers =
             HttpHeaders().apply {
-                set("Authorization", "Bearer \$apiKey")
+                set("Authorization", "Bearer $apiKey")
             }
 
         return try {

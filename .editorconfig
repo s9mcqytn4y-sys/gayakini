@@ -1,0 +1,9 @@
+[*.{kt,kts}]
+max_line_length = 120
+insert_final_newline = true
+indent_size = 4
+continuation_indent_size = 4
+trim_trailing_whitespace = true
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+disabled_rules=no-wildcard-imports,import-ordering

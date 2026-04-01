@@ -7,7 +7,7 @@ import java.time.Instant
 import java.util.UUID
 
 data class PlaceOrderRequest(
-    val customerNotes: String? = null
+    val customerNotes: String? = null,
 )
 
 data class OrderResponse(
@@ -27,7 +27,7 @@ data class OrderResponse(
     val customerNotes: String?,
     val createdAt: Instant,
     val paidAt: Instant?,
-    val cancelledAt: Instant?
+    val cancelledAt: Instant?,
 )
 
 data class OrderPaymentSummaryResponse(
@@ -37,7 +37,7 @@ data class OrderPaymentSummaryResponse(
     val providerOrderId: String? = null,
     val providerTransactionId: String? = null,
     val paidAt: Instant? = null,
-    val grossAmount: MoneyResponse? = null
+    val grossAmount: MoneyResponse? = null,
 )
 
 data class OrderAddressResponse(
@@ -49,7 +49,7 @@ data class OrderAddressResponse(
     val city: String,
     val province: String,
     val postalCode: String,
-    val countryCode: String
+    val countryCode: String,
 )
 
 data class OrderItemResponse(
@@ -60,10 +60,10 @@ data class OrderItemResponse(
     val titleSnapshot: String,
     val quantity: Int,
     val unitPrice: MoneyResponse,
-    val lineTotal: MoneyResponse
+    val lineTotal: MoneyResponse,
 )
 
 data class MoneyResponse(
     val currency: String = "IDR",
-    val amount: Long
+    val amount: Long,
 )

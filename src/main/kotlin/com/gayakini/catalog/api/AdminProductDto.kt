@@ -11,7 +11,7 @@ data class AdminCreateProductRequest(
     val categorySlug: String,
     val description: String,
     val collections: List<String> = listOf(),
-    val status: ProductStatus = ProductStatus.DRAFT
+    val status: ProductStatus = ProductStatus.DRAFT,
 )
 
 data class AdminUpdateProductRequest(
@@ -21,7 +21,7 @@ data class AdminUpdateProductRequest(
     val categorySlug: String? = null,
     val description: String? = null,
     val collections: List<String>? = null,
-    val status: ProductStatus? = null
+    val status: ProductStatus? = null,
 )
 
 data class AdminProductResponse(
@@ -33,7 +33,7 @@ data class AdminProductResponse(
     val categorySlug: String?,
     val description: String,
     val collections: List<String>,
-    val status: ProductStatus
+    val status: ProductStatus,
 )
 
 data class AdminCreateVariantRequest(
@@ -43,20 +43,20 @@ data class AdminCreateVariantRequest(
     val attributes: List<ProductVariantAttributeResponse>,
     val stockOnHand: Int,
     val weightGrams: Int = 0,
-    val status: VariantStatus = VariantStatus.ACTIVE
+    val status: VariantStatus = VariantStatus.ACTIVE,
 )
 
 data class AdminUpdateVariantRequest(
     val price: MoneyResponse? = null,
     val compareAtPrice: MoneyResponse? = null,
     val weightGrams: Int? = null,
-    val status: VariantStatus? = null
+    val status: VariantStatus? = null,
 )
 
 data class StockAdjustmentRequest(
     val quantityDelta: Int,
     val reasonCode: String,
-    val note: String? = null
+    val note: String? = null,
 )
 
 data class StockAdjustmentResponse(
@@ -64,5 +64,5 @@ data class StockAdjustmentResponse(
     val stockOnHand: Int,
     val stockReserved: Int,
     val stockAvailable: Int,
-    val lastAdjustmentId: UUID
+    val lastAdjustmentId: UUID,
 )

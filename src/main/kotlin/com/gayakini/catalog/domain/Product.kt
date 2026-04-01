@@ -1,6 +1,15 @@
 package com.gayakini.catalog.domain
 
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.Id
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
+import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
@@ -8,7 +17,7 @@ import java.util.UUID
 @Table(name = "products", schema = "commerce")
 class Product(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    private val id: UUID,
     @Column(unique = true, nullable = false)
     val slug: String,
     @Column(nullable = false)
@@ -32,6 +41,19 @@ class Product(
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    override fun getId(): UUID = id
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 enum class ProductStatus { DRAFT, PUBLISHED, ARCHIVED }

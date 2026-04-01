@@ -2,16 +2,22 @@ package com.gayakini.common.infrastructure
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.common.util.HashUtils
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EntityManager
+import jakarta.persistence.Id
+import jakarta.persistence.NoResultException
+import jakarta.persistence.PersistenceContext
+import jakarta.persistence.Table
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 @Service
 class IdempotencyService(
     @PersistenceContext private val entityManager: EntityManager,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) {
     @Transactional
     fun <T> handle(
@@ -21,10 +27,10 @@ class IdempotencyService(
         requesterType: String,
         requesterId: UUID?,
         ttlSeconds: Long = 3600,
-        action: () -> T
+        action: () -> T,
     ): T {
         val requestHash = HashUtils.sha256(objectMapper.writeValueAsString(requestPayload))
-        
+
         val existing = findKey(scope, key)
         if (existing != null) {
             if (existing.requestHash != requestHash) {
@@ -45,11 +51,14 @@ class IdempotencyService(
         return result
     }
 
-    private fun findKey(scope: String, key: String): IdempotencyKeyRecord? {
+    private fun findKey(
+        scope: String,
+        key: String,
+    ): IdempotencyKeyRecord? {
         return try {
             entityManager.createQuery(
                 "SELECT r FROM IdempotencyKeyRecord r WHERE r.scope = :scope AND r.idempotencyKey = :key",
-                IdempotencyKeyRecord::class.java
+                IdempotencyKeyRecord::class.java,
             ).setParameter("scope", scope)
                 .setParameter("key", key)
                 .singleResult
@@ -58,15 +67,23 @@ class IdempotencyService(
         }
     }
 
-    private fun saveKey(scope: String, key: String, hash: String, type: String, id: UUID?, ttl: Long) {
-        val record = IdempotencyKeyRecord(
-            scope = scope,
-            idempotencyKey = key,
-            requestHash = hash,
-            requesterType = type,
-            requesterId = id,
-            expiresAt = Instant.now().plusSeconds(ttl)
-        )
+    private fun saveKey(
+        scope: String,
+        key: String,
+        hash: String,
+        type: String,
+        id: UUID?,
+        ttl: Long,
+    ) {
+        val record =
+            IdempotencyKeyRecord(
+                scope = scope,
+                idempotencyKey = key,
+                requestHash = hash,
+                requesterType = type,
+                requesterId = id,
+                expiresAt = Instant.now().plusSeconds(ttl),
+            )
         entityManager.persist(record)
     }
 }
@@ -92,5 +109,5 @@ class IdempotencyKeyRecord(
     @Column(name = "created_at")
     val createdAt: Instant = Instant.now(),
     @Column(name = "expires_at")
-    val expiresAt: Instant
+    val expiresAt: Instant,
 )

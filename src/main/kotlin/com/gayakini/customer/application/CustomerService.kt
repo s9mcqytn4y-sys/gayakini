@@ -8,12 +8,13 @@ import com.gayakini.customer.domain.CustomerRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.*
+import java.util.NoSuchElementException
+import java.util.UUID
 
 @Service
 class CustomerService(
     private val customerRepository: CustomerRepository,
-    private val addressRepository: CustomerAddressRepository
+    private val addressRepository: CustomerAddressRepository,
 ) {
     fun getCustomer(id: UUID): Customer {
         return customerRepository.findById(id)
@@ -25,7 +26,10 @@ class CustomerService(
     }
 
     @Transactional
-    fun upsertAddress(customerId: UUID, request: AddressUpsertRequest): CustomerAddress {
+    fun upsertAddress(
+        customerId: UUID,
+        request: AddressUpsertRequest,
+    ): CustomerAddress {
         val customer = getCustomer(customerId)
 
         if (request.isDefault) {
@@ -36,21 +40,22 @@ class CustomerService(
             }
         }
 
-        val address = CustomerAddress(
-            customer = customer,
-            recipientName = request.recipientName,
-            phone = request.phone,
-            line1 = request.line1,
-            line2 = request.line2,
-            notes = request.notes,
-            areaId = request.areaId,
-            district = request.district,
-            city = request.city,
-            province = request.province,
-            postalCode = request.postalCode,
-            countryCode = request.countryCode,
-            isDefault = request.isDefault
-        )
+        val address =
+            CustomerAddress(
+                customer = customer,
+                recipientName = request.recipientName,
+                phone = request.phone,
+                line1 = request.line1,
+                line2 = request.line2,
+                notes = request.notes,
+                areaId = request.areaId,
+                district = request.district,
+                city = request.city,
+                province = request.province,
+                postalCode = request.postalCode,
+                countryCode = request.countryCode,
+                isDefault = request.isDefault,
+            )
 
         return addressRepository.save(address)
     }

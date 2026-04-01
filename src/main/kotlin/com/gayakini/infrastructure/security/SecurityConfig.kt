@@ -19,7 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    @Value("\${jwt.secret:default-secret-key-change-it-now}") private val jwtSecret: String
+    @Value("\${jwt.secret:default-secret-key-change-it-now}") private val jwtSecret: String,
 ) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
@@ -33,28 +33,23 @@ class SecurityConfig(
             .authorizeHttpRequests { auth ->
                 auth
                     // Public Endpoints
-                    .requestMatchers("/v1/products/**").permitAll()
-                    .requestMatchers("/v1/locations/areas").permitAll()
-                    .requestMatchers("/v1/auth/**").permitAll()
-                    .requestMatchers("/v1/webhooks/**").permitAll()
-                    
+                    .requestMatchers("/api/v1/hello").permitAll()
+                    .requestMatchers("/api/v1/products/**").permitAll()
+                    .requestMatchers("/api/v1/locations/**").permitAll()
+                    .requestMatchers("/api/v1/auth/**").permitAll()
+                    .requestMatchers("/api/v1/webhooks/**").permitAll()
                     // Cart & Checkout (Handled via Guest Token OR Auth in Controller/Filter)
-                    .requestMatchers("/v1/carts/**").permitAll()
-                    .requestMatchers("/v1/checkouts/**").permitAll()
-                    
+                    .requestMatchers("/api/v1/carts/**").permitAll()
+                    .requestMatchers("/api/v1/checkouts/**").permitAll()
                     // Order public access (if token present) - handled in Controller
-                    .requestMatchers("/v1/orders/{orderId}/**").permitAll()
-                    
+                    .requestMatchers("/api/v1/orders/{orderId}/**").permitAll()
                     // Customer Profile & Personal Orders
-                    .requestMatchers("/v1/me/**").authenticated()
-                    
+                    .requestMatchers("/api/v1/me/**").authenticated()
                     // Admin (Requires admin scope/role - TODO: Add Role check)
-                    .requestMatchers("/v1/admin/**").hasRole("ADMIN")
-                    
+                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                     // Internal/Dev
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
-
                     .anyRequest().authenticated()
             }
             .exceptionHandling {
@@ -62,7 +57,7 @@ class SecurityConfig(
             }
             .addFilterBefore(
                 JwtAuthenticationFilter(jwtSecret),
-                UsernamePasswordAuthenticationFilter::class.java
+                UsernamePasswordAuthenticationFilter::class.java,
             )
 
         return http.build()

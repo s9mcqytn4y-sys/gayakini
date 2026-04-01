@@ -1,6 +1,18 @@
 package com.gayakini.catalog.domain
 
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
+import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
@@ -8,7 +20,7 @@ import java.util.UUID
 @Table(name = "product_variants", schema = "commerce")
 class ProductVariant(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    private val id: UUID,
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     val product: Product,
@@ -32,11 +44,27 @@ class ProductVariant(
     @Column(name = "stock_reserved", nullable = false)
     var stockReserved: Int = 0,
     @Column(name = "stock_available", insertable = false, updatable = false)
-    val stockAvailable: Int = 0, // Generated column in DB
+    private val _stockAvailable: Int = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) : Persistable<UUID> {
+    @Transient
+    private var _isNew = true
+
+    val stockAvailable: Int
+        get() = (stockOnHand - stockReserved).coerceAtLeast(0)
+
+    override fun getId(): UUID = id
+
+    override fun isNew(): Boolean = _isNew
+
+    @PostPersist
+    @PostLoad
+    fun markNotNew() {
+        _isNew = false
+    }
+}
 
 enum class VariantStatus { ACTIVE, INACTIVE, ARCHIVED }

@@ -1,7 +1,7 @@
 package com.gayakini.infrastructure.security
 
 import org.springframework.security.core.context.SecurityContextHolder
-import java.util.*
+import java.util.UUID
 
 object SecurityUtils {
     fun getCurrentUser(): UserPrincipal? {

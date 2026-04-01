@@ -6,5 +6,6 @@ import java.util.UUID
 
 interface InventoryReservationRepository : JpaRepository<InventoryReservation, UUID> {
     fun findByOrderId(orderId: UUID): List<InventoryReservation>
+
     fun findByOrderItemId(orderItemId: UUID): Optional<InventoryReservation>
 }

@@ -1,6 +1,9 @@
 package com.gayakini.location.domain
 
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 import java.time.Instant
 
 @Entity
@@ -30,10 +33,15 @@ class LocationArea(
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
-    var updatedAt: Instant = Instant.now()
+    var updatedAt: Instant = Instant.now(),
 )
 
 interface LocationAreaRepository : org.springframework.data.jpa.repository.JpaRepository<LocationArea, String> {
-    @org.springframework.data.jpa.repository.Query("SELECT a FROM LocationArea a WHERE lower(a.label) LIKE lower(concat('%', :input, '%'))")
-    fun searchByLabel(input: String, pageable: org.springframework.data.domain.Pageable): List<LocationArea>
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT a FROM LocationArea a WHERE lower(a.label) LIKE lower(concat('%', :input, '%'))",
+    )
+    fun searchByLabel(
+        input: String,
+        pageable: org.springframework.data.domain.Pageable,
+    ): List<LocationArea>
 }

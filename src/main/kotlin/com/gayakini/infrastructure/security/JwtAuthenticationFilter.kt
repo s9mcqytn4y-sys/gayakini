@@ -7,7 +7,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
-import java.util.*
+import java.util.UUID
 
 class JwtAuthenticationFilter(
     private val jwtSecret: String,
@@ -31,7 +31,7 @@ class JwtAuthenticationFilter(
                         UsernamePasswordAuthenticationToken(
                             principal,
                             null,
-                            listOf(SimpleGrantedAuthority("ROLE_\${principal.role}")),
+                            listOf(SimpleGrantedAuthority("ROLE_${principal.role}")),
                         )
                     SecurityContextHolder.getContext().authentication = authentication
                 }

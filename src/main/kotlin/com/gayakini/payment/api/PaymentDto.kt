@@ -8,7 +8,7 @@ data class CreatePaymentRequest(
     val provider: String? = "MIDTRANS",
     val flow: String? = "SNAP",
     val preferredChannel: String? = null,
-    val enabledChannels: List<String>? = null
+    val enabledChannels: List<String>? = null,
 )
 
 data class PaymentSessionResponse(
@@ -21,5 +21,5 @@ data class PaymentSessionResponse(
     val preferredChannel: String? = null,
     val snapToken: String? = null,
     val snapRedirectUrl: String? = null,
-    val expiresAt: Instant? = null
+    val expiresAt: Instant? = null,
 )

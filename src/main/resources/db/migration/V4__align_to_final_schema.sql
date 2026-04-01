@@ -17,9 +17,9 @@ CREATE TABLE commerce.shipping_areas (
     postal_code          varchar(20),
     country_code         char(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
     raw_payload          jsonb,
-    refreshed_at         timestamptz NOT NULL DEFAULT now(),
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    updated_at           timestamptz NOT NULL DEFAULT now()
+    refreshed_at         timestamp with time zone NOT NULL DEFAULT now(),
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 -- 2. Refactor and move 'customers'
@@ -28,7 +28,7 @@ ALTER TABLE commerce.customers RENAME COLUMN phone_number TO phone;
 ALTER TABLE commerce.customers ADD COLUMN email_normalized text GENERATED ALWAYS AS (lower(btrim(email))) STORED;
 ALTER TABLE commerce.customers ADD COLUMN role varchar(20) NOT NULL DEFAULT 'CUSTOMER' CHECK (role IN ('CUSTOMER'));
 ALTER TABLE commerce.customers ADD COLUMN is_active boolean NOT NULL DEFAULT true;
-ALTER TABLE commerce.customers ADD COLUMN last_login_at timestamptz;
+ALTER TABLE commerce.customers ADD COLUMN last_login_at timestamp with time zone;
 CREATE UNIQUE INDEX uq_customers_email_normalized ON commerce.customers (email_normalized);
 
 -- 3. Categories and Collections
@@ -38,8 +38,8 @@ CREATE TABLE commerce.categories (
     name                 varchar(120) NOT NULL,
     description          text,
     is_active            boolean NOT NULL DEFAULT true,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    updated_at           timestamptz NOT NULL DEFAULT now()
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE TABLE commerce.collections (
@@ -48,8 +48,8 @@ CREATE TABLE commerce.collections (
     name                 varchar(120) NOT NULL,
     description          text,
     is_active            boolean NOT NULL DEFAULT true,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    updated_at           timestamptz NOT NULL DEFAULT now()
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 -- 4. Refactor and move 'products'
@@ -59,8 +59,8 @@ ALTER TABLE commerce.products ADD COLUMN subtitle varchar(180);
 ALTER TABLE commerce.products ADD COLUMN brand_name varchar(120) NOT NULL DEFAULT 'GAYAKINI';
 ALTER TABLE commerce.products ADD COLUMN category_id uuid REFERENCES commerce.categories(id);
 ALTER TABLE commerce.products ADD COLUMN status varchar(20) NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED'));
-ALTER TABLE commerce.products ADD COLUMN published_at timestamptz;
-ALTER TABLE commerce.products ADD COLUMN archived_at timestamptz;
+ALTER TABLE commerce.products ADD COLUMN published_at timestamp with time zone;
+ALTER TABLE commerce.products ADD COLUMN archived_at timestamp with time zone;
 ALTER TABLE commerce.products DROP COLUMN base_price; -- Price is at variant level now
 
 -- 5. Refactor and move 'product_variants'
@@ -78,7 +78,7 @@ ALTER TABLE commerce.product_variants ADD COLUMN compare_at_amount bigint;
 ALTER TABLE public.carts SET SCHEMA commerce;
 ALTER TABLE commerce.carts RENAME COLUMN guest_token_hash TO access_token_hash;
 ALTER TABLE commerce.carts ADD COLUMN currency_code char(3) NOT NULL DEFAULT 'IDR';
-ALTER TABLE commerce.carts ADD COLUMN expires_at timestamptz;
+ALTER TABLE commerce.carts ADD COLUMN expires_at timestamp with time zone;
 ALTER TABLE commerce.carts ADD COLUMN item_count integer NOT NULL DEFAULT 0;
 ALTER TABLE commerce.carts ADD COLUMN subtotal_amount bigint NOT NULL DEFAULT 0;
 
@@ -109,9 +109,9 @@ CREATE TABLE commerce.checkouts (
     shipping_cost_amount bigint NOT NULL DEFAULT 0,
     total_amount         bigint GENERATED ALWAYS AS (subtotal_amount + shipping_cost_amount) STORED,
     selected_shipping_quote_id uuid,
-    expires_at           timestamptz,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    updated_at           timestamptz NOT NULL DEFAULT now()
+    expires_at           timestamp with time zone,
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE TABLE commerce.checkout_items (
@@ -128,7 +128,7 @@ CREATE TABLE commerce.checkout_items (
     compare_at_amount    bigint,
     primary_image_url    text,
     line_total_amount    bigint GENERATED ALWAYS AS (unit_price_amount * quantity::bigint) STORED,
-    created_at           timestamptz NOT NULL DEFAULT now()
+    created_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE TABLE commerce.checkout_shipping_quotes (
@@ -146,9 +146,9 @@ CREATE TABLE commerce.checkout_shipping_quotes (
     estimated_days_max   smallint,
     is_recommended       boolean NOT NULL DEFAULT false,
     raw_payload          jsonb,
-    expires_at           timestamptz,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    updated_at           timestamptz NOT NULL DEFAULT now()
+    expires_at           timestamp with time zone,
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at           timestamp with time zone NOT NULL DEFAULT now()
 );
 
 -- 8. Refactor 'orders'
@@ -166,9 +166,9 @@ ALTER TABLE commerce.orders ADD COLUMN total_amount bigint GENERATED ALWAYS AS (
 ALTER TABLE commerce.orders ADD COLUMN current_payment_id uuid;
 ALTER TABLE commerce.orders RENAME COLUMN grand_total TO grand_total_legacy;
 ALTER TABLE commerce.orders ADD COLUMN customer_notes varchar(500);
-ALTER TABLE commerce.orders ADD COLUMN placed_at timestamptz NOT NULL DEFAULT now();
-ALTER TABLE commerce.orders ADD COLUMN paid_at timestamptz;
-ALTER TABLE commerce.orders ADD COLUMN cancelled_at timestamptz;
+ALTER TABLE commerce.orders ADD COLUMN placed_at timestamp with time zone NOT NULL DEFAULT now();
+ALTER TABLE commerce.orders ADD COLUMN paid_at timestamp with time zone;
+ALTER TABLE commerce.orders ADD COLUMN cancelled_at timestamp with time zone;
 ALTER TABLE commerce.orders ADD COLUMN cancellation_reason varchar(300);
 
 -- 9. Inventory Control
@@ -179,9 +179,9 @@ CREATE TABLE commerce.inventory_reservations (
     variant_id           uuid NOT NULL REFERENCES commerce.product_variants(id),
     quantity             integer NOT NULL CHECK (quantity >= 1),
     status               varchar(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'RELEASED', 'CONSUMED')),
-    reserved_at          timestamptz NOT NULL DEFAULT now(),
-    released_at          timestamptz,
-    consumed_at          timestamptz,
+    reserved_at          timestamp with time zone NOT NULL DEFAULT now(),
+    released_at          timestamp with time zone,
+    consumed_at          timestamp with time zone,
     release_reason       varchar(100)
 );
 
@@ -197,8 +197,8 @@ CREATE TABLE commerce.idempotency_keys (
     resource_id          uuid,
     response_status      integer CHECK (response_status BETWEEN 100 AND 599),
     response_body        jsonb,
-    created_at           timestamptz NOT NULL DEFAULT now(),
-    expires_at           timestamptz NOT NULL,
+    created_at           timestamp with time zone NOT NULL DEFAULT now(),
+    expires_at           timestamp with time zone NOT NULL,
     CONSTRAINT uq_idempotency_scope_key UNIQUE (scope, idempotency_key),
     CONSTRAINT chk_idempotency_expiry CHECK (expires_at > created_at)
 );
