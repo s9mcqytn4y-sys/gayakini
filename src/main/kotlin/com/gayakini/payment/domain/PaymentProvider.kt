@@ -1,10 +1,12 @@
 package com.gayakini.payment.domain
 
+import com.gayakini.order.domain.PaymentStatus
 import java.util.UUID
 
 interface PaymentProvider {
     fun createPaymentSession(
         orderId: UUID,
+        providerOrderId: String,
         amount: Long,
         customerDetails: CustomerPaymentDetails,
     ): PaymentSession
@@ -14,7 +16,7 @@ interface PaymentProvider {
         signature: String,
     ): Boolean
 
-    fun getPaymentStatus(externalId: String): PaymentStatus
+    fun getPaymentStatus(providerOrderId: String): PaymentStatus
 }
 
 data class CustomerPaymentDetails(
@@ -26,14 +28,5 @@ data class CustomerPaymentDetails(
 data class PaymentSession(
     val token: String,
     val redirectUrl: String,
-    val externalId: String,
+    val providerOrderId: String,
 )
-
-enum class PaymentStatus {
-    PENDING,
-    SETTLED,
-    CANCELLED,
-    EXPIRED,
-    DENIED,
-    REFUNDED,
-}

@@ -1,0 +1,56 @@
+package com.gayakini.customer.api
+
+import com.gayakini.common.api.ApiResponse
+import com.gayakini.customer.application.CustomerService
+import com.gayakini.infrastructure.security.SecurityUtils
+import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.*
+import java.util.*
+
+@RestController
+@RequestMapping("/v1/me/addresses")
+class AddressController(private val customerService: CustomerService) {
+
+    @GetMapping
+    fun listMyAddresses(): ApiResponse<List<AddressResponse>> {
+        val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
+        val addresses = customerService.getAddresses(currentUser.id)
+        
+        return ApiResponse.success(
+            message = "Daftar alamat berhasil diambil.",
+            data = addresses.map { mapToResponse(it) }
+        )
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createAddress(@Valid @RequestBody request: AddressUpsertRequest): ApiResponse<AddressResponse> {
+        val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
+        
+        val saved = customerService.upsertAddress(currentUser.id, request)
+        
+        return ApiResponse.success(
+            message = "Alamat berhasil disimpan.",
+            data = mapToResponse(saved)
+        )
+    }
+
+    private fun mapToResponse(address: com.gayakini.customer.domain.CustomerAddress): AddressResponse {
+        return AddressResponse(
+            id = address.id,
+            recipientName = address.recipientName,
+            phone = address.phone,
+            line1 = address.line1,
+            line2 = address.line2,
+            notes = address.notes,
+            areaId = address.areaId,
+            district = address.district,
+            city = address.city,
+            province = address.province,
+            postalCode = address.postalCode,
+            countryCode = address.countryCode,
+            isDefault = address.isDefault
+        )
+    }
+}

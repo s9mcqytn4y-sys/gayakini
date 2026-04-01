@@ -1,32 +1,27 @@
 package com.gayakini.common.api
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import java.time.Instant
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ApiResponse<T>(
-    val success: Boolean,
     val message: String,
     val data: T? = null,
-    val timestamp: Instant = Instant.now(),
-    val errors: List<ApiError>? = null,
+    val meta: ApiMeta? = null
 ) {
     companion object {
-        fun <T> success(
-            data: T,
-            message: String = "Operasi berhasil",
-        ): ApiResponse<T> = ApiResponse(success = true, message = message, data = data)
+        fun <T> success(data: T, message: String = "Operasi berhasil", meta: ApiMeta? = null): ApiResponse<T> =
+            ApiResponse(message = message, data = data, meta = meta)
 
-        fun success(message: String = "Operasi berhasil"): ApiResponse<Unit> = ApiResponse(success = true, message = message)
-
-        fun <T> error(
-            message: String,
-            errors: List<ApiError>? = null,
-        ): ApiResponse<T> = ApiResponse(success = false, message = message, errors = errors)
+        fun success(message: String = "Operasi berhasil", meta: ApiMeta? = null): ApiResponse<Unit> =
+            ApiResponse(message = message, meta = meta)
     }
 }
 
-data class ApiError(
-    val field: String?,
-    val message: String,
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ApiMeta(
+    val requestId: String? = null,
+    val page: Int? = null,
+    val size: Int? = null,
+    val totalElements: Long? = null,
+    val totalPages: Int? = null
 )

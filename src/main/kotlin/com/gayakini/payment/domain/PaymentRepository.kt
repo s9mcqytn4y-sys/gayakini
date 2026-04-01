@@ -6,6 +6,6 @@ import java.util.UUID
 
 interface PaymentRepository : JpaRepository<Payment, UUID> {
     fun findByOrderId(orderId: UUID): Optional<Payment>
-
-    fun findByExternalId(externalId: String): Optional<Payment>
+    fun findByProviderOrderId(providerOrderId: String): Optional<Payment>
+    fun findByProviderTransactionId(providerTransactionId: String): Optional<Payment>
 }

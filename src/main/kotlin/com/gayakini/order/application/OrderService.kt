@@ -1,11 +1,17 @@
 package com.gayakini.order.application
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.gayakini.cart.domain.CartRepository
-import com.gayakini.catalog.domain.ProductVariantRepository
+import com.gayakini.checkout.domain.CheckoutRepository
+import com.gayakini.checkout.domain.CheckoutStatus
+import com.gayakini.common.infrastructure.IdempotencyService
+import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.inventory.application.InventoryService
+import com.gayakini.order.api.OrderAddressResponse
+import com.gayakini.order.api.OrderItemResponse
+import com.gayakini.order.api.OrderPaymentSummaryResponse
+import com.gayakini.order.api.OrderResponse
 import com.gayakini.order.api.PlaceOrderRequest
+import com.gayakini.order.api.MoneyResponse
 import com.gayakini.order.domain.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,97 +21,143 @@ import java.util.*
 @Service
 class OrderService(
     private val orderRepository: OrderRepository,
-    private val orderItemRepository: OrderItemRepository,
-    private val cartRepository: CartRepository,
-    private val variantRepository: ProductVariantRepository,
+    private val checkoutRepository: CheckoutRepository,
     private val inventoryService: InventoryService,
-    private val objectMapper: ObjectMapper,
+    private val idempotencyService: IdempotencyService
 ) {
     @Transactional
-    fun placeOrder(
-        customerId: UUID?,
-        guestTokenHash: String?,
-        request: PlaceOrderRequest,
-    ): Order {
-        // Idempotency check
-        val existingOrder = orderRepository.findByIdempotencyKey(request.idempotencyKey)
-        if (existingOrder.isPresent) {
-            return existingOrder.get()
-        }
-
-        // 1. Get Cart
-        val cart =
-            if (customerId != null) {
-                cartRepository.findByCustomerIdAndIsActiveTrue(customerId)
-            } else {
-                cartRepository.findByGuestTokenHashAndIsActiveTrue(guestTokenHash!!)
-            }.orElseThrow { NoSuchElementException("Keranjang aktif tidak ditemukan.") }
-
-        if (cart.items.isEmpty()) {
-            throw IllegalStateException("Keranjang kosong.")
-        }
-
-        // 2. Lock and Decrease Stock & Fetch Variants for Pricing
-        val variantIds = cart.items.map { it.variantId }
-        val variants = variantRepository.findAllByIdIn(variantIds).associateBy { it.id }
-
-        // 3. Prepare Order Metadata
-        val totalAmount =
-            cart.items.sumOf { cartItem ->
-                val variant =
-                    variants[cartItem.variantId]
-                        ?: throw NoSuchElementException("Varian produk ${cartItem.variantId} tidak ditemukan.")
-                variant.price * cartItem.quantity
+    fun placeOrderFromCheckout(
+        checkoutId: UUID,
+        idempotencyKey: String,
+        checkoutToken: String?,
+        request: PlaceOrderRequest
+    ): OrderResponse {
+        return idempotencyService.handle(
+            scope = "place_order",
+            key = idempotencyKey,
+            requestPayload = request,
+            requesterType = if (checkoutToken != null) "GUEST" else "CUSTOMER",
+            requesterId = null // TODO: Get current user ID
+        ) {
+            val existingByCheckout = orderRepository.findByCheckoutId(checkoutId)
+            if (existingByCheckout.isPresent) {
+                return@handle mapToResponse(existingByCheckout.get())
             }
-        val grandTotal = totalAmount + request.shippingCost
 
-        val orderId = UuidV7Generator.generate()
-        val order =
-            Order(
-                id = orderId,
+            val checkout = checkoutRepository.findById(checkoutId)
+                .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
+
+            if (checkout.status != CheckoutStatus.ACTIVE && checkout.status != CheckoutStatus.READY_FOR_ORDER) {
+                 throw IllegalStateException("Checkout sudah tidak aktif (status: ${checkout.status}).")
+            }
+
+            if (checkout.accessTokenHash != null) {
+                if (HashUtils.sha256(checkoutToken ?: "") != checkout.accessTokenHash) {
+                    throw IllegalStateException("Akses checkout ditolak.")
+                }
+            }
+
+            val order = Order(
+                id = UuidV7Generator.generate(),
                 orderNumber = "ORD-${System.currentTimeMillis()}-${Random().nextInt(999)}",
-                customerId = customerId,
-                guestTokenHash = guestTokenHash,
+                checkoutId = checkout.id,
+                cartId = checkout.cart.id,
+                customerId = checkout.customerId,
+                accessTokenHash = checkout.accessTokenHash,
                 status = OrderStatus.PENDING_PAYMENT,
-                totalAmount = totalAmount,
-                shippingCost = request.shippingCost,
-                grandTotal = grandTotal,
-                shippingAddressSnapshot = objectMapper.writeValueAsString(request.shippingAddress),
-                paymentMethod = request.paymentMethod,
-                idempotencyKey = request.idempotencyKey,
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
+                subtotalAmount = checkout.subtotalAmount,
+                shippingCostAmount = checkout.shippingCostAmount,
+                customerNotes = request.customerNotes
             )
 
-        val savedOrder = orderRepository.save(order)
+            val checkoutAddress = checkout.shippingAddress ?: throw IllegalStateException("Alamat pengiriman belum diset.")
+            order.shippingAddress = OrderShippingAddress(
+                orderId = order.id,
+                order = order,
+                recipientName = checkoutAddress.recipientName,
+                phone = checkoutAddress.phone,
+                line1 = checkoutAddress.line1,
+                line2 = checkoutAddress.line2,
+                notes = checkoutAddress.notes,
+                areaId = checkoutAddress.areaId,
+                district = checkoutAddress.district,
+                city = checkoutAddress.city,
+                province = checkoutAddress.province,
+                postalCode = checkoutAddress.postalCode,
+                countryCode = checkoutAddress.countryCode
+            )
 
-        // 4. Create and Save Order Items
-        cart.items.forEach { cartItem ->
-            val variant = variants[cartItem.variantId]!!
-
-            // Explicit Stock Lock & Decrease
-            inventoryService.lockAndDecreaseStock(cartItem.variantId, cartItem.quantity)
-
-            val itemSubtotal = variant.price * cartItem.quantity
-
-            val orderItem =
-                OrderItem(
+            checkout.items.forEach { checkoutItem ->
+                val orderItem = OrderItem(
                     id = UuidV7Generator.generate(),
-                    order = savedOrder,
-                    variantId = variant.id,
-                    skuSnapshot = variant.sku,
-                    nameSnapshot = variant.name,
-                    priceSnapshot = variant.price,
-                    quantity = cartItem.quantity,
-                    subtotal = itemSubtotal,
+                    order = order,
+                    product = checkoutItem.product,
+                    variant = checkoutItem.variant,
+                    skuSnapshot = checkoutItem.skuSnapshot,
+                    titleSnapshot = checkoutItem.productTitleSnapshot,
+                    color = checkoutItem.color,
+                    sizeCode = checkoutItem.sizeCode,
+                    quantity = checkoutItem.quantity,
+                    unitPriceAmount = checkoutItem.unitPriceAmount
                 )
-            orderItemRepository.save(orderItem)
+                order.items.add(orderItem)
+                
+                inventoryService.reserveStock(order.id, orderItem.id, orderItem.variant.id, orderItem.quantity)
+            }
+
+            val savedOrder = orderRepository.save(order)
+
+            checkout.status = CheckoutStatus.ORDER_CREATED
+            checkoutRepository.save(checkout)
+
+            mapToResponse(savedOrder)
         }
+    }
 
-        // 5. Deactivate Cart
-        cart.isActive = false
-        cartRepository.save(cart)
-
-        return savedOrder
+    private fun mapToResponse(order: Order): OrderResponse {
+        return OrderResponse(
+            id = order.id,
+            orderNumber = order.orderNumber,
+            customerId = order.customerId,
+            status = order.status,
+            fulfillmentStatus = order.fulfillmentStatus,
+            paymentSummary = OrderPaymentSummaryResponse(
+                provider = "MIDTRANS",
+                status = order.paymentStatus
+            ),
+            shippingAddress = order.shippingAddress!!.let { addr ->
+                OrderAddressResponse(
+                    id = null,
+                    recipientName = addr.recipientName,
+                    phone = addr.phone,
+                    line1 = addr.line1,
+                    district = addr.district,
+                    city = addr.city,
+                    province = addr.province,
+                    postalCode = addr.postalCode,
+                    countryCode = addr.countryCode
+                )
+            },
+            items = order.items.map { item ->
+                OrderItemResponse(
+                    id = item.id,
+                    productId = item.product.id,
+                    variantId = item.variant.id,
+                    skuSnapshot = item.skuSnapshot,
+                    titleSnapshot = item.titleSnapshot,
+                    quantity = item.quantity,
+                    unitPrice = MoneyResponse(amount = item.unitPriceAmount),
+                    lineTotal = MoneyResponse(amount = item.lineTotalAmount)
+                )
+            },
+            subtotal = MoneyResponse(amount = order.subtotalAmount),
+            shippingCost = MoneyResponse(amount = order.shippingCostAmount),
+            total = MoneyResponse(amount = order.totalAmount),
+            currency = order.currencyCode,
+            customerNotes = order.customerNotes,
+            createdAt = order.createdAt,
+            paidAt = order.paidAt,
+            cancelledAt = order.cancelledAt
+        )
     }
 }

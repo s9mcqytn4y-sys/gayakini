@@ -32,13 +32,29 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers("/api/v1/hello").permitAll()
-                    .requestMatchers("/api/v1/webhooks/**").permitAll()
+                    // Public Endpoints
+                    .requestMatchers("/v1/products/**").permitAll()
+                    .requestMatchers("/v1/locations/areas").permitAll()
+                    .requestMatchers("/v1/auth/**").permitAll()
+                    .requestMatchers("/v1/webhooks/**").permitAll()
+                    
+                    // Cart & Checkout (Handled via Guest Token OR Auth in Controller/Filter)
+                    .requestMatchers("/v1/carts/**").permitAll()
+                    .requestMatchers("/v1/checkouts/**").permitAll()
+                    
+                    // Order public access (if token present) - handled in Controller
+                    .requestMatchers("/v1/orders/{orderId}/**").permitAll()
+                    
+                    // Customer Profile & Personal Orders
+                    .requestMatchers("/v1/me/**").authenticated()
+                    
+                    // Admin (Requires admin scope/role - TODO: Add Role check)
+                    .requestMatchers("/v1/admin/**").hasRole("ADMIN")
+                    
+                    // Internal/Dev
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
-                    .requestMatchers("/api/v1/orders/place").permitAll()
-                    .requestMatchers("/api/v1/orders/**").authenticated()
-                    .requestMatchers("/api/v1/cart/**").authenticated()
+
                     .anyRequest().authenticated()
             }
             .exceptionHandling {

@@ -1,0 +1,2917 @@
+openapi: 3.1.0
+info:
+  title: Brand Fashion E-Commerce API
+  version: 1.0.0
+  summary: MVP REST API for storefront, checkout, payment, and fulfillment
+  description: 'Finalized MVP contract for:
+
+    - public storefront
+
+    - customer auth and profile
+
+    - guest/authenticated cart and checkout
+
+    - Midtrans Snap payment orchestration
+
+    - Biteship shipping rate and shipment orchestration
+
+    - customer orders
+
+    - admin catalog, inventory, and fulfillment
+
+
+    Design rules:
+
+    - OpenAPI 3.1 for stronger Spring Boot tooling compatibility.
+
+    - Internal API stays provider-agnostic where possible.
+
+    - Midtrans and Biteship are integrated behind backend orchestration.
+
+    - Friendly, non-technical Indonesian copy is included in success and error payloads.
+
+    - No frontend should call Midtrans server-side or Biteship directly.
+
+    '
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+servers:
+- url: https://api.example.com
+  description: Production
+- url: https://staging-api.example.com
+  description: Staging
+- url: http://localhost:8080
+  description: Local
+tags:
+- name: Public Catalog
+- name: Locations
+- name: Auth
+- name: Customer Profile
+- name: Cart
+- name: Checkout
+- name: Payments
+- name: Orders
+- name: Admin Catalog
+- name: Admin Orders
+- name: Admin Inventory
+- name: Webhooks
+security: []
+paths:
+  /v1/products:
+    get:
+      tags:
+      - Public Catalog
+      summary: List published products
+      operationId: listProducts
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      - $ref: '#/components/parameters/ProductSort'
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: categorySlug
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: collectionSlug
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: color
+        in: query
+        schema:
+          type: string
+          maxLength: 50
+      - name: sizeCode
+        in: query
+        schema:
+          type: string
+          maxLength: 20
+      - name: minPrice
+        in: query
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: maxPrice
+        in: query
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: inStock
+        in: query
+        schema:
+          type: boolean
+      responses:
+        '200':
+          description: Daftar produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPageResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/products/{productId}:
+    get:
+      tags:
+      - Public Catalog
+      summary: Get product detail
+      operationId: getProductById
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Detail produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetailResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/products/{productId}/variants:
+    get:
+      tags:
+      - Public Catalog
+      summary: List sellable variants for a product
+      operationId: listProductVariants
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Variasi produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductVariantListResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/locations/areas:
+    get:
+      tags:
+      - Locations
+      summary: Search normalized destination areas for shipping address
+      description: 'Used by web/mobile autocomplete before address is saved.
+
+        The backend may resolve this using Biteship Maps API.
+
+        '
+      operationId: searchAreas
+      parameters:
+      - name: input
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+          maxLength: 120
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 10
+      responses:
+        '200':
+          description: Area tujuan berhasil ditemukan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationAreaListResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Register customer account
+      operationId: registerCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Akun berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login customer account
+      operationId: loginCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Refresh access token
+      operationId: refreshCustomerToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Sesi login berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/me:
+    get:
+      tags:
+      - Customer Profile
+      summary: Get current customer profile
+      operationId: getMyProfile
+      security:
+      - customerBearerAuth: []
+      responses:
+        '200':
+          description: Profil berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfileResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/me/addresses:
+    get:
+      tags:
+      - Customer Profile
+      summary: List current customer addresses
+      operationId: listMyAddresses
+      security:
+      - customerBearerAuth: []
+      responses:
+        '200':
+          description: Daftar alamat berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressListResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      tags:
+      - Customer Profile
+      summary: Create customer address
+      operationId: createMyAddress
+      security:
+      - customerBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressUpsertRequest'
+      responses:
+        '201':
+          description: Alamat berhasil disimpan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/me/addresses/{addressId}:
+    patch:
+      tags:
+      - Customer Profile
+      summary: Update customer address
+      operationId: updateMyAddress
+      security:
+      - customerBearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AddressId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressUpsertRequest'
+      responses:
+        '200':
+          description: Alamat berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags:
+      - Customer Profile
+      summary: Delete customer address
+      operationId: deleteMyAddress
+      security:
+      - customerBearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/AddressId'
+      responses:
+        '204':
+          description: Alamat berhasil dihapus.
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/carts:
+    post:
+      tags:
+      - Cart
+      summary: Create cart
+      description: 'Creates a new cart.
+
+        If customerBearerAuth is provided, the cart is linked to the customer.
+
+        Otherwise the backend returns an opaque cartToken that must be sent on subsequent
+        guest cart requests.
+
+        '
+      operationId: createCart
+      security:
+      - customerBearerAuth: []
+      - {}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCartRequest'
+      responses:
+        '201':
+          description: Keranjang berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/carts/{cartId}:
+    get:
+      tags:
+      - Cart
+      summary: Get cart
+      operationId: getCart
+      security:
+      - customerBearerAuth: []
+      - cartTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CartId'
+      responses:
+        '200':
+          description: Keranjang berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/carts/{cartId}/items:
+    post:
+      tags:
+      - Cart
+      summary: Add item to cart
+      operationId: addCartItem
+      security:
+      - customerBearerAuth: []
+      - cartTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CartId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '200':
+          description: Produk berhasil dimasukkan ke keranjang.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/carts/{cartId}/items/{itemId}:
+    patch:
+      tags:
+      - Cart
+      summary: Update cart item quantity
+      operationId: updateCartItem
+      security:
+      - customerBearerAuth: []
+      - cartTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/CartItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCartItemRequest'
+      responses:
+        '200':
+          description: Keranjang berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CartResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags:
+      - Cart
+      summary: Remove cart item
+      operationId: deleteCartItem
+      security:
+      - customerBearerAuth: []
+      - cartTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/CartItemId'
+      responses:
+        '204':
+          description: Produk berhasil dihapus dari keranjang.
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts:
+    post:
+      tags:
+      - Checkout
+      summary: Create checkout from cart
+      operationId: createCheckout
+      security:
+      - customerBearerAuth: []
+      - cartTokenAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+      responses:
+        '201':
+          description: Checkout berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}:
+    get:
+      tags:
+      - Checkout
+      summary: Get checkout detail
+      operationId: getCheckout
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '200':
+          description: Checkout berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}/shipping-address:
+    put:
+      tags:
+      - Checkout
+      summary: Set or replace shipping address
+      description: 'For logged-in customers, either addressId or guestAddress can
+        be sent.
+
+        For guest checkout, guestAddress must be sent.
+
+        Exactly one of addressId or guestAddress must be provided.
+
+        '
+      operationId: upsertCheckoutShippingAddress
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutShippingAddressRequest'
+      responses:
+        '200':
+          description: Alamat pengiriman berhasil dipilih.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}/shipping-quotes:
+    post:
+      tags:
+      - Checkout
+      summary: Calculate shipping quotes
+      description: 'Backend may call Biteship Rates API and store normalized quote
+        results.
+
+        Quotes are temporary and must not be treated as a permanent contract.
+
+        '
+      operationId: createCheckoutShippingQuotes
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      - $ref: '#/components/parameters/IdempotencyKeyOptional'
+      responses:
+        '200':
+          description: Pilihan pengiriman berhasil dihitung.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}/shipping-selection:
+    put:
+      tags:
+      - Checkout
+      summary: Select shipping quote
+      operationId: setCheckoutShippingSelection
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectShippingQuoteRequest'
+      responses:
+        '200':
+          description: Pilihan pengiriman berhasil dipilih.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}/orders:
+    post:
+      tags:
+      - Checkout
+      summary: Place order from checkout
+      description: 'Creates a single order resource after final validation.
+
+        Stock reservation and amount locking happen here.
+
+        This endpoint must be idempotent.
+
+        '
+      operationId: placeOrder
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlaceOrderRequest'
+      responses:
+        '201':
+          description: Pesanan berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/orders/{orderId}:
+    get:
+      tags:
+      - Orders
+      summary: Get order detail
+      operationId: getOrderById
+      security:
+      - customerBearerAuth: []
+      - orderTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Detail pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/me/orders:
+    get:
+      tags:
+      - Orders
+      summary: List my orders
+      operationId: listMyOrders
+      security:
+      - customerBearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Daftar pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPageResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/orders/{orderId}/payments:
+    post:
+      tags:
+      - Payments
+      summary: Create payment session for an order
+      description: 'Creates a payment attempt for a PENDING_PAYMENT order.
+
+        Backend generates the Midtrans Snap token and keeps the server key private.
+
+        This endpoint must be idempotent.
+
+        '
+      operationId: createOrderPayment
+      security:
+      - customerBearerAuth: []
+      - orderTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Pembayaran siap dilanjutkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentSessionResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/orders/{orderId}/cancellations:
+    post:
+      tags:
+      - Orders
+      summary: Cancel order by customer
+      operationId: cancelOrderByCustomer
+      security:
+      - customerBearerAuth: []
+      - orderTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelOrderRequest'
+      responses:
+        '200':
+          description: Pesanan berhasil dibatalkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/webhooks/midtrans:
+    post:
+      tags:
+      - Webhooks
+      summary: Receive Midtrans payment webhook
+      description: 'Verify Midtrans signature before accepting the payload.
+
+        Recommended handling:
+
+        1. validate signature_key
+
+        2. fetch transaction status from Midtrans using order_id
+
+        3. apply idempotent payment state transition
+
+        4. return 200 once the event is accepted
+
+        '
+      operationId: receiveMidtransWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MidtransWebhookPayload'
+      responses:
+        '200':
+          description: Webhook berhasil diterima.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAckResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/webhooks/biteship:
+    post:
+      tags:
+      - Webhooks
+      summary: Receive Biteship shipment webhook
+      description: 'Used for shipment status synchronization after Biteship booking
+        has been created.
+
+        Merchant should verify the webhook configuration and process updates idempotently.
+
+        '
+      operationId: receiveBiteshipWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BiteshipWebhookPayload'
+      responses:
+        '200':
+          description: Webhook berhasil diterima.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAckResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/products:
+    post:
+      tags:
+      - Admin Catalog
+      summary: Create product
+      operationId: adminCreateProduct
+      security:
+      - adminBearerAuth:
+        - catalog:write
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateProductRequest'
+      responses:
+        '201':
+          description: Produk berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/products/{productId}:
+    patch:
+      tags:
+      - Admin Catalog
+      summary: Update product
+      operationId: adminUpdateProduct
+      security:
+      - adminBearerAuth:
+        - catalog:write
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateProductRequest'
+      responses:
+        '200':
+          description: Produk berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/products/{productId}/variants:
+    post:
+      tags:
+      - Admin Catalog
+      summary: Create variant
+      operationId: adminCreateVariant
+      security:
+      - adminBearerAuth:
+        - catalog:write
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCreateVariantRequest'
+      responses:
+        '201':
+          description: Variasi produk berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVariantResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/variants/{variantId}:
+    patch:
+      tags:
+      - Admin Catalog
+      summary: Update variant
+      operationId: adminUpdateVariant
+      security:
+      - adminBearerAuth:
+        - catalog:write
+      parameters:
+      - $ref: '#/components/parameters/VariantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUpdateVariantRequest'
+      responses:
+        '200':
+          description: Variasi produk berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVariantResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/variants/{variantId}/stock-adjustments:
+    post:
+      tags:
+      - Admin Inventory
+      summary: Adjust variant stock
+      operationId: adminAdjustVariantStock
+      security:
+      - adminBearerAuth:
+        - inventory:adjust
+      parameters:
+      - $ref: '#/components/parameters/VariantId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+      responses:
+        '200':
+          description: Stok berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockAdjustmentResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/orders:
+    get:
+      tags:
+      - Admin Orders
+      summary: List orders for backoffice
+      operationId: adminListOrders
+      security:
+      - adminBearerAuth:
+        - orders:read
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/OrderStatus'
+      - name: paymentStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/PaymentStatus'
+      - name: fulfillmentStatus
+        in: query
+        schema:
+          $ref: '#/components/schemas/FulfillmentStatus'
+      - name: orderNumber
+        in: query
+        schema:
+          type: string
+          maxLength: 50
+      responses:
+        '200':
+          description: Daftar pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPageResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/orders/{orderId}:
+    get:
+      tags:
+      - Admin Orders
+      summary: Get admin order detail
+      operationId: adminGetOrder
+      security:
+      - adminBearerAuth:
+        - orders:read
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Detail pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/orders/{orderId}/shipments:
+    post:
+      tags:
+      - Admin Orders
+      summary: Create shipment booking for a paid order
+      description: 'Uses the chosen shipping quote stored on the order.
+
+        Backend may create a Biteship order and store the returned provider references.
+
+        This endpoint must be idempotent.
+
+        '
+      operationId: adminCreateShipment
+      security:
+      - adminBearerAuth:
+        - orders:fulfill
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShipmentRequest'
+      responses:
+        '200':
+          description: Pengiriman berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        '409':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/orders/{orderId}/cancellations:
+    post:
+      tags:
+      - Admin Orders
+      summary: Cancel order by admin
+      operationId: adminCancelOrder
+      security:
+      - adminBearerAuth:
+        - orders:cancel
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/IdempotencyKeyRequired'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCancelOrderRequest'
+      responses:
+        '200':
+          description: Pesanan berhasil dibatalkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    customerBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    adminBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    cartTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Cart-Token
+      description: Opaque token for guest cart access.
+    checkoutTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Checkout-Token
+      description: Opaque token for guest checkout access.
+    orderTokenAuth:
+      type: apiKey
+      in: header
+      name: X-Order-Token
+      description: Opaque token for guest order access.
+  parameters:
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VariantId:
+      name: variantId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AddressId:
+      name: addressId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CartItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CheckoutId:
+      name: checkoutId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    ProductSort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum:
+        - newest
+        - price_asc
+        - price_desc
+        default: newest
+    IdempotencyKeyRequired:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      description: Unique request key for safely retrying write operations.
+    IdempotencyKeyOptional:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+      description: Optional for safe retries on recalculation or provider-bound operations.
+  responses:
+    Problem:
+      description: Problem Details error response
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+  schemas:
+    ApiMeta:
+      type: object
+      additionalProperties: false
+      properties:
+        requestId:
+          type: string
+          maxLength: 100
+    Money:
+      type: object
+      additionalProperties: false
+      required:
+      - currency
+      - amount
+      properties:
+        currency:
+          type: string
+          enum:
+          - IDR
+        amount:
+          type: integer
+          format: int64
+          minimum: 0
+    PageMeta:
+      type: object
+      additionalProperties: false
+      required:
+      - page
+      - size
+      - totalElements
+      - totalPages
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        size:
+          type: integer
+          minimum: 1
+        totalElements:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    ProblemFieldError:
+      type: object
+      additionalProperties: false
+      required:
+      - field
+      - message
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        userMessage:
+          type: string
+          description: Pesan singkat untuk ditampilkan ke pengguna.
+    ProblemDetails:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - title
+      - status
+      - userMessage
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 100
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+        requestId:
+          type: string
+        userMessage:
+          type: string
+          description: Pesan ramah berbahasa Indonesia untuk UI.
+          example: Maaf, data yang Anda kirim belum lengkap. Silakan cek lagi.
+        fieldErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemFieldError'
+    ProductStatus:
+      type: string
+      enum:
+      - DRAFT
+      - PUBLISHED
+      - ARCHIVED
+    VariantStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - INACTIVE
+      - ARCHIVED
+    CartStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - CHECKOUT_IN_PROGRESS
+      - CONVERTED
+      - EXPIRED
+    CheckoutStatus:
+      type: string
+      enum:
+      - ACTIVE
+      - READY_FOR_ORDER
+      - ORDER_CREATED
+      - EXPIRED
+    PaymentProvider:
+      type: string
+      enum:
+      - MIDTRANS
+    PaymentFlow:
+      type: string
+      enum:
+      - SNAP
+    PaymentStatus:
+      type: string
+      enum:
+      - PENDING
+      - PAID
+      - FAILED
+      - EXPIRED
+      - CANCELLED
+      - REFUNDED
+    OrderStatus:
+      type: string
+      enum:
+      - PENDING_PAYMENT
+      - PAID
+      - READY_TO_SHIP
+      - SHIPPED
+      - COMPLETED
+      - CANCELLED
+    FulfillmentStatus:
+      type: string
+      enum:
+      - UNFULFILLED
+      - BOOKED
+      - IN_TRANSIT
+      - DELIVERED
+      - RETURNED
+      - CANCELLED
+    CustomerRole:
+      type: string
+      enum:
+      - CUSTOMER
+    ProductMedia:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - url
+      - altText
+      - sortOrder
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        altText:
+          type: string
+          maxLength: 200
+        sortOrder:
+          type: integer
+          minimum: 0
+        isPrimary:
+          type: boolean
+          default: false
+    ProductVariantAttribute:
+      type: object
+      additionalProperties: false
+      required:
+      - name
+      - value
+      properties:
+        name:
+          type: string
+          enum:
+          - color
+          - size
+        value:
+          type: string
+          maxLength: 50
+    InventorySummary:
+      type: object
+      additionalProperties: false
+      required:
+      - stockOnHand
+      - stockReserved
+      - stockAvailable
+      properties:
+        stockOnHand:
+          type: integer
+          minimum: 0
+        stockReserved:
+          type: integer
+          minimum: 0
+        stockAvailable:
+          type: integer
+          minimum: 0
+    ProductVariant:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - sku
+      - status
+      - price
+      - inventory
+      - attributes
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          maxLength: 64
+        status:
+          $ref: '#/components/schemas/VariantStatus'
+        price:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        inventory:
+          $ref: '#/components/schemas/InventorySummary'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantAttribute'
+        weightGrams:
+          type: integer
+          minimum: 0
+        primaryImageUrl:
+          type: string
+          format: uri
+    ProductSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - slug
+      - title
+      - brandName
+      - categorySlug
+      - priceRange
+      - primaryImageUrl
+      - inStock
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        title:
+          type: string
+          maxLength: 180
+        subtitle:
+          type: string
+          maxLength: 180
+        brandName:
+          type: string
+          maxLength: 120
+        categorySlug:
+          type: string
+          maxLength: 100
+        primaryImageUrl:
+          type: string
+          format: uri
+        priceRange:
+          type: object
+          additionalProperties: false
+          required:
+          - min
+          - max
+          properties:
+            min:
+              $ref: '#/components/schemas/Money'
+            max:
+              $ref: '#/components/schemas/Money'
+        inStock:
+          type: boolean
+    ProductDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - slug
+      - title
+      - brandName
+      - categorySlug
+      - priceRange
+      - primaryImageUrl
+      - inStock
+      - description
+      - collections
+      - media
+      - variants
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        title:
+          type: string
+          maxLength: 180
+        subtitle:
+          type: string
+          maxLength: 180
+        brandName:
+          type: string
+          maxLength: 120
+        categorySlug:
+          type: string
+          maxLength: 100
+        primaryImageUrl:
+          type: string
+          format: uri
+        priceRange:
+          type: object
+          additionalProperties: false
+          required:
+          - min
+          - max
+          properties:
+            min:
+              $ref: '#/components/schemas/Money'
+            max:
+              $ref: '#/components/schemas/Money'
+        inStock:
+          type: boolean
+        description:
+          type: string
+        collections:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductMedia'
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+    ProductPageResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      - meta
+      properties:
+        message:
+          type: string
+          example: Daftar produk berhasil diambil.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductSummary'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+          - page
+          - size
+          - totalElements
+          - totalPages
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            size:
+              type: integer
+              minimum: 1
+            totalElements:
+              type: integer
+              format: int64
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+            requestId:
+              type: string
+              maxLength: 100
+    ProductDetailResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Detail produk berhasil diambil.
+        data:
+          $ref: '#/components/schemas/ProductDetail'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    ProductVariantListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Variasi produk berhasil diambil.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    LocationArea:
+      type: object
+      additionalProperties: false
+      required:
+      - areaId
+      - label
+      - countryCode
+      properties:
+        areaId:
+          type: string
+          maxLength: 100
+          description: Normalized provider area identifier used for shipping calculation.
+        label:
+          type: string
+          maxLength: 250
+        district:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 120
+        province:
+          type: string
+          maxLength: 120
+        postalCode:
+          type: string
+          maxLength: 20
+        countryCode:
+          type: string
+          enum:
+          - ID
+    LocationAreaListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Area tujuan berhasil ditemukan.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationArea'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      - fullName
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        phone:
+          type: string
+          maxLength: 30
+        fullName:
+          type: string
+          maxLength: 120
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - email
+      - password
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+    RefreshTokenRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          minLength: 20
+    JwtTokenPair:
+      type: object
+      additionalProperties: false
+      required:
+      - accessToken
+      - refreshToken
+      - tokenType
+      - expiresIn
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        tokenType:
+          type: string
+          enum:
+          - Bearer
+        expiresIn:
+          type: integer
+          minimum: 1
+    CustomerProfile:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - email
+      - fullName
+      - role
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          maxLength: 30
+        fullName:
+          type: string
+          maxLength: 120
+        role:
+          $ref: '#/components/schemas/CustomerRole'
+        createdAt:
+          type: string
+          format: date-time
+    AuthTokensResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Login berhasil.
+        data:
+          type: object
+          additionalProperties: false
+          required:
+          - tokens
+          - customer
+          properties:
+            tokens:
+              $ref: '#/components/schemas/JwtTokenPair'
+            customer:
+              $ref: '#/components/schemas/CustomerProfile'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    CustomerProfileResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Profil berhasil diambil.
+        data:
+          $ref: '#/components/schemas/CustomerProfile'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    Address:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - recipientName
+      - phone
+      - line1
+      - areaId
+      - district
+      - city
+      - province
+      - postalCode
+      - countryCode
+      - isDefault
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipientName:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+        line1:
+          type: string
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 200
+        areaId:
+          type: string
+          maxLength: 100
+        district:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 120
+        province:
+          type: string
+          maxLength: 120
+        postalCode:
+          type: string
+          maxLength: 20
+        countryCode:
+          type: string
+          enum:
+          - ID
+        isDefault:
+          type: boolean
+    AddressUpsertRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - recipientName
+      - phone
+      - line1
+      - areaId
+      - district
+      - city
+      - province
+      - postalCode
+      - countryCode
+      properties:
+        recipientName:
+          type: string
+          maxLength: 120
+        phone:
+          type: string
+          maxLength: 30
+        line1:
+          type: string
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        notes:
+          type: string
+          maxLength: 200
+        areaId:
+          type: string
+          maxLength: 100
+        district:
+          type: string
+          maxLength: 120
+        city:
+          type: string
+          maxLength: 120
+        province:
+          type: string
+          maxLength: 120
+        postalCode:
+          type: string
+          maxLength: 20
+        countryCode:
+          type: string
+          enum:
+          - ID
+        isDefault:
+          type: boolean
+          default: false
+    AddressResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Alamat berhasil disimpan.
+        data:
+          $ref: '#/components/schemas/Address'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    AddressListResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Daftar alamat berhasil diambil.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Address'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    CreateCartRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        currency:
+          type: string
+          enum:
+          - IDR
+          default: IDR
+    CartItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - productId
+      - productTitle
+      - variantId
+      - sku
+      - attributes
+      - quantity
+      - unitPrice
+      - lineTotal
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        productTitle:
+          type: string
+          maxLength: 180
+        variantId:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          maxLength: 64
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantAttribute'
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          oneOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+        primaryImageUrl:
+          type: string
+          format: uri
+    CartSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - subtotal
+      - itemCount
+      properties:
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        itemCount:
+          type: integer
+          minimum: 0
+    Cart:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - status
+      - currency
+      - items
+      - summary
+      properties:
+        id:
+          type: string
+          format: uuid
+        customerId:
+          oneOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        status:
+          $ref: '#/components/schemas/CartStatus'
+        currency:
+          type: string
+          enum:
+          - IDR
+        accessToken:
+          type: string
+          description: Returned only for guest cart access.
+        expiresAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        summary:
+          $ref: '#/components/schemas/CartSummary'
+    CartResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Keranjang berhasil diperbarui.
+        data:
+          $ref: '#/components/schemas/Cart'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    AddCartItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - variantId
+      - quantity
+      properties:
+        variantId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+    UpdateCartItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - quantity
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+    CreateCheckoutRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - cartId
+      properties:
+        cartId:
+          type: string
+          format: uuid
+    ShippingQuote:
+      type: object
+      additionalProperties: false
+      required:
+      - quoteId
+      - provider
+      - courierCode
+      - courierName
+      - serviceCode
+      - serviceName
+      - cost
+      properties:
+        quoteId:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum:
+          - BITESHIP
+        providerReference:
+          type: string
+          description: Opaque provider quote/reference ID. Do not use for business
+            rules on client side.
+        courierCode:
+          type: string
+          maxLength: 50
+        courierName:
+          type: string
+          maxLength: 120
+        serviceCode:
+          type: string
+          maxLength: 50
+        serviceName:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 200
+        cost:
+          $ref: '#/components/schemas/Money'
+        estimatedDaysMin:
+          type: integer
+          minimum: 1
+        estimatedDaysMax:
+          type: integer
+          minimum: 1
+        isRecommended:
+          type: boolean
+          default: false
+    Checkout:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - cartId
+      - status
+      - currency
+      - items
+      - subtotal
+      - total
+      - availableShippingQuotes
+      properties:
+        id:
+          type: string
+          format: uuid
+        cartId:
+          type: string
+          format: uuid
+        customerId:
+          oneOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        accessToken:
+          type: string
+          description: Returned only for guest checkout access.
+        status:
+          $ref: '#/components/schemas/CheckoutStatus'
+        currency:
+          type: string
+          enum:
+          - IDR
+        shippingAddress:
+          oneOf:
+          - $ref: '#/components/schemas/Address'
+          - type: 'null'
+        selectedShippingQuote:
+          oneOf:
+          - $ref: '#/components/schemas/ShippingQuote'
+          - type: 'null'
+        availableShippingQuotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShippingQuote'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        shippingCost:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        expiresAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+    CheckoutResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Checkout berhasil diperbarui.
+        data:
+          $ref: '#/components/schemas/Checkout'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    CheckoutShippingAddressRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        addressId:
+          type: string
+          format: uuid
+        guestAddress:
+          $ref: '#/components/schemas/AddressUpsertRequest'
+      description: Exactly one of addressId or guestAddress must be provided.
+    SelectShippingQuoteRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - quoteId
+      properties:
+        quoteId:
+          type: string
+          format: uuid
+    PlaceOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        customerNotes:
+          type: string
+          maxLength: 500
+    PaymentChannel:
+      type: string
+      enum:
+      - AUTO
+      - CREDIT_CARD
+      - BANK_TRANSFER
+      - GOPAY
+      - SHOPEEPAY
+      - QRIS
+      - CSTORE
+    CreatePaymentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        provider:
+          $ref: '#/components/schemas/PaymentProvider'
+        flow:
+          $ref: '#/components/schemas/PaymentFlow'
+        preferredChannel:
+          $ref: '#/components/schemas/PaymentChannel'
+        enabledChannels:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/PaymentChannel'
+      description: 'For MVP, provider defaults to MIDTRANS and flow defaults to SNAP.
+
+        preferredChannel and enabledChannels are optional hints only.
+
+        '
+    PaymentSession:
+      type: object
+      additionalProperties: false
+      required:
+      - paymentId
+      - provider
+      - flow
+      - status
+      - providerOrderId
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        provider:
+          $ref: '#/components/schemas/PaymentProvider'
+        flow:
+          $ref: '#/components/schemas/PaymentFlow'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        providerOrderId:
+          type: string
+          maxLength: 50
+          description: Merchant order identifier sent to Midtrans as order_id.
+        providerTransactionId:
+          type: string
+        preferredChannel:
+          $ref: '#/components/schemas/PaymentChannel'
+        snapToken:
+          type: string
+        snapRedirectUrl:
+          type: string
+          format: uri
+        expiresAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+    PaymentSessionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Pembayaran siap dilanjutkan.
+        data:
+          $ref: '#/components/schemas/PaymentSession'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    OrderItem:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - productId
+      - variantId
+      - skuSnapshot
+      - titleSnapshot
+      - attributesSnapshot
+      - quantity
+      - unitPrice
+      - lineTotal
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        variantId:
+          type: string
+          format: uuid
+        skuSnapshot:
+          type: string
+          maxLength: 64
+        titleSnapshot:
+          type: string
+          maxLength: 180
+        attributesSnapshot:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariantAttribute'
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+    Shipment:
+      type: object
+      additionalProperties: false
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum:
+          - BITESHIP
+        providerShipmentId:
+          type: string
+        courierCode:
+          type: string
+        courierName:
+          type: string
+        serviceCode:
+          type: string
+        serviceName:
+          type: string
+        trackingNumber:
+          type: string
+        trackingUrl:
+          type: string
+          format: uri
+        status:
+          $ref: '#/components/schemas/FulfillmentStatus'
+        bookedAt:
+          type: string
+          format: date-time
+        shippedAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+    OrderPaymentSummary:
+      type: object
+      additionalProperties: false
+      required:
+      - provider
+      - status
+      properties:
+        provider:
+          $ref: '#/components/schemas/PaymentProvider'
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        flow:
+          $ref: '#/components/schemas/PaymentFlow'
+        providerOrderId:
+          type: string
+          maxLength: 50
+        providerTransactionId:
+          type: string
+        paidAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        grossAmount:
+          $ref: '#/components/schemas/Money'
+        providerStatus:
+          type: string
+          description: Raw latest provider status for audit or support needs.
+    Order:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - orderNumber
+      - status
+      - fulfillmentStatus
+      - paymentSummary
+      - items
+      - subtotal
+      - shippingCost
+      - total
+      - currency
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          maxLength: 50
+        accessToken:
+          type: string
+          description: Returned only for guest order access.
+        customerId:
+          oneOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        fulfillmentStatus:
+          $ref: '#/components/schemas/FulfillmentStatus'
+        paymentSummary:
+          $ref: '#/components/schemas/OrderPaymentSummary'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        selectedShippingQuote:
+          oneOf:
+          - $ref: '#/components/schemas/ShippingQuote'
+          - type: 'null'
+        shipment:
+          oneOf:
+          - $ref: '#/components/schemas/Shipment'
+          - type: 'null'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        shippingCost:
+          $ref: '#/components/schemas/Money'
+        total:
+          $ref: '#/components/schemas/Money'
+        currency:
+          type: string
+          enum:
+          - IDR
+        customerNotes:
+          type: string
+          maxLength: 500
+        createdAt:
+          type: string
+          format: date-time
+        paidAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        cancelledAt:
+          oneOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+    OrderResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Detail pesanan berhasil diambil.
+        data:
+          $ref: '#/components/schemas/Order'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    OrderPageResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      - meta
+      properties:
+        message:
+          type: string
+          example: Daftar pesanan berhasil diambil.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        meta:
+          type: object
+          additionalProperties: false
+          required:
+          - page
+          - size
+          - totalElements
+          - totalPages
+          properties:
+            page:
+              type: integer
+              minimum: 1
+            size:
+              type: integer
+              minimum: 1
+            totalElements:
+              type: integer
+              format: int64
+              minimum: 0
+            totalPages:
+              type: integer
+              minimum: 0
+            requestId:
+              type: string
+              maxLength: 100
+    CancelOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 300
+    MidtransWebhookPayload:
+      type: object
+      additionalProperties: true
+      required:
+      - order_id
+      - status_code
+      - transaction_status
+      - gross_amount
+      - signature_key
+      properties:
+        order_id:
+          type: string
+          maxLength: 50
+        transaction_status:
+          type: string
+        status_code:
+          type: string
+        gross_amount:
+          type: string
+        signature_key:
+          type: string
+        transaction_id:
+          type: string
+        payment_type:
+          type: string
+        fraud_status:
+          type: string
+        settlement_time:
+          type: string
+        transaction_time:
+          type: string
+        expiry_time:
+          type: string
+        currency:
+          type: string
+    BiteshipWebhookPayload:
+      type: object
+      additionalProperties: true
+      properties:
+        event:
+          type: string
+        id:
+          type: string
+        order_id:
+          type: string
+        status:
+          type: string
+        courier_code:
+          type: string
+        waybill_id:
+          type: string
+        note:
+          type: string
+    WebhookAckResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Webhook berhasil diterima.
+        data:
+          type: object
+          additionalProperties: false
+          required:
+          - accepted
+          properties:
+            accepted:
+              type: boolean
+              const: true
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    AdminCreateProductRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      - slug
+      - brandName
+      - categorySlug
+      - description
+      properties:
+        title:
+          type: string
+          maxLength: 180
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        subtitle:
+          type: string
+          maxLength: 180
+        brandName:
+          type: string
+          maxLength: 120
+        categorySlug:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        collections:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductMedia'
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+    AdminUpdateProductRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 180
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        subtitle:
+          type: string
+          maxLength: 180
+        brandName:
+          type: string
+          maxLength: 120
+        categorySlug:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        collections:
+          type: array
+          items:
+            type: string
+            maxLength: 100
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductMedia'
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+    AdminCreateVariantRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - sku
+      - price
+      - attributes
+      - stockOnHand
+      properties:
+        sku:
+          type: string
+          maxLength: 64
+        price:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          $ref: '#/components/schemas/Money'
+        attributes:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ProductVariantAttribute'
+        stockOnHand:
+          type: integer
+          minimum: 0
+        weightGrams:
+          type: integer
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/VariantStatus'
+    AdminUpdateVariantRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        price:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          $ref: '#/components/schemas/Money'
+        weightGrams:
+          type: integer
+          minimum: 0
+        status:
+          $ref: '#/components/schemas/VariantStatus'
+    AdminProductResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Produk berhasil dibuat.
+        data:
+          type: object
+          additionalProperties: false
+          required:
+          - id
+          - slug
+          - title
+          - brandName
+          - categorySlug
+          - description
+          - status
+          properties:
+            id:
+              type: string
+              format: uuid
+            slug:
+              type: string
+            title:
+              type: string
+            subtitle:
+              type: string
+            brandName:
+              type: string
+            categorySlug:
+              type: string
+            description:
+              type: string
+            collections:
+              type: array
+              items:
+                type: string
+            media:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProductMedia'
+            status:
+              $ref: '#/components/schemas/ProductStatus'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    AdminVariantResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Variasi produk berhasil diperbarui.
+        data:
+          $ref: '#/components/schemas/ProductVariant'
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    StockAdjustmentRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - quantityDelta
+      - reasonCode
+      properties:
+        quantityDelta:
+          type: integer
+          minimum: -999999
+          maximum: 999999
+        reasonCode:
+          type: string
+          enum:
+          - INITIAL_STOCK
+          - MANUAL_CORRECTION
+          - DAMAGE
+          - LOST
+          - FOUND
+          - RETURN_RESTOCK
+        note:
+          type: string
+          maxLength: 500
+    StockAdjustmentResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      properties:
+        message:
+          type: string
+          example: Stok berhasil diperbarui.
+        data:
+          type: object
+          additionalProperties: false
+          required:
+          - variantId
+          - stockOnHand
+          - stockReserved
+          - stockAvailable
+          properties:
+            variantId:
+              type: string
+              format: uuid
+            stockOnHand:
+              type: integer
+            stockReserved:
+              type: integer
+            stockAvailable:
+              type: integer
+            lastAdjustmentId:
+              type: string
+              format: uuid
+        meta:
+          $ref: '#/components/schemas/ApiMeta'
+    CreateShipmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        note:
+          type: string
+          maxLength: 300
+      description: 'The selected shipping quote on the order is used by default.
+
+        This keeps shipment creation stable and avoids client-side provider coupling.
+
+        '
+    AdminCancelOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 300

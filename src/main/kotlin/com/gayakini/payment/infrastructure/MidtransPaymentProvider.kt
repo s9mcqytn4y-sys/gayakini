@@ -1,5 +1,6 @@
 package com.gayakini.payment.infrastructure
 
+import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.*
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -15,46 +16,42 @@ import java.util.*
 
 @Component
 class MidtransPaymentProvider(
-    @Value("\${midtrans.server-key}") private val serverKey: String,
-    @Value("\${midtrans.base-url}") private val baseUrl: String,
+    @Value("\${midtrans.server-key:sandbox-server-key}") private val serverKey: String,
+    @Value("\${midtrans.base-url:https://app.sandbox.midtrans.com/snap/v1/transactions}") private val baseUrl: String,
     private val restTemplate: RestTemplate,
 ) : PaymentProvider {
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
 
     override fun createPaymentSession(
         orderId: UUID,
+        providerOrderId: String,
         amount: Long,
         customerDetails: CustomerPaymentDetails,
-    ): PaymentSession {
-        val url = "\$baseUrl/snap/v1/transactions"
-
-        val requestBody =
-            mapOf(
-                "transaction_details" to
-                    mapOf(
-                        "order_id" to orderId.toString(),
-                        "gross_amount" to amount,
-                    ),
-                "customer_details" to
-                    mapOf(
-                        "first_name" to customerDetails.fullName,
-                        "email" to customerDetails.email,
-                        "phone" to customerDetails.phone,
-                    ),
-            )
+    ): com.gayakini.payment.domain.PaymentSession {
+        val requestBody = mapOf(
+            "transaction_details" to mapOf(
+                "order_id" to providerOrderId,
+                "gross_amount" to amount,
+            ),
+            "customer_details" to mapOf(
+                "first_name" to customerDetails.fullName,
+                "email" to customerDetails.email,
+                "phone" to customerDetails.phone,
+            ),
+        )
 
         val headers = createHeaders()
-        val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
+        val response = restTemplate.postForEntity(baseUrl, HttpEntity(requestBody, headers), Map::class.java)
 
         if (response.statusCode.is2xxSuccessful) {
             val body = response.body as Map<*, *>
-            return PaymentSession(
+            return com.gayakini.payment.domain.PaymentSession(
                 token = body["token"] as String,
                 redirectUrl = body["redirect_url"] as String,
-                externalId = orderId.toString(),
+                providerOrderId = providerOrderId,
             )
         } else {
-            logger.error("Gagal membuat sesi pembayaran Midtrans: \${response.statusCode} - \${response.body}")
+            logger.error("Gagal membuat sesi pembayaran Midtrans: {} - {}", response.statusCode, response.body)
             throw IllegalStateException("Gagal membuat sesi pembayaran. Silakan coba lagi.")
         }
     }
@@ -72,12 +69,12 @@ class MidtransPaymentProvider(
         return calculatedSignature.equals(signature, ignoreCase = true)
     }
 
-    override fun getPaymentStatus(externalId: String): PaymentStatus {
-        val url = "\$baseUrl/v2/\$externalId/status"
+    override fun getPaymentStatus(providerOrderId: String): PaymentStatus {
+        val statusUrl = baseUrl.replace("/snap/v1/transactions", "/v2/$providerOrderId/status")
 
         val headers = createHeaders()
         return try {
-            val response = restTemplate.exchange(url, HttpMethod.GET, HttpEntity<Any>(headers), Map::class.java)
+            val response = restTemplate.exchange(statusUrl, HttpMethod.GET, HttpEntity<Any>(headers), Map::class.java)
             if (response.statusCode.is2xxSuccessful) {
                 val body = response.body as Map<*, *>
                 mapStatus(body["transaction_status"] as String)
@@ -85,26 +82,26 @@ class MidtransPaymentProvider(
                 PaymentStatus.PENDING
             }
         } catch (e: Exception) {
-            logger.error("Gagal mengambil status pembayaran dari Midtrans: \${e.message}")
+            logger.error("Gagal mengambil status pembayaran dari Midtrans: {}", e.message)
             PaymentStatus.PENDING
         }
     }
 
     private fun createHeaders(): HttpHeaders {
-        return HttpHeaders().apply {
-            contentType = MediaType.APPLICATION_JSON
-            setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
-        }
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.APPLICATION_JSON
+        headers.setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
+        return headers
     }
 
     private fun mapStatus(midtransStatus: String): PaymentStatus {
         return when (midtransStatus) {
-            "capture", "settlement" -> PaymentStatus.SETTLED
+            "capture", "settlement" -> PaymentStatus.PAID
             "pending" -> PaymentStatus.PENDING
             "deny", "cancel" -> PaymentStatus.CANCELLED
             "expire" -> PaymentStatus.EXPIRED
             "refund" -> PaymentStatus.REFUNDED
-            else -> PaymentStatus.PENDING
+            else -> PaymentStatus.FAILED
         }
     }
 
