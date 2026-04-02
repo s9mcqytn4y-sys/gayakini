@@ -1,16 +1,13 @@
 package com.gayakini.webhook.api
 
-import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.WebhookAckData
-import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
+import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
-import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/webhooks", "/v1/webhooks")
+@RequestMapping("/v1/webhooks")
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
@@ -19,33 +16,44 @@ class WebhookController(
 
     @PostMapping("/midtrans")
     fun handleMidtransWebhook(
-        @RequestBody payload: Map<String, Any>,
+        @Valid @RequestBody payload: MidtransWebhookPayload,
         @RequestHeader("X-Callback-Signature", required = false) signature: String?,
     ): WebhookAckResponse {
-        logger.info("Menerima webhook Midtrans: {}", payload)
+        logger.info("Menerima webhook Midtrans untuk Order: {}", payload.orderId)
 
-        val signatureKey = payload["signature_key"] as? String ?: signature ?: ""
-        paymentService.processMidtransWebhook(payload, signatureKey)
+        // Midtrans typically uses signature_key in payload
+        val signatureKey = payload.signatureKey
 
-        return WebhookAckResponse(
-            message = "Webhook berhasil diterima.",
-            data = WebhookAckData(accepted = true),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+        // Convert to map for existing service compatibility
+        val payloadMap = mutableMapOf<String, Any>(
+            "order_id" to payload.orderId,
+            "status_code" to payload.statusCode,
+            "transaction_status" to payload.transactionStatus,
+            "gross_amount" to payload.grossAmount,
+            "signature_key" to payload.signatureKey,
+            "transaction_id" to (payload.transactionId ?: "")
         )
+
+        paymentService.processMidtransWebhook(payloadMap, signatureKey)
+
+        return WebhookAckResponse()
     }
 
     @PostMapping("/biteship")
     fun handleBiteshipWebhook(
-        @RequestBody payload: Map<String, Any>,
+        @Valid @RequestBody payload: BiteshipWebhookPayload,
     ): WebhookAckResponse {
-        logger.info("Menerima webhook Biteship: {}", payload)
+        logger.info("Menerima webhook Biteship Event: {} untuk Order: {}", payload.event, payload.orderId)
 
-        shippingService.processBiteshipWebhook(payload)
-
-        return WebhookAckResponse(
-            message = "Webhook berhasil diterima.",
-            data = WebhookAckData(accepted = true),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+        val payloadMap = mutableMapOf<String, Any>(
+            "event" to payload.event,
+            "id" to payload.id
         )
+        payload.orderId?.let { payloadMap["order_id"] = it }
+        payload.status?.let { payloadMap["status"] = it }
+
+        shippingService.processBiteshipWebhook(payloadMap)
+
+        return WebhookAckResponse()
     }
 }

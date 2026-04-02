@@ -1,6 +1,7 @@
 package com.gayakini.checkout.api
 
 import com.gayakini.cart.api.CartItemDto
+import com.gayakini.cart.api.ProductVariantAttributeDto
 import com.gayakini.checkout.application.CheckoutService
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
@@ -19,9 +20,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @Valid @RequestBody request: CreateCheckoutRequest,
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
     ): CheckoutResponse {
-        // Extract customerId from SecurityContext if authenticated, otherwise use guest flow
         val checkout = checkoutService.createCheckout(request.cartId, null, cartToken)
-
         return mapToResponse(checkout, "Checkout berhasil dibuat.")
     }
 
@@ -77,7 +76,10 @@ class CheckoutController(private val checkoutService: CheckoutService) {
                         productTitle = item.productTitleSnapshot,
                         variantId = item.variant.id,
                         sku = item.skuSnapshot,
-                        attributes = listOf(), // TODO: Map attributes
+                        attributes = listOf(
+                            ProductVariantAttributeDto(name = "color", value = item.color),
+                            ProductVariantAttributeDto(name = "size", value = item.sizeCode)
+                        ),
                         quantity = item.quantity,
                         unitPrice = MoneyDto(amount = item.unitPriceAmount),
                         compareAtPrice = item.compareAtAmount?.let { MoneyDto(amount = it) },
@@ -89,9 +91,54 @@ class CheckoutController(private val checkoutService: CheckoutService) {
                 shippingCost = MoneyDto(amount = checkout.shippingCostAmount),
                 total = MoneyDto(amount = checkout.totalAmount),
                 expiresAt = checkout.expiresAt,
-                shippingAddress = null, // TODO: Map address
-                selectedShippingQuote = null, // TODO: Map selected quote
-                availableShippingQuotes = listOf() // TODO: Map quotes
+                shippingAddress = checkout.shippingAddress?.let { addr ->
+                    CheckoutAddressDto(
+                        id = addr.customerAddressId,
+                        recipientName = addr.recipientName,
+                        phone = addr.phone,
+                        line1 = addr.line1,
+                        line2 = addr.line2,
+                        notes = addr.notes,
+                        areaId = addr.areaId,
+                        district = addr.district,
+                        city = addr.city,
+                        province = addr.province,
+                        postalCode = addr.postalCode,
+                        countryCode = addr.countryCode
+                    )
+                },
+                selectedShippingQuote = checkout.availableShippingQuotes.find { it.id == checkout.selectedShippingQuoteId }?.let { quote ->
+                    ShippingQuoteDto(
+                        quoteId = quote.id,
+                        provider = quote.provider,
+                        providerReference = quote.providerReference,
+                        courierCode = quote.courierCode,
+                        courierName = quote.courierName,
+                        serviceCode = quote.serviceCode,
+                        serviceName = quote.serviceName,
+                        description = quote.description,
+                        cost = MoneyDto(amount = quote.costAmount),
+                        estimatedDaysMin = quote.estimatedDaysMin,
+                        estimatedDaysMax = quote.estimatedDaysMax,
+                        isRecommended = quote.isRecommended
+                    )
+                },
+                availableShippingQuotes = checkout.availableShippingQuotes.map { quote ->
+                    ShippingQuoteDto(
+                        quoteId = quote.id,
+                        provider = quote.provider,
+                        providerReference = quote.providerReference,
+                        courierCode = quote.courierCode,
+                        courierName = quote.courierName,
+                        serviceCode = quote.serviceCode,
+                        serviceName = quote.serviceName,
+                        description = quote.description,
+                        cost = MoneyDto(amount = quote.costAmount),
+                        estimatedDaysMin = quote.estimatedDaysMin,
+                        estimatedDaysMax = quote.estimatedDaysMax,
+                        isRecommended = quote.isRecommended
+                    )
+                }
             ),
             meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
