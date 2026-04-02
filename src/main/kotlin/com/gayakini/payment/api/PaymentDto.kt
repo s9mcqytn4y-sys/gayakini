@@ -1,5 +1,6 @@
 package com.gayakini.payment.api
 
+import com.gayakini.common.api.ApiMeta
 import com.gayakini.order.domain.PaymentStatus
 import java.time.Instant
 import java.util.UUID
@@ -11,7 +12,7 @@ data class CreatePaymentRequest(
     val enabledChannels: List<String>? = null,
 )
 
-data class PaymentSessionResponse(
+data class PaymentSessionDto(
     val paymentId: UUID,
     val provider: String,
     val flow: String,

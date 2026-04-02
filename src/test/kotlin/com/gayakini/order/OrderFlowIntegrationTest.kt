@@ -9,11 +9,7 @@ import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductRepository
 import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.ProductVariantRepository
-import com.gayakini.checkout.domain.Checkout
-import com.gayakini.checkout.domain.CheckoutItem
-import com.gayakini.checkout.domain.CheckoutRepository
-import com.gayakini.checkout.domain.CheckoutShippingAddress
-import com.gayakini.checkout.domain.CheckoutStatus
+import com.gayakini.checkout.domain.*
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.order.api.PlaceOrderRequest
@@ -58,6 +54,9 @@ class OrderFlowIntegrationTest {
     @Autowired
     private lateinit var orderRepository: OrderRepository
 
+    @Autowired
+    private lateinit var quoteRepository: CheckoutShippingQuoteRepository
+
     private lateinit var testProduct: Product
     private lateinit var testVariant: ProductVariant
     private lateinit var testCart: Cart
@@ -68,80 +67,74 @@ class OrderFlowIntegrationTest {
 
     @BeforeEach
     fun setup() {
-        testProduct =
-            Product(
-                id = UuidV7Generator.generate(),
-                slug = "test-product-${UUID.randomUUID()}",
-                title = "Test Product",
-                subtitle = "Subtitle",
-                brandName = "Brand",
-                categoryId = null,
-                description = "Desc",
-            )
+        testProduct = Product(
+            id = UuidV7Generator.generate(),
+            slug = "test-product-${UUID.randomUUID()}",
+            title = "Test Product",
+            subtitle = "Subtitle",
+            brandName = "Brand",
+            category = null,
+            description = "Desc",
+        )
         productRepository.save(testProduct)
 
-        testVariant =
-            ProductVariant(
-                id = UuidV7Generator.generate(),
-                product = testProduct,
-                sku = "SKU-${UUID.randomUUID()}",
-                color = "Black",
-                sizeCode = "M",
-                priceAmount = 50000,
-                weightGrams = 100,
-                stockOnHand = 10,
-            )
+        testVariant = ProductVariant(
+            id = UuidV7Generator.generate(),
+            product = testProduct,
+            sku = "SKU-${UUID.randomUUID()}",
+            color = "Black",
+            sizeCode = "M",
+            priceAmount = 50000,
+            weightGrams = 100,
+            stockOnHand = 10,
+        )
         variantRepository.save(testVariant)
 
-        testCart =
-            Cart(
-                id = UuidV7Generator.generate(),
-                customerId = null,
-                accessTokenHash = guestTokenHash,
-                status = CartStatus.ACTIVE,
-            )
-        val cartItem =
-            CartItem(
-                id = UuidV7Generator.generate(),
-                cart = testCart,
-                product = testProduct,
-                variant = testVariant,
-                productTitleSnapshot = testProduct.title,
-                skuSnapshot = testVariant.sku,
-                color = testVariant.color,
-                sizeCode = testVariant.sizeCode,
-                quantity = 2,
-                unitPriceAmount = testVariant.priceAmount,
-            )
+        testCart = Cart(
+            id = UuidV7Generator.generate(),
+            customerId = null,
+            accessTokenHash = guestTokenHash,
+            status = CartStatus.ACTIVE,
+        )
+        val cartItem = CartItem(
+            id = UuidV7Generator.generate(),
+            cart = testCart,
+            product = testProduct,
+            variant = testVariant,
+            productTitleSnapshot = testProduct.title,
+            skuSnapshot = testVariant.sku,
+            color = testVariant.color,
+            sizeCode = testVariant.sizeCode,
+            quantity = 2,
+            unitPriceAmount = testVariant.priceAmount,
+        )
         testCart.items.add(cartItem)
         cartRepository.save(testCart)
 
-        testCheckout =
-            Checkout(
-                id = UuidV7Generator.generate(),
-                cart = testCart,
-                customerId = null,
-                status = CheckoutStatus.READY_FOR_ORDER,
-                accessTokenHash = guestTokenHash,
-                subtotalAmount = 100000,
-                shippingCostAmount = 10000,
-                expiresAt = null,
-            )
-        val address =
-            CheckoutShippingAddress(
-                checkoutId = testCheckout.id,
-                checkout = testCheckout,
-                recipientName = "John Doe",
-                phone = "08123456789",
-                line1 = "Jl. Sudirman No. 1",
-                line2 = null,
-                notes = null,
-                areaId = "AREA1",
-                district = "Jakarta Selatan",
-                city = "Jakarta",
-                province = "DKI Jakarta",
-                postalCode = "12345",
-            )
+        testCheckout = Checkout(
+            id = UuidV7Generator.generate(),
+            cart = testCart,
+            customerId = null,
+            status = CheckoutStatus.READY_FOR_ORDER,
+            accessTokenHash = guestTokenHash,
+            subtotalAmount = 100000,
+            shipping_cost_amount = 10000,
+            expiresAt = null,
+        )
+        val address = CheckoutShippingAddress(
+            checkoutId = testCheckout.id,
+            checkout = testCheckout,
+            recipientName = "John Doe",
+            phone = "08123456789",
+            line1 = "Jl. Sudirman No. 1",
+            line2 = null,
+            notes = null,
+            areaId = "AREA1",
+            district = "Jakarta Selatan",
+            city = "Jakarta",
+            province = "DKI Jakarta",
+            postalCode = "12345",
+        )
         testCheckout.shippingAddress = address
         testCheckout.items.add(
             CheckoutItem(
@@ -157,6 +150,26 @@ class OrderFlowIntegrationTest {
                 unitPriceAmount = testVariant.priceAmount,
             ),
         )
+
+        val quote = CheckoutShippingQuote(
+            id = UuidV7Generator.generate(),
+            checkout = testCheckout,
+            provider = "BITESHIP",
+            providerReference = "REF1",
+            courierCode = "jne",
+            courierName = "JNE",
+            serviceCode = "reg",
+            serviceName = "Reguler",
+            description = null,
+            costAmount = 10000,
+            estimatedDaysMin = 1,
+            estimatedDaysMax = 2,
+            rawPayload = null,
+            expiresAt = null
+        )
+        testCheckout.availableShippingQuotes.add(quote)
+        testCheckout.selectedShippingQuoteId = quote.id
+
         checkoutRepository.save(testCheckout)
     }
 
@@ -166,24 +179,25 @@ class OrderFlowIntegrationTest {
         val idempotencyKey = UUID.randomUUID().toString()
 
         mockMvc.perform(
-            post("/api/v1/checkouts/{checkoutId}/orders", testCheckout.id)
+            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
                 .header("Idempotency-Key", idempotencyKey)
                 .header("X-Checkout-Token", guestTokenRaw)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)),
         )
             .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.success").value(true))
+            .andExpect(jsonPath("$.message").value("Pesanan berhasil dibuat."))
             .andExpect(jsonPath("$.data.subtotal.amount").value(100000))
             .andExpect(jsonPath("$.data.total.amount").value(110000))
+            .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
 
         val variantAfter = variantRepository.findById(testVariant.id).get()
         assert(variantAfter.stockAvailable == 8)
+        assert(variantAfter.stockReserved == 2)
     }
 
     @Test
     fun `should reject order when stock is insufficient`() {
-        // We set stockOnHand to 1, but we need 2. So it should fail with 409.
         testVariant.stockOnHand = 1
         variantRepository.save(testVariant)
 
@@ -191,13 +205,14 @@ class OrderFlowIntegrationTest {
         val idempotencyKey = UUID.randomUUID().toString()
 
         mockMvc.perform(
-            post("/api/v1/checkouts/{checkoutId}/orders", testCheckout.id)
+            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
                 .header("Idempotency-Key", idempotencyKey)
                 .header("X-Checkout-Token", guestTokenRaw)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)),
         )
             .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.userMessage").exists())
     }
 
     @Test
@@ -206,7 +221,7 @@ class OrderFlowIntegrationTest {
         val request = PlaceOrderRequest()
 
         mockMvc.perform(
-            post("/api/v1/checkouts/{checkoutId}/orders", testCheckout.id)
+            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
                 .header("Idempotency-Key", key)
                 .header("X-Checkout-Token", guestTokenRaw)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -215,7 +230,7 @@ class OrderFlowIntegrationTest {
             .andExpect(status().isCreated)
 
         mockMvc.perform(
-            post("/api/v1/checkouts/{checkoutId}/orders", testCheckout.id)
+            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
                 .header("Idempotency-Key", key)
                 .header("X-Checkout-Token", guestTokenRaw)
                 .contentType(MediaType.APPLICATION_JSON)

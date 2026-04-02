@@ -1,21 +1,17 @@
 package com.gayakini.payment.api
 
-import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.StandardResponse
 import com.gayakini.payment.application.PaymentService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
 @RequestMapping("/v1/orders")
 class PaymentController(private val paymentService: PaymentService) {
+
     @PostMapping("/{orderId}/payments")
     @ResponseStatus(HttpStatus.CREATED)
     fun createOrderPayment(
@@ -23,24 +19,24 @@ class PaymentController(private val paymentService: PaymentService) {
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
         @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
         @Valid @RequestBody(required = false) request: CreatePaymentRequest?,
-    ): ApiResponse<PaymentSessionResponse> {
+    ): StandardResponse<PaymentSessionDto> {
         val payment = paymentService.createPaymentSession(orderId, idempotencyKey, orderToken, request)
 
-        return ApiResponse.success(
+        return StandardResponse(
             message = "Pembayaran siap dilanjutkan.",
-            data =
-                PaymentSessionResponse(
-                    paymentId = payment.id,
-                    provider = payment.provider,
-                    flow = payment.flow,
-                    status = payment.status,
-                    providerOrderId = payment.providerOrderId,
-                    providerTransactionId = payment.providerTransactionId,
-                    preferredChannel = payment.preferredChannel,
-                    snapToken = payment.snapToken,
-                    snapRedirectUrl = payment.snapRedirectUrl,
-                    expiresAt = payment.expiresAt,
-                ),
+            data = PaymentSessionDto(
+                paymentId = payment.id,
+                provider = payment.provider,
+                flow = payment.flow,
+                status = payment.status,
+                providerOrderId = payment.providerOrderId,
+                providerTransactionId = payment.providerTransactionId,
+                preferredChannel = payment.preferredChannel,
+                snapToken = payment.snapToken,
+                snapRedirectUrl = payment.snapRedirectUrl,
+                expiresAt = payment.expiresAt,
+            ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
     }
 }

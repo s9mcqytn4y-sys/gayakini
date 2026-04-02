@@ -1,27 +1,48 @@
 {
   "mcpServers": {
-    "github": {
-      "command": "npx",
+    "gayakini-filesystem": {
+      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
-      }
-    },
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@context7/mcp-server"
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Software\\gayakini\\tooling\\mcp\\start-filesystem.ps1"
       ]
     },
-    "openai-docs": {
-      "command": "npx",
+    "gayakini-git": {
+      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-openai"
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Software\\gayakini\\tooling\\mcp\\start-git.ps1"
+      ]
+    },
+    "gayakini-postgres": {
+      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Software\\gayakini\\tooling\\mcp\\start-postgres.ps1"
+      ]
+    },
+    "gayakini-github": {
+      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Software\\gayakini\\tooling\\mcp\\start-github.ps1"
+      ]
+    },
+    "gayakini-terminal": {
+      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:\\Software\\gayakini\\tooling\\mcp\\start-terminal.ps1"
       ]
     }
   }

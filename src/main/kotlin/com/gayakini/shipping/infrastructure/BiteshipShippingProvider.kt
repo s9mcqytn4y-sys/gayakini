@@ -1,14 +1,8 @@
 package com.gayakini.shipping.infrastructure
 
-import com.gayakini.shipping.domain.ContactInfo
-import com.gayakini.shipping.domain.ShipmentBooking
-import com.gayakini.shipping.domain.ShipmentTracking
-import com.gayakini.shipping.domain.ShippingItem
-import com.gayakini.shipping.domain.ShippingProvider
-import com.gayakini.shipping.domain.ShippingRate
-import com.gayakini.shipping.domain.TrackingEvent
+import com.gayakini.infrastructure.config.GayakiniProperties
+import com.gayakini.shipping.domain.*
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -17,8 +11,7 @@ import org.springframework.web.client.RestTemplate
 
 @Component
 class BiteshipShippingProvider(
-    @Value("\${biteship.api-key}") private val apiKey: String,
-    @Value("\${biteship.base-url}") private val baseUrl: String,
+    private val properties: GayakiniProperties,
     private val restTemplate: RestTemplate,
 ) : ShippingProvider {
     private val logger = LoggerFactory.getLogger(BiteshipShippingProvider::class.java)
@@ -28,7 +21,7 @@ class BiteshipShippingProvider(
         destination: String,
         items: List<ShippingItem>,
     ): List<ShippingRate> {
-        val url = "$baseUrl/v1/rates/couriers"
+        val url = "${properties.biteship.apiUrl}/rates/couriers"
 
         val requestBody =
             mapOf(
@@ -46,11 +39,7 @@ class BiteshipShippingProvider(
                     },
             )
 
-        val headers =
-            HttpHeaders().apply {
-                contentType = MediaType.APPLICATION_JSON
-                set("Authorization", "Bearer $apiKey")
-            }
+        val headers = createHeaders()
 
         return try {
             val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
@@ -60,10 +49,14 @@ class BiteshipShippingProvider(
                 pricing.map {
                     ShippingRate(
                         id = it["company"].toString() + "_" + it["type"].toString(),
+                        courierCode = it["company"].toString(),
                         courierName = it["courier_name"].toString(),
-                        courierService = it["courier_service_name"].toString(),
-                        costIdr = (it["price"] as Number).toLong(),
-                        estimatedDays = it["duration"].toString(),
+                        serviceCode = it["type"].toString(),
+                        serviceName = it["courier_service_name"].toString(),
+                        description = it["description"]?.toString(),
+                        price = (it["price"] as Number).toLong(),
+                        minDuration = parseDuration(it["duration"]?.toString(), true),
+                        maxDuration = parseDuration(it["duration"]?.toString(), false)
                     )
                 }
             } else {
@@ -75,6 +68,12 @@ class BiteshipShippingProvider(
         }
     }
 
+    private fun parseDuration(duration: String?, isMin: Boolean): Int? {
+        if (duration == null) return null
+        val parts = duration.split("-").map { it.trim().filter { c -> c.isDigit() }.toIntOrNull() }
+        return if (isMin) parts.firstOrNull() else parts.lastOrNull()
+    }
+
     override fun createShipment(
         orderId: String,
         rateId: String,
@@ -82,10 +81,8 @@ class BiteshipShippingProvider(
         receiver: ContactInfo,
         items: List<ShippingItem>,
     ): ShipmentBooking {
-        val url = "$baseUrl/v1/orders"
+        val url = "${properties.biteship.apiUrl}/orders"
 
-        // rateId in internal model is courier_service_code
-        // This is a simplified mapping for MVP
         val requestBody =
             mapOf(
                 "shipper_contact_name" to sender.fullName,
@@ -116,11 +113,7 @@ class BiteshipShippingProvider(
                     },
             )
 
-        val headers =
-            HttpHeaders().apply {
-                contentType = MediaType.APPLICATION_JSON
-                set("Authorization", "Bearer $apiKey")
-            }
+        val headers = createHeaders()
 
         return try {
             val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
@@ -142,12 +135,9 @@ class BiteshipShippingProvider(
     }
 
     override fun trackShipment(waybillId: String): ShipmentTracking {
-        val url = "$baseUrl/v1/trackings/$waybillId"
+        val url = "${properties.biteship.apiUrl}/trackings/$waybillId"
 
-        val headers =
-            HttpHeaders().apply {
-                set("Authorization", "Bearer $apiKey")
-            }
+        val headers = createHeaders()
 
         return try {
             val response = restTemplate.getForEntity(url, Map::class.java, headers)
@@ -173,5 +163,12 @@ class BiteshipShippingProvider(
             logger.error("Gagal melacak pengiriman Biteship", e)
             throw e
         }
+    }
+
+    private fun createHeaders(): HttpHeaders {
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.APPLICATION_JSON
+        headers.set("Authorization", "Bearer ${properties.biteship.apiKey}")
+        return headers
     }
 }

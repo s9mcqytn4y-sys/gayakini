@@ -13,3 +13,7 @@ interface CheckoutRepository : JpaRepository<Checkout, UUID> {
 interface CheckoutItemRepository : JpaRepository<CheckoutItem, UUID> {
     fun findByCheckoutId(checkoutId: UUID): List<CheckoutItem>
 }
+
+interface CheckoutShippingQuoteRepository : JpaRepository<CheckoutShippingQuote, UUID> {
+    fun deleteAllByCheckoutId(checkoutId: UUID)
+}

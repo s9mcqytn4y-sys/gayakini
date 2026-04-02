@@ -27,10 +27,14 @@ data class ShippingItem(
 
 data class ShippingRate(
     val id: String,
+    val courierCode: String,
     val courierName: String,
-    val courierService: String,
-    val costIdr: Long,
-    val estimatedDays: String,
+    val serviceCode: String,
+    val serviceName: String,
+    val description: String?,
+    val price: Long,
+    val minDuration: Int?,
+    val maxDuration: Int?,
 )
 
 data class ContactInfo(

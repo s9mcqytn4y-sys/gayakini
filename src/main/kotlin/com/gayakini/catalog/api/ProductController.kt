@@ -3,18 +3,16 @@ package com.gayakini.catalog.api
 import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
-import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.ApiResponse
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import com.gayakini.catalog.domain.PublicProductSummary
+import com.gayakini.catalog.domain.VariantStatus
+import com.gayakini.common.api.*
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("/v1/products")
 class ProductController(private val productService: ProductService) {
+
     @GetMapping
     fun listProducts(
         @RequestParam(defaultValue = "1") page: Int,
@@ -28,86 +26,113 @@ class ProductController(private val productService: ProductService) {
         @RequestParam(required = false) minPrice: Long?,
         @RequestParam(required = false) maxPrice: Long?,
         @RequestParam(required = false) inStock: Boolean?,
-    ): ApiResponse<List<ProductSummaryResponse>> {
-        val products = productService.listProducts()
+    ): PaginatedResponse<ProductSummaryDto> {
+        val resultPage = productService.searchProducts(
+            page, size, sort, q, categorySlug, collectionSlug, color, sizeCode, minPrice, maxPrice, inStock
+        )
 
-        return ApiResponse.success(
+        return PaginatedResponse(
             message = "Daftar produk berhasil diambil.",
-            data = products.map { mapToSummary(it) },
-            meta = ApiMeta(page = page, size = size, totalElements = products.size.toLong(), totalPages = 1),
+            data = resultPage.content.map { mapToSummary(it) },
+            meta = PageMeta(
+                page = page,
+                size = size,
+                totalElements = resultPage.totalElements,
+                totalPages = resultPage.totalPages,
+                requestId = UUID.randomUUID().toString()
+            ),
         )
     }
 
     @GetMapping("/{productId}")
     fun getProductById(
         @PathVariable productId: UUID,
-    ): ApiResponse<ProductDetailData> {
+    ): StandardResponse<ProductDetailDto> {
         val product = productService.getProduct(productId)
 
-        return ApiResponse.success(
+        return StandardResponse(
             message = "Detail produk berhasil diambil.",
             data = mapToDetail(product),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
     }
 
-    private fun mapToSummary(product: Product): ProductSummaryResponse {
-        return ProductSummaryResponse(
+    @GetMapping("/{productId}/variants")
+    fun listProductVariants(
+        @PathVariable productId: UUID,
+    ): StandardResponse<List<ProductVariantDto>> {
+        val product = productService.getProduct(productId)
+
+        return StandardResponse(
+            message = "Variasi produk berhasil diambil.",
+            data = product.variants.map { mapToVariantDto(it) },
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+        )
+    }
+
+    private fun mapToSummary(summary: PublicProductSummary): ProductSummaryDto {
+        return ProductSummaryDto(
+            id = summary.id,
+            slug = summary.slug,
+            title = summary.title,
+            subtitle = summary.subtitle,
+            brandName = summary.brandName,
+            categorySlug = summary.categorySlug,
+            primaryImageUrl = summary.primaryImageUrl,
+            priceRange = PriceRangeDto(
+                min = MoneyDto(amount = summary.minPriceAmount),
+                max = MoneyDto(amount = summary.maxPriceAmount),
+            ),
+            inStock = summary.inStock,
+        )
+    }
+
+    private fun mapToDetail(product: Product): ProductDetailDto {
+        val activeVariants = product.variants.filter { it.status == VariantStatus.ACTIVE }
+        return ProductDetailDto(
             id = product.id,
             slug = product.slug,
             title = product.title,
             subtitle = product.subtitle,
             brandName = product.brandName,
-            categorySlug = "todo", // Logic to fetch slug from category entity
-            primaryImageUrl = null, // TODO: Fetch from ProductMedia
-            priceRange =
-                PriceRangeResponse(
-                    min = MoneyResponse(amount = 0), // TODO: Calculate from variants
-                    max = MoneyResponse(amount = 0),
-                ),
-            inStock = true, // TODO: Check variants available stock
-        )
-    }
-
-    private fun mapToDetail(product: Product): ProductDetailData {
-        return ProductDetailData(
-            id = product.id,
-            slug = product.slug,
-            title = product.title,
-            subtitle = product.subtitle,
-            brandName = product.brandName,
-            categorySlug = "todo",
-            primaryImageUrl = null,
-            priceRange =
-                PriceRangeResponse(
-                    min = MoneyResponse(amount = 0),
-                    max = MoneyResponse(amount = 0),
-                ),
-            inStock = true,
+            categorySlug = product.category?.slug ?: "unknown",
+            primaryImageUrl = product.media.firstOrNull { it.isPrimary }?.url ?: product.media.firstOrNull()?.url,
+            priceRange = PriceRangeDto(
+                min = MoneyDto(amount = activeVariants.minOfOrNull { it.priceAmount } ?: 0),
+                max = MoneyDto(amount = activeVariants.maxOfOrNull { it.priceAmount } ?: 0),
+            ),
+            inStock = activeVariants.any { it.stockAvailable > 0 },
             description = product.description,
-            collections = listOf(),
-            media = listOf(),
-            variants = listOf(), // TODO: Map variants using mapToVariantResponse
+            collections = listOf(), // TODO: Map collections relationship if available in Product entity
+            media = product.media.map {
+                ProductMediaDto(
+                    id = it.id,
+                    url = it.url,
+                    altText = it.altText,
+                    sortOrder = it.sortOrder,
+                    isPrimary = it.isPrimary
+                )
+            },
+            variants = product.variants.map { mapToVariantDto(it) },
         )
     }
 
-    private fun mapToVariantResponse(variant: ProductVariant): ProductVariantResponse {
-        return ProductVariantResponse(
+    private fun mapToVariantDto(variant: ProductVariant): ProductVariantDto {
+        return ProductVariantDto(
             id = variant.id,
             sku = variant.sku,
             status = variant.status,
-            price = MoneyResponse(amount = variant.priceAmount),
-            compareAtPrice = variant.compareAtAmount?.let { MoneyResponse(amount = it) },
-            inventory =
-                InventorySummaryResponse(
-                    stockOnHand = variant.stockOnHand,
-                    stockReserved = variant.stockReserved,
-                    stockAvailable = variant.stockAvailable,
-                ),
-            attributes =
-                listOf(
-                    ProductVariantAttributeResponse(name = "color", value = variant.color),
-                    ProductVariantAttributeResponse(name = "size", value = variant.sizeCode),
-                ),
+            price = MoneyDto(amount = variant.priceAmount),
+            compareAtPrice = variant.compareAtAmount?.let { MoneyDto(amount = it) },
+            inventory = InventorySummaryDto(
+                stockOnHand = variant.stockOnHand,
+                stockReserved = variant.stockReserved,
+                stockAvailable = variant.stockAvailable,
+            ),
+            attributes = listOf(
+                ProductVariantAttributeDto(name = "color", value = variant.color),
+                ProductVariantAttributeDto(name = "size", value = variant.sizeCode),
+            ),
             weightGrams = variant.weightGrams,
             primaryImageUrl = null,
         )

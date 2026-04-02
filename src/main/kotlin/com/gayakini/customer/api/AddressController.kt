@@ -1,6 +1,6 @@
 package com.gayakini.customer.api
 
-import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.StandardResponse
 import com.gayakini.customer.application.CustomerService
 import com.gayakini.infrastructure.security.SecurityUtils
 import jakarta.validation.Valid
@@ -16,11 +16,11 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/v1/me/addresses")
 class AddressController(private val customerService: CustomerService) {
     @GetMapping
-    fun listMyAddresses(): ApiResponse<List<AddressResponse>> {
+    fun listMyAddresses(): StandardResponse<List<AddressResponse>> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
         val addresses = customerService.getAddresses(currentUser.id)
 
-        return ApiResponse.success(
+        return StandardResponse(
             message = "Daftar alamat berhasil diambil.",
             data = addresses.map { mapToResponse(it) },
         )
@@ -30,12 +30,12 @@ class AddressController(private val customerService: CustomerService) {
     @ResponseStatus(HttpStatus.CREATED)
     fun createAddress(
         @Valid @RequestBody request: AddressUpsertRequest,
-    ): ApiResponse<AddressResponse> {
+    ): StandardResponse<AddressResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw IllegalStateException("Unauthorized")
 
         val saved = customerService.upsertAddress(currentUser.id, request)
 
-        return ApiResponse.success(
+        return StandardResponse(
             message = "Alamat berhasil disimpan.",
             data = mapToResponse(saved),
         )

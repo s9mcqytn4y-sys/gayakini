@@ -1,14 +1,6 @@
 package com.gayakini.catalog.domain
 
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.Id
-import jakarta.persistence.PostLoad
-import jakarta.persistence.PostPersist
-import jakarta.persistence.Table
-import jakarta.persistence.Transient
+import jakarta.persistence.*
 import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
@@ -26,8 +18,11 @@ class Product(
     var subtitle: String?,
     @Column(name = "brand_name", nullable = false, length = 120)
     var brandName: String,
-    @Column(name = "category_id")
-    var categoryId: UUID?,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    var category: Category? = null,
+
     @Column(columnDefinition = "TEXT", nullable = false)
     var description: String,
     @Enumerated(EnumType.STRING)
@@ -37,6 +32,13 @@ class Product(
     var publishedAt: Instant? = null,
     @Column(name = "archived_at")
     var archivedAt: Instant? = null,
+
+    @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var variants: MutableList<ProductVariant> = mutableListOf(),
+
+    @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var media: MutableList<ProductMedia> = mutableListOf(),
+
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")

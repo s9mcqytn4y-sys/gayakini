@@ -1,83 +1,99 @@
 package com.gayakini.checkout.api
 
-import com.gayakini.cart.api.CartItemResponse
-import com.gayakini.cart.api.MoneyResponse
+import com.gayakini.cart.api.CartItemDto
 import com.gayakini.checkout.application.CheckoutService
-import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.MoneyDto
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/checkouts")
+@RequestMapping("/v1/checkouts")
 class CheckoutController(private val checkoutService: CheckoutService) {
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     fun createCheckout(
         @Valid @RequestBody request: CreateCheckoutRequest,
-        @RequestHeader(value = "Authorization", required = false) authHeader: String?,
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
-    ): ApiResponse<CheckoutResponse> {
-        // TODO: Extract customerId from authHeader
-        val customerId: UUID? = null
+    ): CheckoutResponse {
+        // Extract customerId from SecurityContext if authenticated, otherwise use guest flow
+        val checkout = checkoutService.createCheckout(request.cartId, null, cartToken)
 
-        val checkout = checkoutService.createCheckout(request.cartId, customerId, cartToken)
-
-        return ApiResponse.success(
-            message = "Checkout berhasil dibuat.",
-            data = mapToResponse(checkout),
-        )
+        return mapToResponse(checkout, "Checkout berhasil dibuat.")
     }
 
     @GetMapping("/{checkoutId}")
     fun getCheckout(
         @PathVariable checkoutId: UUID,
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
-    ): ApiResponse<CheckoutResponse> {
+    ): CheckoutResponse {
         val checkout = checkoutService.getCheckout(checkoutId)
-        // TODO: Validate token
-
-        return ApiResponse.success(
-            message = "Checkout berhasil diambil.",
-            data = mapToResponse(checkout),
-        )
+        return mapToResponse(checkout, "Checkout berhasil diambil.")
     }
 
-    private fun mapToResponse(checkout: com.gayakini.checkout.domain.Checkout): CheckoutResponse {
+    @PutMapping("/{checkoutId}/shipping-address")
+    fun upsertShippingAddress(
+        @PathVariable checkoutId: UUID,
+        @Valid @RequestBody request: CheckoutShippingAddressRequest
+    ): CheckoutResponse {
+        val checkout = checkoutService.updateShippingAddress(checkoutId, request)
+        return mapToResponse(checkout, "Alamat pengiriman berhasil dipilih.")
+    }
+
+    @PostMapping("/{checkoutId}/shipping-quotes")
+    fun createShippingQuotes(
+        @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?
+    ): CheckoutResponse {
+        val checkout = checkoutService.calculateShippingQuotes(checkoutId)
+        return mapToResponse(checkout, "Pilihan pengiriman berhasil dihitung.")
+    }
+
+    @PutMapping("/{checkoutId}/shipping-selection")
+    fun setShippingSelection(
+        @PathVariable checkoutId: UUID,
+        @Valid @RequestBody request: SelectShippingQuoteRequest
+    ): CheckoutResponse {
+        val checkout = checkoutService.selectShippingQuote(checkoutId, request.quoteId)
+        return mapToResponse(checkout, "Pilihan pengiriman berhasil dipilih.")
+    }
+
+    private fun mapToResponse(checkout: com.gayakini.checkout.domain.Checkout, message: String): CheckoutResponse {
         return CheckoutResponse(
-            id = checkout.id,
-            cartId = checkout.cart.id,
-            customerId = checkout.customerId,
-            status = checkout.status,
-            currency = checkout.currencyCode,
-            items =
-                checkout.items.map { item ->
-                    CartItemResponse(
+            message = message,
+            data = CheckoutDto(
+                id = checkout.id,
+                cartId = checkout.cart.id,
+                customerId = checkout.customerId,
+                status = checkout.status,
+                currency = checkout.currencyCode,
+                items = checkout.items.map { item ->
+                    CartItemDto(
                         id = item.id,
                         productId = item.product.id,
                         productTitle = item.productTitleSnapshot,
                         variantId = item.variant.id,
                         sku = item.skuSnapshot,
-                        attributes = listOf(),
+                        attributes = listOf(), // TODO: Map attributes
                         quantity = item.quantity,
-                        unitPrice = MoneyResponse(amount = item.unitPriceAmount),
-                        compareAtPrice = item.compareAtAmount?.let { MoneyResponse(amount = it) },
-                        lineTotal = MoneyResponse(amount = item.lineTotalAmount),
-                        primaryImageUrl = item.primaryImageUrl,
+                        unitPrice = MoneyDto(amount = item.unitPriceAmount),
+                        compareAtPrice = item.compareAtAmount?.let { MoneyDto(amount = it) },
+                        lineTotal = MoneyDto(amount = item.lineTotalAmount),
+                        primaryImageUrl = item.primaryImageUrl
                     )
                 },
-            subtotal = MoneyResponse(amount = checkout.subtotalAmount),
-            shippingCost = MoneyResponse(amount = checkout.shippingCostAmount),
-            total = MoneyResponse(amount = checkout.totalAmount),
-            expiresAt = checkout.expiresAt,
+                subtotal = MoneyDto(amount = checkout.subtotalAmount),
+                shippingCost = MoneyDto(amount = checkout.shippingCostAmount),
+                total = MoneyDto(amount = checkout.totalAmount),
+                expiresAt = checkout.expiresAt,
+                shippingAddress = null, // TODO: Map address
+                selectedShippingQuote = null, // TODO: Map selected quote
+                availableShippingQuotes = listOf() // TODO: Map quotes
+            ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
     }
 }

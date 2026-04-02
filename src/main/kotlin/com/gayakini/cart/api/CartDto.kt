@@ -1,6 +1,8 @@
 package com.gayakini.cart.api
 
 import com.gayakini.cart.domain.CartStatus
+import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.MoneyDto
 import java.time.Instant
 import java.util.UUID
 
@@ -17,42 +19,43 @@ data class UpdateCartItemRequest(
     val quantity: Int,
 )
 
-data class CartResponse(
+data class CartDto(
     val id: UUID,
     val customerId: UUID?,
     val status: CartStatus,
     val currency: String,
     val accessToken: String? = null,
     val expiresAt: Instant?,
-    val items: List<CartItemResponse>,
-    val summary: CartSummaryResponse,
+    val items: List<CartItemDto>,
+    val summary: CartSummaryDto,
 )
 
-data class CartItemResponse(
+data class CartItemDto(
     val id: UUID,
     val productId: UUID,
     val productTitle: String,
     val variantId: UUID,
     val sku: String,
-    val attributes: List<ProductVariantAttributeResponse>,
+    val attributes: List<ProductVariantAttributeDto>,
     val quantity: Int,
-    val unitPrice: MoneyResponse,
-    val compareAtPrice: MoneyResponse? = null,
-    val lineTotal: MoneyResponse,
+    val unitPrice: MoneyDto,
+    val compareAtPrice: MoneyDto? = null,
+    val lineTotal: MoneyDto,
     val primaryImageUrl: String?,
 )
 
-data class CartSummaryResponse(
-    val subtotal: MoneyResponse,
+data class CartSummaryDto(
+    val subtotal: MoneyDto,
     val itemCount: Int,
 )
 
-data class MoneyResponse(
-    val currency: String = "IDR",
-    val amount: Long,
-)
-
-data class ProductVariantAttributeResponse(
+data class ProductVariantAttributeDto(
     val name: String,
     val value: String,
+)
+
+data class CartResponse(
+    val message: String,
+    val data: CartDto,
+    val meta: ApiMeta? = null,
 )

@@ -1,17 +1,16 @@
 package com.gayakini.webhook.api
 
-import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.WebhookAckData
+import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/webhooks")
+@RequestMapping("/api/v1/webhooks", "/v1/webhooks")
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
@@ -22,30 +21,31 @@ class WebhookController(
     fun handleMidtransWebhook(
         @RequestBody payload: Map<String, Any>,
         @RequestHeader("X-Callback-Signature", required = false) signature: String?,
-    ): ApiResponse<WebhookAckData> {
+    ): WebhookAckResponse {
         logger.info("Menerima webhook Midtrans: {}", payload)
 
         val signatureKey = payload["signature_key"] as? String ?: signature ?: ""
-
         paymentService.processMidtransWebhook(payload, signatureKey)
 
-        return ApiResponse.success(
+        return WebhookAckResponse(
             message = "Webhook berhasil diterima.",
             data = WebhookAckData(accepted = true),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
     }
 
     @PostMapping("/biteship")
     fun handleBiteshipWebhook(
         @RequestBody payload: Map<String, Any>,
-    ): ApiResponse<WebhookAckData> {
+    ): WebhookAckResponse {
         logger.info("Menerima webhook Biteship: {}", payload)
 
         shippingService.processBiteshipWebhook(payload)
 
-        return ApiResponse.success(
+        return WebhookAckResponse(
             message = "Webhook berhasil diterima.",
             data = WebhookAckData(accepted = true),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
         )
     }
 }

@@ -3,23 +3,7 @@ package com.gayakini.checkout.domain
 import com.gayakini.cart.domain.Cart
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
-import jakarta.persistence.CascadeType
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.FetchType
-import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.MapsId
-import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
-import jakarta.persistence.PostLoad
-import jakarta.persistence.PostPersist
-import jakarta.persistence.PrimaryKeyJoinColumn
-import jakarta.persistence.Table
-import jakarta.persistence.Transient
+import jakarta.persistence.*
 import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
@@ -44,16 +28,22 @@ class Checkout(
     @Column(name = "subtotal_amount", nullable = false)
     var subtotalAmount: Long = 0,
     @Column(name = "shipping_cost_amount", nullable = false)
-    var shippingCostAmount: Long = 0,
+    var shipping_cost_amount: Long = 0, // Matched to schema renamed column in migration? Actually schema says shipping_cost_amount
     @Column(name = "total_amount", insertable = false, updatable = false)
     val totalAmount: Long = 0,
     @Column(name = "selected_shipping_quote_id")
     var selectedShippingQuoteId: UUID? = null,
+
     @OneToMany(mappedBy = "checkout", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<CheckoutItem> = mutableListOf(),
+
     @OneToOne(mappedBy = "checkout", cascade = [CascadeType.ALL])
     @PrimaryKeyJoinColumn
     var shippingAddress: CheckoutShippingAddress? = null,
+
+    @OneToMany(mappedBy = "checkout", cascade = [CascadeType.ALL], orphanRemoval = true)
+    val availableShippingQuotes: MutableList<CheckoutShippingQuote> = mutableListOf(),
+
     @Column(name = "expires_at")
     var expiresAt: Instant? = null,
     @Column(name = "created_at", updatable = false)
@@ -73,6 +63,10 @@ class Checkout(
     fun markNotNew() {
         _isNew = false
     }
+
+    var shippingCostAmount: Long
+        get() = shipping_cost_amount
+        set(value) { shipping_cost_amount = value }
 }
 
 enum class CheckoutStatus { ACTIVE, READY_FOR_ORDER, ORDER_CREATED, EXPIRED }

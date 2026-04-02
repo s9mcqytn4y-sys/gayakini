@@ -1,7 +1,10 @@
 package com.gayakini.payment.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
+import com.gayakini.customer.domain.CustomerRepository
+import com.gayakini.inventory.application.InventoryService
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
 import com.gayakini.order.domain.PaymentStatus
@@ -21,7 +24,10 @@ import java.util.UUID
 class PaymentService(
     private val paymentRepository: PaymentRepository,
     private val orderRepository: OrderRepository,
+    private val customerRepository: CustomerRepository,
+    private val inventoryService: InventoryService,
     private val paymentProvider: PaymentProvider,
+    private val idempotencyService: IdempotencyService,
     private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
@@ -33,50 +39,56 @@ class PaymentService(
         orderToken: String?,
         request: CreatePaymentRequest?,
     ): Payment {
-        val order =
-            orderRepository.findById(orderId)
-                .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
 
-        if (order.status != OrderStatus.PENDING_PAYMENT) {
-            throw IllegalStateException("Order tidak dalam status menunggu pembayaran.")
-        }
-
-        // Validate token if guest
-        if (order.accessTokenHash != null) {
-            if (HashUtils.sha256(orderToken ?: "") != order.accessTokenHash) {
-                throw IllegalStateException("Akses order ditolak.")
+        return idempotencyService.handle(
+            scope = "create_payment",
+            key = idempotencyKey,
+            requestPayload = request ?: emptyMap<String, String>(),
+            requesterType = if (order.customerId != null) "CUSTOMER" else "GUEST",
+            requesterId = order.customerId
+        ) {
+            if (order.status != OrderStatus.PENDING_PAYMENT) {
+                throw IllegalStateException("Order tidak dalam status menunggu pembayaran.")
             }
-        }
 
-        // Return existing pending payment if any
-        val existingPayment =
-            paymentRepository.findByOrderId(order.id)
+            // Validate token if guest
+            if (order.accessTokenHash != null) {
+                if (HashUtils.sha256(orderToken ?: "") != order.accessTokenHash) {
+                    throw IllegalStateException("Akses order ditolak.")
+                }
+            }
+
+            // Return existing pending payment if any
+            val existingPayment = paymentRepository.findByOrderId(order.id)
                 .filter { it.status == PaymentStatus.PENDING && it.expiresAt?.isAfter(Instant.now()) == true }
 
-        if (existingPayment.isPresent) {
-            return existingPayment.get()
-        }
+            if (existingPayment.isPresent) {
+                return@handle existingPayment.get()
+            }
 
-        // Create new payment session with provider
-        val providerOrderId = "${order.orderNumber}-${System.currentTimeMillis()}"
+            // Get customer email from order or customer profile
+            val customerEmail = order.customerId?.let { id ->
+                customerRepository.findById(id).map { it.email }.orElse("customer@example.com")
+            } ?: "customer@example.com"
 
-        val customerDetails =
-            CustomerPaymentDetails(
-                email = "customer@example.com", // TODO: Get from order/customer
+            val providerOrderId = "${order.orderNumber}-${Instant.now().toEpochMilli()}"
+
+            val customerDetails = CustomerPaymentDetails(
+                email = customerEmail,
                 fullName = order.shippingAddress?.recipientName ?: "Customer",
                 phone = order.shippingAddress?.phone,
             )
 
-        val session =
-            paymentProvider.createPaymentSession(
+            val session = paymentProvider.createPaymentSession(
                 orderId = order.id,
                 providerOrderId = providerOrderId,
                 amount = order.totalAmount,
                 customerDetails = customerDetails,
             )
 
-        val payment =
-            Payment(
+            val payment = Payment(
                 orderId = order.id,
                 providerOrderId = providerOrderId,
                 grossAmount = order.totalAmount,
@@ -86,10 +98,14 @@ class PaymentService(
                 expiresAt = Instant.now().plusSeconds(86400), // 24 hours
             )
 
-        order.currentPaymentId = payment.id
-        orderRepository.save(order)
+            val savedPayment = paymentRepository.save(payment)
 
-        return paymentRepository.save(payment)
+            order.currentPaymentId = savedPayment.id
+            order.updatedAt = Instant.now()
+            orderRepository.save(order)
+
+            savedPayment
+        }
     }
 
     @Transactional
@@ -105,46 +121,37 @@ class PaymentService(
         val providerOrderId = payload["order_id"] as String
         val transactionStatus = payload["transaction_status"] as String
 
-        val payment =
-            paymentRepository.findByProviderOrderId(providerOrderId)
-                .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
+        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
 
-        val order =
-            orderRepository.findById(payment.orderId)
-                .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
+        val payment = paymentRepository.findByProviderOrderId(providerOrderId)
+            .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
 
-        val newStatus = mapMidtransStatus(transactionStatus)
+        val order = orderRepository.findById(payment.orderId)
+            .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
 
-        if (payment.status != newStatus) {
-            payment.status = newStatus
+        if (payment.status != reconciledStatus) {
+            payment.status = reconciledStatus
             payment.providerTransactionId = payload["transaction_id"] as? String
             payment.rawProviderStatus = transactionStatus
             payment.updatedAt = Instant.now()
 
-            if (newStatus == PaymentStatus.PAID) {
+            if (reconciledStatus == PaymentStatus.PAID) {
                 payment.paidAt = Instant.now()
                 order.status = OrderStatus.PAID
                 order.paymentStatus = PaymentStatus.PAID
                 order.paidAt = Instant.now()
-            } else if (newStatus == PaymentStatus.CANCELLED || newStatus == PaymentStatus.EXPIRED || newStatus == PaymentStatus.FAILED) {
+            } else if (reconciledStatus == PaymentStatus.CANCELLED || reconciledStatus == PaymentStatus.EXPIRED || reconciledStatus == PaymentStatus.FAILED) {
                 order.status = OrderStatus.CANCELLED
-                order.paymentStatus = newStatus
+                order.paymentStatus = reconciledStatus
                 order.cancelledAt = Instant.now()
+
+                // Release inventory reservations (Hard Requirement 12)
+                inventoryService.releaseReservations(order.id, "Payment failure state: $reconciledStatus")
             }
 
             paymentRepository.save(payment)
+            order.updatedAt = Instant.now()
             orderRepository.save(order)
-        }
-    }
-
-    private fun mapMidtransStatus(status: String): PaymentStatus {
-        return when (status) {
-            "capture", "settlement" -> PaymentStatus.PAID
-            "pending" -> PaymentStatus.PENDING
-            "deny", "cancel" -> PaymentStatus.CANCELLED
-            "expire" -> PaymentStatus.EXPIRED
-            "refund" -> PaymentStatus.REFUNDED
-            else -> PaymentStatus.FAILED
         }
     }
 }

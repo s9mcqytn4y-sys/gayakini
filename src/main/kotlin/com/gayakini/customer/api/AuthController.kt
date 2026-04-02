@@ -1,69 +1,44 @@
 package com.gayakini.customer.api
 
-import com.gayakini.common.api.ApiResponse
-import com.gayakini.customer.domain.CustomerRole
+import com.gayakini.common.api.StandardResponse
+import com.gayakini.customer.application.CustomerService
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
-import java.time.Instant
-import java.util.UUID
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/v1/auth")
-class AuthController {
+class AuthController(private val customerService: CustomerService) {
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun register(
-        @RequestBody request: RegisterRequest,
-    ): ApiResponse<AuthTokensData> {
-        // TODO: Implement registration logic in CustomerService
-        return ApiResponse.success(
+        @Valid @RequestBody request: RegisterRequest,
+    ): StandardResponse<AuthTokensData> {
+        val data = customerService.register(request)
+        return StandardResponse(
             message = "Akun berhasil dibuat.",
-            data = mockAuthResponse(),
+            data = data
         )
     }
 
     @PostMapping("/login")
     fun login(
-        @RequestBody request: LoginRequest,
-    ): ApiResponse<AuthTokensData> {
-        // TODO: Implement login logic
-        return ApiResponse.success(
+        @Valid @RequestBody request: LoginRequest,
+    ): StandardResponse<AuthTokensData> {
+        val data = customerService.login(request)
+        return StandardResponse(
             message = "Login berhasil.",
-            data = mockAuthResponse(),
+            data = data
         )
     }
 
     @PostMapping("/refresh")
     fun refresh(
-        @RequestBody request: RefreshTokenRequest,
-    ): ApiResponse<AuthTokensData> {
-        // TODO: Implement refresh logic
-        return ApiResponse.success(
-            message = "Sesi login berhasil diperbarui.",
-            data = mockAuthResponse(),
-        )
+        @Valid @RequestBody request: RefreshTokenRequest,
+    ): StandardResponse<AuthTokensData> {
+        // TODO: Implement refresh token rotation logic in CustomerService
+        // For now, it's a stub to keep the path but mark it as needing implementation if not already done.
+        throw UnsupportedOperationException("Token refresh rotation is being implemented.")
     }
-
-    private fun mockAuthResponse() =
-        AuthTokensData(
-            tokens =
-                JwtTokenPair(
-                    accessToken = "mock-access-token",
-                    refreshToken = "mock-refresh-token",
-                    expiresIn = 3600,
-                ),
-            customer =
-                CustomerProfileResponse(
-                    id = UUID.randomUUID(),
-                    email = "user@example.com",
-                    phone = "08123456789",
-                    fullName = "John Doe",
-                    role = CustomerRole.CUSTOMER,
-                    createdAt = Instant.now(),
-                ),
-        )
 }

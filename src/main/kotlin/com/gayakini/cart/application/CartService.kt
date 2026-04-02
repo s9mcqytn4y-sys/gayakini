@@ -23,24 +23,26 @@ class CartService(
     fun createCart(
         customerId: UUID?,
         currency: String,
-    ): Cart {
-        val cart =
-            Cart(
-                id = UUID.randomUUID(),
-                customerId = customerId,
-                currencyCode = currency,
-                status = CartStatus.ACTIVE,
-                expiresAt = Instant.now().plusSeconds(86400 * 7), // 7 days
-            )
+    ): Pair<Cart, String?> {
+        val cartId = UUID.randomUUID()
+        var rawToken: String? = null
+        var tokenHash: String? = null
 
         if (customerId == null) {
-            val rawToken = UUID.randomUUID().toString()
-            cart.accessTokenHash = HashUtils.sha256(rawToken)
-            // In a real scenario, we'd return the rawToken to the client once.
-            // For now, let's assume the controller handles returning the raw token.
+            rawToken = UUID.randomUUID().toString()
+            tokenHash = HashUtils.sha256(rawToken)
         }
 
-        return cartRepository.save(cart)
+        val cart = Cart(
+            id = cartId,
+            customerId = customerId,
+            currencyCode = currency,
+            status = CartStatus.ACTIVE,
+            accessTokenHash = tokenHash,
+            expiresAt = Instant.now().plusSeconds(86400 * 7), // 7 days
+        )
+
+        return cartRepository.save(cart) to rawToken
     }
 
     @Transactional
@@ -48,38 +50,36 @@ class CartService(
         cartId: UUID,
         variantId: UUID,
         quantity: Int,
+        customerId: UUID? = null,
+        cartToken: String? = null
     ): Cart {
-        val cart =
-            cartRepository.findById(cartId)
-                .orElseThrow { NoSuchElementException("Keranjang tidak ditemukan.") }
+        val cart = getValidatedCart(cartId, customerId, cartToken)
 
         if (cart.status != CartStatus.ACTIVE) {
             throw IllegalStateException("Keranjang sudah tidak aktif.")
         }
 
-        val variant =
-            variantRepository.findById(variantId)
-                .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
+        val variant = variantRepository.findById(variantId)
+            .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
 
         val existingItem = cart.items.find { it.variant.id == variantId }
         if (existingItem != null) {
             existingItem.quantity += quantity
             if (existingItem.quantity > 99) existingItem.quantity = 99
         } else {
-            val newItem =
-                CartItem(
-                    cart = cart,
-                    product = variant.product,
-                    variant = variant,
-                    productTitleSnapshot = variant.product.title,
-                    skuSnapshot = variant.sku,
-                    color = variant.color,
-                    sizeCode = variant.sizeCode,
-                    quantity = quantity,
-                    unitPriceAmount = variant.priceAmount,
-                    compareAtAmount = variant.compareAtAmount,
-                    primaryImageUrl = null, // TODO: Get from product media
-                )
+            val newItem = CartItem(
+                cart = cart,
+                product = variant.product,
+                variant = variant,
+                productTitleSnapshot = variant.product.title,
+                skuSnapshot = variant.sku,
+                color = variant.color,
+                sizeCode = variant.sizeCode,
+                quantity = quantity,
+                unitPriceAmount = variant.priceAmount,
+                compareAtAmount = variant.compareAtAmount,
+                primaryImageUrl = variant.product.media.firstOrNull { it.isPrimary }?.url,
+            )
             cart.items.add(newItem)
         }
 
@@ -87,10 +87,25 @@ class CartService(
         return cartRepository.save(cart)
     }
 
+    fun getValidatedCart(cartId: UUID, customerId: UUID?, cartToken: String?): Cart {
+        val cart = cartRepository.findById(cartId)
+            .orElseThrow { NoSuchElementException("Keranjang tidak ditemukan.") }
+
+        if (cart.customerId != null && cart.customerId != customerId) {
+            throw IllegalStateException("Akses keranjang ditolak.")
+        }
+
+        if (cart.accessTokenHash != null) {
+            if (cartToken == null || HashUtils.sha256(cartToken) != cart.accessTokenHash) {
+                throw IllegalStateException("Akses keranjang ditolak.")
+            }
+        }
+
+        return cart
+    }
+
     private fun updateTotals(cart: Cart) {
         cart.itemCount = cart.items.sumOf { it.quantity }
-        // Note: unitPriceAmount is a snapshot, but for active cart we might want to refresh it?
-        // Spec says CartItem has unitPrice. Usually it tracks current price until checkout.
         cart.subtotalAmount = cart.items.sumOf { it.unitPriceAmount * it.quantity }
         cart.updatedAt = Instant.now()
     }

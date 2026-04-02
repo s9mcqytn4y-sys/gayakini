@@ -1,11 +1,11 @@
 package com.gayakini.payment.infrastructure
 
+import com.gayakini.infrastructure.config.GayakiniProperties
 import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.PaymentProvider
 import com.gayakini.payment.domain.PaymentSession
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -18,8 +18,7 @@ import java.util.UUID
 
 @Component
 class MidtransPaymentProvider(
-    @Value("\${midtrans.server-key:sandbox-server-key}") private val serverKey: String,
-    @Value("\${midtrans.base-url:https://app.sandbox.midtrans.com/snap/v1/transactions}") private val baseUrl: String,
+    private val properties: GayakiniProperties,
     private val restTemplate: RestTemplate,
 ) : PaymentProvider {
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
@@ -46,7 +45,7 @@ class MidtransPaymentProvider(
             )
 
         val headers = createHeaders()
-        val response = restTemplate.postForEntity(baseUrl, HttpEntity(requestBody, headers), Map::class.java)
+        val response = restTemplate.postForEntity(properties.midtrans.snapUrl, HttpEntity(requestBody, headers), Map::class.java)
 
         if (response.statusCode.is2xxSuccessful) {
             val body = response.body as Map<*, *>
@@ -68,14 +67,14 @@ class MidtransPaymentProvider(
         val orderId = payload["order_id"] as? String ?: return false
         val statusCode = payload["status_code"] as? String ?: return false
         val grossAmount = payload["gross_amount"] as? String ?: return false
-        val rawData = orderId + statusCode + grossAmount + serverKey
+        val rawData = orderId + statusCode + grossAmount + properties.midtrans.serverKey
 
         val calculatedSignature = sha512(rawData)
         return calculatedSignature.equals(signature, ignoreCase = true)
     }
 
     override fun getPaymentStatus(providerOrderId: String): PaymentStatus {
-        val statusUrl = baseUrl.replace("/snap/v1/transactions", "/v2/$providerOrderId/status")
+        val statusUrl = "${properties.midtrans.apiUrl}/$providerOrderId/status"
 
         val headers = createHeaders()
         return try {
@@ -95,7 +94,7 @@ class MidtransPaymentProvider(
     private fun createHeaders(): HttpHeaders {
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
-        headers.setBasicAuth(serverKey, "", StandardCharsets.UTF_8)
+        headers.setBasicAuth(properties.midtrans.serverKey, "", StandardCharsets.UTF_8)
         return headers
     }
 

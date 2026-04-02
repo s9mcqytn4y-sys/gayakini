@@ -50,6 +50,28 @@ class InventoryService(
     }
 
     @Transactional
+    fun releaseReservations(
+        orderId: UUID,
+        reason: String,
+    ) {
+        val reservations = reservationRepository.findAllByOrderIdAndStatus(orderId, ReservationStatus.ACTIVE)
+        reservations.forEach { reservation ->
+            val variant =
+                variantRepository.findWithLockById(reservation.variant.id)
+                    .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
+
+            variant.stockReserved -= reservation.quantity
+            variant.updatedAt = Instant.now()
+            variantRepository.save(variant)
+
+            reservation.status = ReservationStatus.RELEASED
+            reservation.releasedAt = Instant.now()
+            reservation.releaseReason = reason
+            reservationRepository.save(reservation)
+        }
+    }
+
+    @Transactional
     fun releaseReservation(
         orderItemId: UUID,
         reason: String,

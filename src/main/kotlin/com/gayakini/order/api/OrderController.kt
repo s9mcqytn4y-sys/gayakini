@@ -1,35 +1,126 @@
 package com.gayakini.order.api
 
-import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.MoneyDto
+import com.gayakini.common.api.PageMeta
 import com.gayakini.order.application.OrderService
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
-@RequestMapping("/api/v1/checkouts")
+@RequestMapping("/v1")
 class OrderController(
     private val orderService: OrderService,
 ) {
-    @PostMapping("/{checkoutId}/orders")
+    @PostMapping("/checkouts/{checkoutId}/orders")
     @ResponseStatus(HttpStatus.CREATED)
     fun placeOrder(
         @PathVariable checkoutId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @RequestBody request: PlaceOrderRequest,
-    ): ApiResponse<OrderResponse> {
-        val response = orderService.placeOrderFromCheckout(checkoutId, idempotencyKey, checkoutToken, request)
+    ): OrderResponse {
+        val order = orderService.placeOrderFromCheckout(checkoutId, idempotencyKey, checkoutToken, request)
+        return mapToResponse(order, "Pesanan berhasil dibuat.")
+    }
 
-        return ApiResponse.success(
-            data = response,
-            message = "Pesanan berhasil dibuat. Silakan selesaikan pembayaran.",
+    @GetMapping("/orders/{orderId}")
+    fun getOrderById(
+        @PathVariable orderId: UUID,
+        @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
+    ): OrderResponse {
+        val order = orderService.getOrder(orderId)
+        // TODO: Validate token for guest access
+        return mapToResponse(order, "Detail pesanan berhasil diambil.")
+    }
+
+    @GetMapping("/me/orders")
+    fun listMyOrders(
+        @RequestParam(defaultValue = "1") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+    ): OrderPageResponse {
+        // TODO: Get current customer ID
+        val orders = orderService.listOrders(null)
+
+        return OrderPageResponse(
+            message = "Daftar pesanan berhasil diambil.",
+            data = orders.map { mapToDto(it) },
+            meta = PageMeta(
+                page = page,
+                size = size,
+                totalElements = orders.size.toLong(),
+                totalPages = 1,
+                requestId = UUID.randomUUID().toString()
+            )
+        )
+    }
+
+    @PostMapping("/orders/{orderId}/cancellations")
+    fun cancelOrderByCustomer(
+        @PathVariable orderId: UUID,
+        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
+        @RequestBody request: CancelOrderRequest
+    ): OrderResponse {
+        val order = orderService.cancelOrder(orderId, request.reason)
+        return mapToResponse(order, "Pesanan berhasil dibatalkan.")
+    }
+
+    private fun mapToResponse(order: com.gayakini.order.domain.Order, message: String): OrderResponse {
+        return OrderResponse(
+            message = message,
+            data = mapToDto(order),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+        )
+    }
+
+    private fun mapToDto(order: com.gayakini.order.domain.Order): OrderDto {
+        return OrderDto(
+            id = order.id,
+            orderNumber = order.orderNumber,
+            customerId = order.customerId,
+            status = order.status,
+            fulfillmentStatus = order.fulfillmentStatus,
+            paymentSummary = OrderPaymentSummaryDto(
+                provider = "MIDTRANS",
+                status = order.paymentStatus
+            ),
+            shippingAddress = order.shippingAddress!!.let { addr ->
+                OrderAddressDto(
+                    recipientName = addr.recipientName,
+                    phone = addr.phone,
+                    line1 = addr.line1,
+                    line2 = addr.line2,
+                    notes = addr.notes,
+                    areaId = addr.areaId,
+                    district = addr.district,
+                    city = addr.city,
+                    province = addr.province,
+                    postalCode = addr.postalCode,
+                    countryCode = addr.countryCode
+                )
+            },
+            items = order.items.map { item ->
+                OrderItemDto(
+                    id = item.id,
+                    productId = item.product.id,
+                    variantId = item.variant.id,
+                    skuSnapshot = item.skuSnapshot,
+                    titleSnapshot = item.titleSnapshot,
+                    quantity = item.quantity,
+                    unitPrice = MoneyDto(amount = item.unitPriceAmount),
+                    lineTotal = MoneyDto(amount = item.lineTotalAmount)
+                )
+            },
+            subtotal = MoneyDto(amount = order.subtotalAmount),
+            shippingCost = MoneyDto(amount = order.shippingCostAmount),
+            total = MoneyDto(amount = order.totalAmount),
+            currency = order.currencyCode,
+            customerNotes = order.customerNotes,
+            createdAt = order.createdAt,
+            paidAt = order.paidAt,
+            cancelledAt = order.cancelledAt
         )
     }
 }
