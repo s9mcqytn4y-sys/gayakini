@@ -10,7 +10,6 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/carts")
 class CartController(private val cartService: CartService) {
-
     @PostMapping
     fun createCart(
         @RequestParam(required = false) currency: String?,
@@ -38,40 +37,48 @@ class CartController(private val cartService: CartService) {
         return mapToResponse(cart, "Produk berhasil dimasukkan ke keranjang.")
     }
 
-    private fun mapToResponse(cart: Cart, message: String, rawToken: String? = null): CartResponse {
+    private fun mapToResponse(
+        cart: Cart,
+        message: String,
+        rawToken: String? = null,
+    ): CartResponse {
         return CartResponse(
             message = message,
-            data = CartDto(
-                id = cart.id,
-                customerId = cart.customerId,
-                status = cart.status,
-                currency = cart.currencyCode,
-                accessToken = rawToken,
-                expiresAt = cart.expiresAt,
-                items = cart.items.map { item ->
-                    CartItemDto(
-                        id = item.id,
-                        productId = item.product?.id ?: UUID.randomUUID(),
-                        productTitle = item.productTitleSnapshot ?: "",
-                        variantId = item.variant.id,
-                        sku = item.skuSnapshot ?: "",
-                        attributes = listOf(
-                            ProductVariantAttributeDto(name = "color", value = item.color ?: ""),
-                            ProductVariantAttributeDto(name = "size", value = item.sizeCode ?: "")
+            data =
+                CartDto(
+                    id = cart.id,
+                    customerId = cart.customerId,
+                    status = cart.status,
+                    currency = cart.currencyCode,
+                    accessToken = rawToken,
+                    expiresAt = cart.expiresAt,
+                    items =
+                        cart.items.map { item ->
+                            CartItemDto(
+                                id = item.id,
+                                productId = item.product?.id ?: UUID.randomUUID(),
+                                productTitle = item.productTitleSnapshot ?: "",
+                                variantId = item.variant.id,
+                                sku = item.skuSnapshot ?: "",
+                                attributes =
+                                    listOf(
+                                        ProductVariantAttributeDto(name = "color", value = item.color ?: ""),
+                                        ProductVariantAttributeDto(name = "size", value = item.sizeCode ?: ""),
+                                    ),
+                                quantity = item.quantity,
+                                unitPrice = MoneyDto(amount = item.unitPriceAmount),
+                                compareAtPrice = item.compareAtAmount?.let { MoneyDto(amount = it) },
+                                lineTotal = MoneyDto(amount = item.lineTotalAmount),
+                                primaryImageUrl = item.primaryImageUrl,
+                            )
+                        },
+                    summary =
+                        CartSummaryDto(
+                            subtotal = MoneyDto(amount = cart.subtotalAmount),
+                            itemCount = cart.itemCount,
                         ),
-                        quantity = item.quantity,
-                        unitPrice = MoneyDto(amount = item.unitPriceAmount),
-                        compareAtPrice = item.compareAtAmount?.let { MoneyDto(amount = it) },
-                        lineTotal = MoneyDto(amount = item.lineTotalAmount),
-                        primaryImageUrl = item.primaryImageUrl
-                    )
-                },
-                summary = CartSummaryDto(
-                    subtotal = MoneyDto(amount = cart.subtotalAmount),
-                    itemCount = cart.itemCount
-                )
-            ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+                ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 }

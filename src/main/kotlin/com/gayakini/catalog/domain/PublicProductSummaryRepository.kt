@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.Query
 import java.util.UUID
 
 interface PublicProductSummaryRepository : JpaRepository<PublicProductSummary, UUID> {
-
-    @Query("""
+    @Query(
+        """
         SELECT p FROM PublicProductSummary p
         WHERE (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(p.brandName) LIKE LOWER(CONCAT('%', :q, '%')))
         AND (:categorySlug IS NULL OR p.categorySlug = :categorySlug)
@@ -18,7 +18,8 @@ interface PublicProductSummaryRepository : JpaRepository<PublicProductSummary, U
         AND (:minPrice IS NULL OR p.minPriceAmount >= :minPrice)
         AND (:maxPrice IS NULL OR p.maxPriceAmount <= :maxPrice)
         AND (:inStock IS NULL OR p.inStock = :inStock)
-    """)
+    """,
+    )
     fun search(
         q: String?,
         categorySlug: String?,
@@ -28,6 +29,6 @@ interface PublicProductSummaryRepository : JpaRepository<PublicProductSummary, U
         minPrice: Long?,
         maxPrice: Long?,
         inStock: Boolean?,
-        pageable: Pageable
+        pageable: Pageable,
     ): Page<PublicProductSummary>
 }

@@ -36,5 +36,5 @@ class PublicProductSummary(
     @Column(name = "in_stock")
     val inStock: Boolean,
     @Column(name = "created_at")
-    val createdAt: Instant
+    val createdAt: Instant,
 )

@@ -32,11 +32,12 @@ class ProductService(
         maxPrice: Long?,
         inStock: Boolean?,
     ): Page<PublicProductSummary> {
-        val sortOrder = when (sort) {
-            "price_asc" -> Sort.by(Sort.Direction.ASC, "minPriceAmount")
-            "price_desc" -> Sort.by(Sort.Direction.DESC, "minPriceAmount")
-            else -> Sort.by(Sort.Direction.DESC, "createdAt")
-        }
+        val sortOrder =
+            when (sort) {
+                "price_asc" -> Sort.by(Sort.Direction.ASC, "minPriceAmount")
+                "price_desc" -> Sort.by(Sort.Direction.DESC, "minPriceAmount")
+                else -> Sort.by(Sort.Direction.DESC, "createdAt")
+            }
         val pageable = PageRequest.of(page - 1, size, sortOrder)
         return publicProductSummaryRepository.search(
             q = q,
@@ -47,7 +48,7 @@ class ProductService(
             minPrice = minPrice,
             maxPrice = maxPrice,
             inStock = inStock,
-            pageable = pageable
+            pageable = pageable,
         )
     }
 

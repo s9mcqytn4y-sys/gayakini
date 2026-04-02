@@ -43,7 +43,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 userMessage = "Maaf, data yang Anda kirim belum lengkap. Silakan cek lagi.",
                 fieldErrors = fieldErrors,
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
-                requestId = UUID.randomUUID().toString()
+                requestId = UUID.randomUUID().toString(),
             )
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
@@ -64,7 +64,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 detail = ex.message ?: "Permintaan tidak dapat diproses karena aturan bisnis.",
                 userMessage = ex.message ?: "Maaf, permintaan Anda tidak dapat diproses saat ini.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
-                requestId = UUID.randomUUID().toString()
+                requestId = UUID.randomUUID().toString(),
             )
         return ResponseEntity.status(status).body(problem)
     }
@@ -82,7 +82,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 detail = ex.message ?: "Resource yang dicari tidak ditemukan.",
                 userMessage = "Data yang Anda cari tidak dapat kami temukan.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
-                requestId = UUID.randomUUID().toString()
+                requestId = UUID.randomUUID().toString(),
             )
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(problem)
     }
@@ -100,7 +100,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 detail = ex.message ?: "Permintaan tidak valid.",
                 userMessage = "Permintaan tidak dapat diproses. Pastikan data benar.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
-                requestId = UUID.randomUUID().toString()
+                requestId = UUID.randomUUID().toString(),
             )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
     }
@@ -119,7 +119,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 detail = "Terjadi kesalahan sistem yang tidak terduga.",
                 userMessage = "Terjadi gangguan teknis. Tim kami sedang menanganinya.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
-                requestId = UUID.randomUUID().toString()
+                requestId = UUID.randomUUID().toString(),
             )
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(problem)
     }

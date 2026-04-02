@@ -22,7 +22,11 @@ class JwtService(private val properties: GayakiniProperties) {
         }
     }
 
-    fun generateAccessToken(userId: UUID, email: String, role: String): String {
+    fun generateAccessToken(
+        userId: UUID,
+        email: String,
+        role: String,
+    ): String {
         val now = Date()
         val expiry = Date(now.time + properties.jwt.accessTokenExpirationMinutes * 60 * 1000)
 
@@ -50,16 +54,17 @@ class JwtService(private val properties: GayakiniProperties) {
 
     fun parseToken(token: String): UserPrincipal? {
         return try {
-            val claims: Claims = Jwts.parser()
-                .verifyWith(signingKey)
-                .build()
-                .parseSignedClaims(token)
-                .payload
+            val claims: Claims =
+                Jwts.parser()
+                    .verifyWith(signingKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .payload
 
             UserPrincipal(
                 id = UUID.fromString(claims.subject),
                 email = claims["email"] as String,
-                role = claims["role"] as String
+                role = claims["role"] as String,
             )
         } catch (e: Exception) {
             null

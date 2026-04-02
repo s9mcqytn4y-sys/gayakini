@@ -107,31 +107,33 @@ class CheckoutService(
     @Transactional
     fun updateShippingAddress(
         checkoutId: UUID,
-        request: CheckoutShippingAddressRequest
+        request: CheckoutShippingAddressRequest,
     ): Checkout {
         val checkout = getCheckout(checkoutId)
 
         if (request.addressId != null) {
             val customerId = checkout.customerId ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
-            val customerAddress = customerAddressRepository.findById(request.addressId)
-                .filter { it.customer.id == customerId }
-                .orElseThrow { NoSuchElementException("Alamat tidak ditemukan.") }
+            val customerAddress =
+                customerAddressRepository.findById(request.addressId)
+                    .filter { it.customer.id == customerId }
+                    .orElseThrow { NoSuchElementException("Alamat tidak ditemukan.") }
 
-            val addr = checkout.shippingAddress ?: CheckoutShippingAddress(
-                checkoutId = checkout.id,
-                checkout = checkout,
-                recipientName = customerAddress.recipientName,
-                phone = customerAddress.phone,
-                line1 = customerAddress.line1,
-                line2 = customerAddress.line2,
-                notes = customerAddress.notes,
-                areaId = customerAddress.areaId,
-                district = customerAddress.district,
-                city = customerAddress.city,
-                province = customerAddress.province,
-                postalCode = customerAddress.postalCode,
-                countryCode = customerAddress.countryCode
-            )
+            val addr =
+                checkout.shippingAddress ?: CheckoutShippingAddress(
+                    checkoutId = checkout.id,
+                    checkout = checkout,
+                    recipientName = customerAddress.recipientName,
+                    phone = customerAddress.phone,
+                    line1 = customerAddress.line1,
+                    line2 = customerAddress.line2,
+                    notes = customerAddress.notes,
+                    areaId = customerAddress.areaId,
+                    district = customerAddress.district,
+                    city = customerAddress.city,
+                    province = customerAddress.province,
+                    postalCode = customerAddress.postalCode,
+                    countryCode = customerAddress.countryCode,
+                )
             addr.customerAddressId = customerAddress.id
             addr.recipientName = customerAddress.recipientName
             addr.phone = customerAddress.phone
@@ -149,21 +151,22 @@ class CheckoutService(
             checkout.shippingAddress = addr
         } else if (request.guestAddress != null) {
             val guest = request.guestAddress
-            val addr = checkout.shippingAddress ?: CheckoutShippingAddress(
-                checkoutId = checkout.id,
-                checkout = checkout,
-                recipientName = guest.recipientName,
-                phone = guest.phone,
-                line1 = guest.line1,
-                line2 = guest.line2,
-                notes = guest.notes,
-                areaId = guest.areaId,
-                district = guest.district,
-                city = guest.city,
-                province = guest.province,
-                postalCode = guest.postalCode,
-                countryCode = guest.countryCode
-            )
+            val addr =
+                checkout.shippingAddress ?: CheckoutShippingAddress(
+                    checkoutId = checkout.id,
+                    checkout = checkout,
+                    recipientName = guest.recipientName,
+                    phone = guest.phone,
+                    line1 = guest.line1,
+                    line2 = guest.line2,
+                    notes = guest.notes,
+                    areaId = guest.areaId,
+                    district = guest.district,
+                    city = guest.city,
+                    province = guest.province,
+                    postalCode = guest.postalCode,
+                    countryCode = guest.countryCode,
+                )
 
             addr.recipientName = guest.recipientName
             addr.phone = guest.phone
@@ -194,44 +197,48 @@ class CheckoutService(
         val checkout = getCheckout(checkoutId)
         val address = checkout.shippingAddress ?: throw IllegalStateException("Alamat pengiriman belum diset.")
 
-        val origin = merchantOriginRepository.findDefaultActive()
-            .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }
+        val origin =
+            merchantOriginRepository.findDefaultActive()
+                .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }
 
-        val items = checkout.items.map {
-            ShippingItem(
-                name = it.productTitleSnapshot,
-                weightGrams = it.variant.weightGrams,
-                quantity = it.quantity,
-                valueIdr = it.unitPriceAmount,
+        val items =
+            checkout.items.map {
+                ShippingItem(
+                    name = it.productTitleSnapshot,
+                    weightGrams = it.variant.weightGrams,
+                    quantity = it.quantity,
+                    valueIdr = it.unitPriceAmount,
+                )
+            }
+
+        val rates =
+            shippingProvider.getRates(
+                origin = origin.areaId ?: "TODO_DEFAULT_ORIGIN",
+                destination = address.areaId,
+                items = items,
             )
-        }
-
-        val rates = shippingProvider.getRates(
-            origin = origin.areaId ?: "TODO_DEFAULT_ORIGIN",
-            destination = address.areaId,
-            items = items
-        )
 
         shippingQuoteRepository.deleteAllByCheckoutId(checkout.id)
         checkout.availableShippingQuotes.clear()
 
         rates.forEach { rate ->
-            val quote = CheckoutShippingQuote(
-                id = UuidV7Generator.generate(),
-                checkout = checkout,
-                provider = "BITESHIP",
-                providerReference = rate.id,
-                courierCode = rate.courierCode,
-                courierName = rate.courierName,
-                serviceCode = rate.serviceCode,
-                serviceName = rate.serviceName,
-                description = rate.description,
-                costAmount = rate.price,
-                estimatedDaysMin = rate.minDuration,
-                estimatedDaysMax = rate.maxDuration,
-                rawPayload = null,
-                expiresAt = Instant.now().plusSeconds(3600)
-            )
+            val quote =
+                CheckoutShippingQuote(
+                    id = UuidV7Generator.generate(),
+                    checkout = checkout,
+                    provider = "BITESHIP",
+                    providerReference = rate.id,
+                    courierCode = rate.courierCode,
+                    courierName = rate.courierName,
+                    serviceCode = rate.serviceCode,
+                    serviceName = rate.serviceName,
+                    description = rate.description,
+                    costAmount = rate.price,
+                    estimatedDaysMin = rate.minDuration,
+                    estimatedDaysMax = rate.maxDuration,
+                    rawPayload = null,
+                    expiresAt = Instant.now().plusSeconds(3600),
+                )
             checkout.availableShippingQuotes.add(quote)
         }
 
@@ -240,10 +247,14 @@ class CheckoutService(
     }
 
     @Transactional
-    fun selectShippingQuote(checkoutId: UUID, quoteId: UUID): Checkout {
+    fun selectShippingQuote(
+        checkoutId: UUID,
+        quoteId: UUID,
+    ): Checkout {
         val checkout = getCheckout(checkoutId)
-        val quote = checkout.availableShippingQuotes.find { it.id == quoteId }
-            ?: throw NoSuchElementException("Pilihan pengiriman tidak ditemukan.")
+        val quote =
+            checkout.availableShippingQuotes.find { it.id == quoteId }
+                ?: throw NoSuchElementException("Pilihan pengiriman tidak ditemukan.")
 
         checkout.selectedShippingQuoteId = quote.id
         checkout.shippingCostAmount = quote.costAmount

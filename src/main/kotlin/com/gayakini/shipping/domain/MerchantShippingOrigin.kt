@@ -4,6 +4,7 @@ import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import java.math.BigDecimal
 import java.time.Instant
 import java.util.UUID
 
@@ -40,8 +41,10 @@ class MerchantShippingOrigin(
     var postalCode: String,
     @Column(name = "country_code", nullable = false, length = 2)
     var countryCode: String = "ID",
-    var latitude: Double? = null,
-    var longitude: Double? = null,
+    @Column(precision = 10, scale = 7)
+    var latitude: BigDecimal? = null,
+    @Column(precision = 10, scale = 7)
+    var longitude: BigDecimal? = null,
     @Column(name = "is_default", nullable = false)
     var isDefault: Boolean = false,
     @Column(name = "is_active", nullable = false)

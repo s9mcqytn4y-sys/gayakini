@@ -30,14 +30,16 @@ class SecurityIntegrationTest {
         mockMvc.perform(
             post("/api/v1/webhooks/biteship")
                 .contentType("application/json")
-                .content("""
+                .content(
+                    """
                     {
                         "event": "order.status_updated",
                         "id": "test-id",
                         "order_id": "test-order-id",
                         "status": "delivered"
                     }
-                """.trimIndent()),
+                    """.trimIndent(),
+                ),
         )
             .andExpect(status().isOk)
     }

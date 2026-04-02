@@ -6,7 +6,10 @@ import java.util.UUID
 
 interface OrderRepository : JpaRepository<Order, UUID> {
     fun findByOrderNumber(orderNumber: String): Optional<Order>
+
     fun findByCheckoutId(checkoutId: UUID): Optional<Order>
+
     fun findAllByCustomerIdOrderByCreatedAtDesc(customerId: UUID): List<Order>
+
     fun findAllByOrderByCreatedAtDesc(): List<Order>
 }

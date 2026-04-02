@@ -39,15 +39,16 @@ class PaymentService(
         orderToken: String?,
         request: CreatePaymentRequest?,
     ): Payment {
-        val order = orderRepository.findById(orderId)
-            .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
+        val order =
+            orderRepository.findById(orderId)
+                .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
 
         return idempotencyService.handle(
             scope = "create_payment",
             key = idempotencyKey,
             requestPayload = request ?: emptyMap<String, String>(),
             requesterType = if (order.customerId != null) "CUSTOMER" else "GUEST",
-            requesterId = order.customerId
+            requesterId = order.customerId,
         ) {
             if (order.status != OrderStatus.PENDING_PAYMENT) {
                 throw IllegalStateException("Order tidak dalam status menunggu pembayaran.")
@@ -61,42 +62,47 @@ class PaymentService(
             }
 
             // Return existing pending payment if any
-            val existingPayment = paymentRepository.findByOrderId(order.id)
-                .filter { it.status == PaymentStatus.PENDING && it.expiresAt?.isAfter(Instant.now()) == true }
+            val existingPayment =
+                paymentRepository.findByOrderId(order.id)
+                    .filter { it.status == PaymentStatus.PENDING && it.expiresAt?.isAfter(Instant.now()) == true }
 
             if (existingPayment.isPresent) {
                 return@handle existingPayment.get()
             }
 
             // Get customer email from order or customer profile
-            val customerEmail = order.customerId?.let { id ->
-                customerRepository.findById(id).map { it.email }.orElse("customer@example.com")
-            } ?: "customer@example.com"
+            val customerEmail =
+                order.customerId?.let { id ->
+                    customerRepository.findById(id).map { it.email }.orElse("customer@example.com")
+                } ?: "customer@example.com"
 
             val providerOrderId = "${order.orderNumber}-${Instant.now().toEpochMilli()}"
 
-            val customerDetails = CustomerPaymentDetails(
-                email = customerEmail,
-                fullName = order.shippingAddress?.recipientName ?: "Customer",
-                phone = order.shippingAddress?.phone,
-            )
+            val customerDetails =
+                CustomerPaymentDetails(
+                    email = customerEmail,
+                    fullName = order.shippingAddress?.recipientName ?: "Customer",
+                    phone = order.shippingAddress?.phone,
+                )
 
-            val session = paymentProvider.createPaymentSession(
-                orderId = order.id,
-                providerOrderId = providerOrderId,
-                amount = order.totalAmount,
-                customerDetails = customerDetails,
-            )
+            val session =
+                paymentProvider.createPaymentSession(
+                    orderId = order.id,
+                    providerOrderId = providerOrderId,
+                    amount = order.totalAmount,
+                    customerDetails = customerDetails,
+                )
 
-            val payment = Payment(
-                orderId = order.id,
-                providerOrderId = providerOrderId,
-                grossAmount = order.totalAmount,
-                status = PaymentStatus.PENDING,
-                snapToken = session.token,
-                snapRedirectUrl = session.redirectUrl,
-                expiresAt = Instant.now().plusSeconds(86400), // 24 hours
-            )
+            val payment =
+                Payment(
+                    orderId = order.id,
+                    providerOrderId = providerOrderId,
+                    grossAmount = order.totalAmount,
+                    status = PaymentStatus.PENDING,
+                    snapToken = session.token,
+                    snapRedirectUrl = session.redirectUrl,
+                    expiresAt = Instant.now().plusSeconds(86400), // 24 hours
+                )
 
             val savedPayment = paymentRepository.save(payment)
 
@@ -123,11 +129,13 @@ class PaymentService(
 
         val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
 
-        val payment = paymentRepository.findByProviderOrderId(providerOrderId)
-            .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
+        val payment =
+            paymentRepository.findByProviderOrderId(providerOrderId)
+                .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
 
-        val order = orderRepository.findById(payment.orderId)
-            .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
+        val order =
+            orderRepository.findById(payment.orderId)
+                .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
 
         if (payment.status != reconciledStatus) {
             payment.status = reconciledStatus

@@ -12,7 +12,6 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/products")
 class ProductController(private val productService: ProductService) {
-
     @GetMapping
     fun listProducts(
         @RequestParam(defaultValue = "1") page: Int,
@@ -27,20 +26,22 @@ class ProductController(private val productService: ProductService) {
         @RequestParam(required = false) maxPrice: Long?,
         @RequestParam(required = false) inStock: Boolean?,
     ): PaginatedResponse<ProductSummaryDto> {
-        val resultPage = productService.searchProducts(
-            page, size, sort, q, categorySlug, collectionSlug, color, sizeCode, minPrice, maxPrice, inStock
-        )
+        val resultPage =
+            productService.searchProducts(
+                page, size, sort, q, categorySlug, collectionSlug, color, sizeCode, minPrice, maxPrice, inStock,
+            )
 
         return PaginatedResponse(
             message = "Daftar produk berhasil diambil.",
             data = resultPage.content.map { mapToSummary(it) },
-            meta = PageMeta(
-                page = page,
-                size = size,
-                totalElements = resultPage.totalElements,
-                totalPages = resultPage.totalPages,
-                requestId = UUID.randomUUID().toString()
-            ),
+            meta =
+                PageMeta(
+                    page = page,
+                    size = size,
+                    totalElements = resultPage.totalElements,
+                    totalPages = resultPage.totalPages,
+                    requestId = UUID.randomUUID().toString(),
+                ),
         )
     }
 
@@ -53,7 +54,7 @@ class ProductController(private val productService: ProductService) {
         return StandardResponse(
             message = "Detail produk berhasil diambil.",
             data = mapToDetail(product),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
@@ -66,7 +67,7 @@ class ProductController(private val productService: ProductService) {
         return StandardResponse(
             message = "Variasi produk berhasil diambil.",
             data = product.variants.map { mapToVariantDto(it) },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
@@ -79,10 +80,11 @@ class ProductController(private val productService: ProductService) {
             brandName = summary.brandName,
             categorySlug = summary.categorySlug,
             primaryImageUrl = summary.primaryImageUrl,
-            priceRange = PriceRangeDto(
-                min = MoneyDto(amount = summary.minPriceAmount),
-                max = MoneyDto(amount = summary.maxPriceAmount),
-            ),
+            priceRange =
+                PriceRangeDto(
+                    min = MoneyDto(amount = summary.minPriceAmount),
+                    max = MoneyDto(amount = summary.maxPriceAmount),
+                ),
             inStock = summary.inStock,
         )
     }
@@ -97,22 +99,24 @@ class ProductController(private val productService: ProductService) {
             brandName = product.brandName,
             categorySlug = product.category?.slug ?: "unknown",
             primaryImageUrl = product.media.firstOrNull { it.isPrimary }?.url ?: product.media.firstOrNull()?.url,
-            priceRange = PriceRangeDto(
-                min = MoneyDto(amount = activeVariants.minOfOrNull { it.priceAmount } ?: 0),
-                max = MoneyDto(amount = activeVariants.maxOfOrNull { it.priceAmount } ?: 0),
-            ),
+            priceRange =
+                PriceRangeDto(
+                    min = MoneyDto(amount = activeVariants.minOfOrNull { it.priceAmount } ?: 0),
+                    max = MoneyDto(amount = activeVariants.maxOfOrNull { it.priceAmount } ?: 0),
+                ),
             inStock = activeVariants.any { it.stockAvailable > 0 },
             description = product.description,
             collections = listOf(), // TODO: Map collections relationship if available in Product entity
-            media = product.media.map {
-                ProductMediaDto(
-                    id = it.id,
-                    url = it.url,
-                    altText = it.altText,
-                    sortOrder = it.sortOrder,
-                    isPrimary = it.isPrimary
-                )
-            },
+            media =
+                product.media.map {
+                    ProductMediaDto(
+                        id = it.id,
+                        url = it.url,
+                        altText = it.altText,
+                        sortOrder = it.sortOrder,
+                        isPrimary = it.isPrimary,
+                    )
+                },
             variants = product.variants.map { mapToVariantDto(it) },
         )
     }
@@ -124,15 +128,17 @@ class ProductController(private val productService: ProductService) {
             status = variant.status,
             price = MoneyDto(amount = variant.priceAmount),
             compareAtPrice = variant.compareAtAmount?.let { MoneyDto(amount = it) },
-            inventory = InventorySummaryDto(
-                stockOnHand = variant.stockOnHand,
-                stockReserved = variant.stockReserved,
-                stockAvailable = variant.stockAvailable,
-            ),
-            attributes = listOf(
-                ProductVariantAttributeDto(name = "color", value = variant.color),
-                ProductVariantAttributeDto(name = "size", value = variant.sizeCode),
-            ),
+            inventory =
+                InventorySummaryDto(
+                    stockOnHand = variant.stockOnHand,
+                    stockReserved = variant.stockReserved,
+                    stockAvailable = variant.stockAvailable,
+                ),
+            attributes =
+                listOf(
+                    ProductVariantAttributeDto(name = "color", value = variant.color),
+                    ProductVariantAttributeDto(name = "size", value = variant.sizeCode),
+                ),
             weightGrams = variant.weightGrams,
             primaryImageUrl = null,
         )

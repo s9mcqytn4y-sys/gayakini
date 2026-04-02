@@ -29,7 +29,7 @@ class GayakiniApplication(private val env: Environment) {
             Swagger UI: http://$host:$port$contextPath/swagger-ui.html
             API Docs:   http://$host:$port$contextPath/api-docs
             ----------------------------------------------------------
-            """.trimIndent()
+            """.trimIndent(),
         )
     }
 }

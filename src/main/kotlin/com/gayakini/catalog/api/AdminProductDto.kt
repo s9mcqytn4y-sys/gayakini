@@ -40,13 +40,13 @@ data class AdminProductData(
     val description: String,
     val collections: List<String>,
     val media: List<ProductMediaDto>,
-    val status: ProductStatus
+    val status: ProductStatus,
 )
 
 data class AdminProductResponse(
     val message: String,
     val data: AdminProductData,
-    val meta: ApiMeta? = null
+    val meta: ApiMeta? = null,
 )
 
 data class AdminCreateVariantRequest(
@@ -83,11 +83,11 @@ data class StockAdjustmentData(
     val stockOnHand: Int,
     val stockReserved: Int,
     val stockAvailable: Int,
-    val lastAdjustmentId: UUID
+    val lastAdjustmentId: UUID,
 )
 
 data class StockAdjustmentResponse(
     val message: String,
     val data: StockAdjustmentData,
-    val meta: ApiMeta? = null
+    val meta: ApiMeta? = null,
 )

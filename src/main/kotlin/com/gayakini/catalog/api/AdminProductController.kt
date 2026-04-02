@@ -14,36 +14,41 @@ import java.util.*
 class AdminProductController(
     private val productService: ProductService,
     private val productRepository: ProductRepository,
-    private val variantRepository: ProductVariantRepository
+    private val variantRepository: ProductVariantRepository,
 ) {
-
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
-    fun createProduct(@Valid @RequestBody request: AdminCreateProductRequest): AdminProductResponse {
-        val product = Product(
-            id = UuidV7Generator.generate(),
-            slug = request.slug,
-            title = request.title,
-            subtitle = request.subtitle,
-            brandName = request.brandName,
-            description = request.description,
-            status = request.status
-        )
+    fun createProduct(
+        @Valid @RequestBody request: AdminCreateProductRequest,
+    ): AdminProductResponse {
+        val product =
+            Product(
+                id = UuidV7Generator.generate(),
+                slug = request.slug,
+                title = request.title,
+                subtitle = request.subtitle,
+                brandName = request.brandName,
+                description = request.description,
+                status = request.status,
+            )
         // TODO: Actually handle category, collections, media in a real service
         val saved = productRepository.save(product)
         return AdminProductResponse(
             message = "Produk berhasil dibuat.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
     @PatchMapping("/products/{productId}")
     fun updateProduct(
         @PathVariable productId: UUID,
-        @Valid @RequestBody request: AdminUpdateProductRequest
+        @Valid @RequestBody request: AdminUpdateProductRequest,
     ): AdminProductResponse {
-        val product = productRepository.findById(productId).orElseThrow { NoSuchElementException("Produk tidak ditemukan") }
+        val product =
+            productRepository.findById(
+                productId,
+            ).orElseThrow { NoSuchElementException("Produk tidak ditemukan") }
         request.title?.let { product.title = it }
         request.status?.let { product.status = it }
         request.subtitle?.let { product.subtitle = it }
@@ -54,7 +59,7 @@ class AdminProductController(
         return AdminProductResponse(
             message = "Produk berhasil diperbarui.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
@@ -62,22 +67,26 @@ class AdminProductController(
     fun adjustStock(
         @PathVariable variantId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
-        @Valid @RequestBody request: StockAdjustmentRequest
+        @Valid @RequestBody request: StockAdjustmentRequest,
     ): StockAdjustmentResponse {
-        val variant = variantRepository.findById(variantId).orElseThrow { NoSuchElementException("Varian tidak ditemukan") }
+        val variant =
+            variantRepository.findById(
+                variantId,
+            ).orElseThrow { NoSuchElementException("Varian tidak ditemukan") }
         variant.stockOnHand += request.quantityDelta
         variantRepository.save(variant)
 
         return StockAdjustmentResponse(
             message = "Stok berhasil diperbarui.",
-            data = StockAdjustmentData(
-                variantId = variantId,
-                stockOnHand = variant.stockOnHand,
-                stockReserved = variant.stockReserved,
-                stockAvailable = variant.stockAvailable,
-                lastAdjustmentId = UUID.randomUUID() // TODO: Record in adjustment table
-            ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            data =
+                StockAdjustmentData(
+                    variantId = variantId,
+                    stockOnHand = variant.stockOnHand,
+                    stockReserved = variant.stockReserved,
+                    stockAvailable = variant.stockAvailable,
+                    lastAdjustmentId = UUID.randomUUID(), // TODO: Record in adjustment table
+                ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
@@ -91,16 +100,17 @@ class AdminProductController(
             categorySlug = product.category?.slug,
             description = product.description,
             collections = listOf(), // TODO: Map collections
-            media = product.media.map {
-                ProductMediaDto(
-                    id = it.id,
-                    url = it.url,
-                    altText = it.altText,
-                    sortOrder = it.sortOrder,
-                    isPrimary = it.isPrimary
-                )
-            },
-            status = product.status
+            media =
+                product.media.map {
+                    ProductMediaDto(
+                        id = it.id,
+                        url = it.url,
+                        altText = it.altText,
+                        sortOrder = it.sortOrder,
+                        isPrimary = it.isPrimary,
+                    )
+                },
+            status = product.status,
         )
     }
 }

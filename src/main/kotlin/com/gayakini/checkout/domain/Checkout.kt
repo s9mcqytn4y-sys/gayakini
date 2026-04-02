@@ -33,17 +33,13 @@ class Checkout(
     val totalAmount: Long = 0,
     @Column(name = "selected_shipping_quote_id")
     var selectedShippingQuoteId: UUID? = null,
-
     @OneToMany(mappedBy = "checkout", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<CheckoutItem> = mutableListOf(),
-
     @OneToOne(mappedBy = "checkout", cascade = [CascadeType.ALL])
     @PrimaryKeyJoinColumn
     var shippingAddress: CheckoutShippingAddress? = null,
-
     @OneToMany(mappedBy = "checkout", cascade = [CascadeType.ALL], orphanRemoval = true)
     val availableShippingQuotes: MutableList<CheckoutShippingQuote> = mutableListOf(),
-
     @Column(name = "expires_at")
     var expiresAt: Instant? = null,
     @Column(name = "created_at", updatable = false)

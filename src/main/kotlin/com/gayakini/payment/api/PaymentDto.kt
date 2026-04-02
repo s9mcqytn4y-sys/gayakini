@@ -1,6 +1,5 @@
 package com.gayakini.payment.api
 
-import com.gayakini.common.api.ApiMeta
 import com.gayakini.order.domain.PaymentStatus
 import java.time.Instant
 import java.util.UUID

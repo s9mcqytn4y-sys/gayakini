@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/v1/auth")
 class AuthController(private val customerService: CustomerService) {
-
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun register(
@@ -18,7 +17,7 @@ class AuthController(private val customerService: CustomerService) {
         val data = customerService.register(request)
         return StandardResponse(
             message = "Akun berhasil dibuat.",
-            data = data
+            data = data,
         )
     }
 
@@ -29,7 +28,7 @@ class AuthController(private val customerService: CustomerService) {
         val data = customerService.login(request)
         return StandardResponse(
             message = "Login berhasil.",
-            data = data
+            data = data,
         )
     }
 

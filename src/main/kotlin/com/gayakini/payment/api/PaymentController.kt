@@ -11,7 +11,6 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/orders")
 class PaymentController(private val paymentService: PaymentService) {
-
     @PostMapping("/{orderId}/payments")
     @ResponseStatus(HttpStatus.CREATED)
     fun createOrderPayment(
@@ -24,19 +23,20 @@ class PaymentController(private val paymentService: PaymentService) {
 
         return StandardResponse(
             message = "Pembayaran siap dilanjutkan.",
-            data = PaymentSessionDto(
-                paymentId = payment.id,
-                provider = payment.provider,
-                flow = payment.flow,
-                status = payment.status,
-                providerOrderId = payment.providerOrderId,
-                providerTransactionId = payment.providerTransactionId,
-                preferredChannel = payment.preferredChannel,
-                snapToken = payment.snapToken,
-                snapRedirectUrl = payment.snapRedirectUrl,
-                expiresAt = payment.expiresAt,
-            ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            data =
+                PaymentSessionDto(
+                    paymentId = payment.id,
+                    provider = payment.provider,
+                    flow = payment.flow,
+                    status = payment.status,
+                    providerOrderId = payment.providerOrderId,
+                    providerTransactionId = payment.providerTransactionId,
+                    preferredChannel = payment.preferredChannel,
+                    snapToken = payment.snapToken,
+                    snapRedirectUrl = payment.snapRedirectUrl,
+                    expiresAt = payment.expiresAt,
+                ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 }

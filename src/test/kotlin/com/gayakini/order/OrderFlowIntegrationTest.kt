@@ -21,13 +21,11 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
-import java.time.Instant
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class OrderFlowIntegrationTest {
-
     @Autowired
     lateinit var orderService: OrderService
 
@@ -62,97 +60,105 @@ class OrderFlowIntegrationTest {
 
     @BeforeEach
     fun setup() {
-        val category = categoryRepository.save(
-            Category(
-                id = UuidV7Generator.generate(),
-                slug = "test-category",
-                name = "Test Category",
-                description = "Test Description"
+        val category =
+            categoryRepository.save(
+                Category(
+                    id = UuidV7Generator.generate(),
+                    slug = "test-category",
+                    name = "Test Category",
+                    description = "Test Description",
+                ),
             )
-        )
 
-        testProduct = productRepository.save(
-            Product(
-                id = UuidV7Generator.generate(),
-                slug = "test-product",
-                title = "Test Product",
-                subtitle = "Test Subtitle",
-                brandName = "GAYAKINI",
-                category = category,
-                description = "Test Product Description",
-                status = ProductStatus.PUBLISHED
+        testProduct =
+            productRepository.save(
+                Product(
+                    id = UuidV7Generator.generate(),
+                    slug = "test-product",
+                    title = "Test Product",
+                    subtitle = "Test Subtitle",
+                    brandName = "GAYAKINI",
+                    category = category,
+                    description = "Test Product Description",
+                    status = ProductStatus.PUBLISHED,
+                ),
             )
-        )
 
-        testVariant = ProductVariant(
-            id = UuidV7Generator.generate(),
-            product = testProduct,
-            sku = "TEST-SKU-1",
-            sizeCode = "M",
-            color = "Black",
-            priceAmount = 50000,
-            stockOnHand = 10,
-        )
+        testVariant =
+            ProductVariant(
+                id = UuidV7Generator.generate(),
+                product = testProduct,
+                sku = "TEST-SKU-1",
+                sizeCode = "M",
+                color = "Black",
+                priceAmount = 50000,
+                stockOnHand = 10,
+            )
         testProduct.variants.add(testVariant)
         productRepository.save(testProduct)
 
-        testCustomer = customerRepository.save(
-            Customer(
-                id = UuidV7Generator.generate(),
-                email = "test@example.com",
-                passwordHash = passwordEncoder.encode("password"),
-                fullName = "Test User",
-                phone = "08123456789"
+        testCustomer =
+            customerRepository.save(
+                Customer(
+                    id = UuidV7Generator.generate(),
+                    email = "test@example.com",
+                    passwordHash = passwordEncoder.encode("password"),
+                    fullName = "Test User",
+                    phone = "08123456789",
+                ),
             )
-        )
 
-        testCart = cartRepository.save(
-            Cart(
-                id = UuidV7Generator.generate(),
-                customerId = null,
-                accessTokenHash = guestTokenHash,
+        testCart =
+            cartRepository.save(
+                Cart(
+                    id = UuidV7Generator.generate(),
+                    customerId = null,
+                    accessTokenHash = guestTokenHash,
+                ),
             )
-        )
 
-        val cartItem = CartItem(
-            id = UuidV7Generator.generate(),
-            cart = testCart,
-            product = testProduct,
-            variant = testVariant,
-            productTitleSnapshot = testProduct.title,
-            skuSnapshot = testVariant.sku,
-            color = testVariant.color,
-            sizeCode = testVariant.sizeCode,
-            quantity = 2,
-            unitPriceAmount = testVariant.priceAmount,
-        )
+        val cartItem =
+            CartItem(
+                id = UuidV7Generator.generate(),
+                cart = testCart,
+                product = testProduct,
+                variant = testVariant,
+                productTitleSnapshot = testProduct.title,
+                skuSnapshot = testVariant.sku,
+                color = testVariant.color,
+                sizeCode = testVariant.sizeCode,
+                quantity = 2,
+                unitPriceAmount = testVariant.priceAmount,
+            )
         testCart.items.add(cartItem)
         cartRepository.save(testCart)
 
-        testCheckout = Checkout(
-            id = UuidV7Generator.generate(),
-            cart = testCart,
-            customerId = null,
-            status = CheckoutStatus.READY_FOR_ORDER,
-            accessTokenHash = guestTokenHash,
-            subtotalAmount = 100000,
-            shippingCostAmount = 10000,
-            expiresAt = null,
-        )
-        val address = CheckoutShippingAddress(
-            checkoutId = testCheckout.id,
-            checkout = testCheckout,
-            recipientName = "John Doe",
-            phone = "08123456789",
-            line1 = "Jl. Sudirman No. 1",
-            line2 = null,
-            notes = null,
-            areaId = "AREA1",
-            district = "Jakarta Selatan",
-            city = "Jakarta",
-            province = "DKI Jakarta",
-            postalCode = "12345",
-        )
+        testCheckout =
+            Checkout(
+                id = UuidV7Generator.generate(),
+                cart = testCart,
+                customerId = null,
+                status = CheckoutStatus.READY_FOR_ORDER,
+                accessTokenHash = guestTokenHash,
+                subtotalAmount = 100000,
+                shippingCostAmount = 10000,
+                expiresAt = null,
+            )
+        val address =
+            CheckoutShippingAddress(
+                checkoutId = testCheckout.id,
+                checkout = testCheckout,
+                recipientName = "John Doe",
+                phone = "08123456789",
+                line1 = "Jl. Sudirman No. 1",
+                line2 = null,
+                notes = null,
+                areaId = "AREA1",
+                district = "Jakarta Selatan",
+                city = "Jakarta",
+                province = "DKI Jakarta",
+                postalCode = "12345",
+            )
         testCheckout.shippingAddress = address
         testCheckout.items.add(
             CheckoutItem(
@@ -166,26 +172,27 @@ class OrderFlowIntegrationTest {
                 sizeCode = testVariant.sizeCode,
                 quantity = 2,
                 unitPriceAmount = testVariant.priceAmount,
-            )
+            ),
         )
 
-        val quote = CheckoutShippingQuote(
-            id = UuidV7Generator.generate(),
-            checkout = testCheckout,
-            provider = "BITESHIP",
-            providerReference = "REF123",
-            courierCode = "jne",
-            courierName = "JNE",
-            serviceCode = "reg",
-            serviceName = "Regular",
-            description = "Reguler Service",
-            costAmount = 10000,
-            estimatedDaysMin = 1,
-            estimatedDaysMax = 3,
-            isRecommended = true,
-            rawPayload = null,
-            expiresAt = null
-        )
+        val quote =
+            CheckoutShippingQuote(
+                id = UuidV7Generator.generate(),
+                checkout = testCheckout,
+                provider = "BITESHIP",
+                providerReference = "REF123",
+                courierCode = "jne",
+                courierName = "JNE",
+                serviceCode = "reg",
+                serviceName = "Regular",
+                description = "Reguler Service",
+                costAmount = 10000,
+                estimatedDaysMin = 1,
+                estimatedDaysMax = 3,
+                isRecommended = true,
+                rawPayload = null,
+                expiresAt = null,
+            )
         testCheckout.availableShippingQuotes.add(quote)
         testCheckout.selectedShippingQuoteId = quote.id
 
@@ -199,12 +206,13 @@ class OrderFlowIntegrationTest {
         val request = PlaceOrderRequest(customerNotes = "Test notes")
 
         // When
-        val order = orderService.placeOrderFromCheckout(
-            checkoutId = testCheckout.id,
-            idempotencyKey = idempotencyKey,
-            checkoutToken = guestToken,
-            request = request
-        )
+        val order =
+            orderService.placeOrderFromCheckout(
+                checkoutId = testCheckout.id,
+                idempotencyKey = idempotencyKey,
+                checkoutToken = guestToken,
+                request = request,
+            )
 
         // Then
         assertNotNull(order)

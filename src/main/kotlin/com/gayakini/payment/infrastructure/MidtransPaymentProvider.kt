@@ -45,7 +45,12 @@ class MidtransPaymentProvider(
             )
 
         val headers = createHeaders()
-        val response = restTemplate.postForEntity(properties.midtrans.snapUrl, HttpEntity(requestBody, headers), Map::class.java)
+        val response =
+            restTemplate.postForEntity(
+                properties.midtrans.snapUrl,
+                HttpEntity(requestBody, headers),
+                Map::class.java,
+            )
 
         if (response.statusCode.is2xxSuccessful) {
             val body = response.body as Map<*, *>

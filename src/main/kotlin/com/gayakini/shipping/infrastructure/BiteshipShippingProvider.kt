@@ -56,7 +56,7 @@ class BiteshipShippingProvider(
                         description = it["description"]?.toString(),
                         price = (it["price"] as Number).toLong(),
                         minDuration = parseDuration(it["duration"]?.toString(), true),
-                        maxDuration = parseDuration(it["duration"]?.toString(), false)
+                        maxDuration = parseDuration(it["duration"]?.toString(), false),
                     )
                 }
             } else {
@@ -68,7 +68,10 @@ class BiteshipShippingProvider(
         }
     }
 
-    private fun parseDuration(duration: String?, isMin: Boolean): Int? {
+    private fun parseDuration(
+        duration: String?,
+        isMin: Boolean,
+    ): Int? {
         if (duration == null) return null
         val parts = duration.split("-").map { it.trim().filter { c -> c.isDigit() }.toIntOrNull() }
         return if (isMin) parts.firstOrNull() else parts.lastOrNull()

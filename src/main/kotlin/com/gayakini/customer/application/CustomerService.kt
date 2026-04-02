@@ -23,26 +23,28 @@ class CustomerService(
             throw IllegalStateException("Email sudah terdaftar.")
         }
 
-        val customer = Customer(
-            email = request.email,
-            passwordHash = passwordEncoder.encode(request.password),
-            fullName = request.fullName,
-            phone = request.phone
-        )
+        val customer =
+            Customer(
+                email = request.email,
+                passwordHash = passwordEncoder.encode(request.password),
+                fullName = request.fullName,
+                phone = request.phone,
+            )
         val savedCustomer = customerRepository.save(customer)
 
         val tokens = generateTokenPair(savedCustomer)
         return AuthTokensData(
             tokens = tokens,
-            customer = mapToProfileResponse(savedCustomer)
+            customer = mapToProfileResponse(savedCustomer),
         )
     }
 
     @Transactional
     fun login(request: LoginRequest): AuthTokensData {
-        val customer = customerRepository.findByEmail(request.email)
-            .filter { passwordEncoder.matches(request.password, it.passwordHash) }
-            .orElseThrow { IllegalArgumentException("Email atau password salah.") }
+        val customer =
+            customerRepository.findByEmail(request.email)
+                .filter { passwordEncoder.matches(request.password, it.passwordHash) }
+                .orElseThrow { IllegalArgumentException("Email atau password salah.") }
 
         customer.lastLoginAt = Instant.now()
         customer.updatedAt = Instant.now()
@@ -51,7 +53,7 @@ class CustomerService(
         val tokens = generateTokenPair(savedCustomer)
         return AuthTokensData(
             tokens = tokens,
-            customer = mapToProfileResponse(savedCustomer)
+            customer = mapToProfileResponse(savedCustomer),
         )
     }
 
@@ -61,18 +63,19 @@ class CustomerService(
         return JwtTokenPair(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            expiresIn = 3600 // This should ideally come from config or JwtService
+            expiresIn = 3600, // This should ideally come from config or JwtService
         )
     }
 
-    private fun mapToProfileResponse(customer: Customer) = CustomerProfileResponse(
-        id = customer.id,
-        email = customer.email,
-        phone = customer.phone,
-        fullName = customer.fullName,
-        role = customer.role,
-        createdAt = customer.createdAt
-    )
+    private fun mapToProfileResponse(customer: Customer) =
+        CustomerProfileResponse(
+            id = customer.id,
+            email = customer.email,
+            phone = customer.phone,
+            fullName = customer.fullName,
+            role = customer.role,
+            createdAt = customer.createdAt,
+        )
 
     fun getCustomer(id: UUID): Customer {
         return customerRepository.findById(id)

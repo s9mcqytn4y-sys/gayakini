@@ -47,8 +47,9 @@ class OrderService(
                 return@handle existingByCheckout.get()
             }
 
-            val checkout = checkoutRepository.findById(checkoutId)
-                .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
+            val checkout =
+                checkoutRepository.findById(checkoutId)
+                    .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
 
             if (checkout.status != CheckoutStatus.READY_FOR_ORDER) {
                 throw IllegalStateException("Checkout belum siap atau sudah diproses (status: ${checkout.status}).")
@@ -64,71 +65,76 @@ class OrderService(
                 }
             }
 
-            val order = Order(
-                id = UuidV7Generator.generate(),
-                orderNumber = "ORD-${Instant.now().toEpochMilli()}-${Random().nextInt(9999)}",
-                checkoutId = checkout.id,
-                cartId = checkout.cart.id,
-                customerId = checkout.customerId,
-                accessTokenHash = checkout.accessTokenHash,
-                status = OrderStatus.PENDING_PAYMENT,
-                subtotalAmount = checkout.subtotalAmount,
-                shippingCostAmount = checkout.shippingCostAmount,
-                customerNotes = request.customerNotes,
-            )
+            val order =
+                Order(
+                    id = UuidV7Generator.generate(),
+                    orderNumber = "ORD-${Instant.now().toEpochMilli()}-${Random().nextInt(9999)}",
+                    checkoutId = checkout.id,
+                    cartId = checkout.cart.id,
+                    customerId = checkout.customerId,
+                    accessTokenHash = checkout.accessTokenHash,
+                    status = OrderStatus.PENDING_PAYMENT,
+                    subtotalAmount = checkout.subtotalAmount,
+                    shippingCostAmount = checkout.shippingCostAmount,
+                    customerNotes = request.customerNotes,
+                )
 
             // Snapshot Address
             val checkoutAddress = checkout.shippingAddress ?: throw IllegalStateException("Alamat pengiriman belum diset.")
-            order.shippingAddress = OrderShippingAddress(
-                orderId = order.id,
-                order = order,
-                recipientName = checkoutAddress.recipientName,
-                phone = checkoutAddress.phone,
-                line1 = checkoutAddress.line1,
-                line2 = checkoutAddress.line2,
-                notes = checkoutAddress.notes,
-                areaId = checkoutAddress.areaId,
-                district = checkoutAddress.district,
-                city = checkoutAddress.city,
-                province = checkoutAddress.province,
-                postalCode = checkoutAddress.postalCode,
-                countryCode = checkoutAddress.countryCode,
-            )
+            order.shippingAddress =
+                OrderShippingAddress(
+                    orderId = order.id,
+                    order = order,
+                    recipientName = checkoutAddress.recipientName,
+                    phone = checkoutAddress.phone,
+                    line1 = checkoutAddress.line1,
+                    line2 = checkoutAddress.line2,
+                    notes = checkoutAddress.notes,
+                    areaId = checkoutAddress.areaId,
+                    district = checkoutAddress.district,
+                    city = checkoutAddress.city,
+                    province = checkoutAddress.province,
+                    postalCode = checkoutAddress.postalCode,
+                    countryCode = checkoutAddress.countryCode,
+                )
 
             // Snapshot Shipping Selection
-            val selectedQuote = checkout.availableShippingQuotes.find { it.id == checkout.selectedShippingQuoteId }
-                ?: throw IllegalStateException("Pilihan pengiriman tidak valid.")
+            val selectedQuote =
+                checkout.availableShippingQuotes.find { it.id == checkout.selectedShippingQuoteId }
+                    ?: throw IllegalStateException("Pilihan pengiriman tidak valid.")
 
-            order.shippingSelection = OrderShippingSelection(
-                orderId = order.id,
-                order = order,
-                provider = selectedQuote.provider,
-                providerReference = selectedQuote.providerReference,
-                courierCode = selectedQuote.courierCode,
-                courierName = selectedQuote.courierName,
-                serviceCode = selectedQuote.serviceCode,
-                serviceName = selectedQuote.serviceName,
-                description = selectedQuote.description,
-                costAmount = selectedQuote.costAmount,
-                estimatedDaysMin = selectedQuote.estimatedDaysMin,
-                estimatedDaysMax = selectedQuote.estimatedDaysMax,
-                rawQuotePayload = selectedQuote.rawPayload
-            )
+            order.shippingSelection =
+                OrderShippingSelection(
+                    orderId = order.id,
+                    order = order,
+                    provider = selectedQuote.provider,
+                    providerReference = selectedQuote.providerReference,
+                    courierCode = selectedQuote.courierCode,
+                    courierName = selectedQuote.courierName,
+                    serviceCode = selectedQuote.serviceCode,
+                    serviceName = selectedQuote.serviceName,
+                    description = selectedQuote.description,
+                    costAmount = selectedQuote.costAmount,
+                    estimatedDaysMin = selectedQuote.estimatedDaysMin,
+                    estimatedDaysMax = selectedQuote.estimatedDaysMax,
+                    rawQuotePayload = selectedQuote.rawPayload,
+                )
 
             // Items & Reservations
             checkout.items.forEach { checkoutItem ->
-                val orderItem = OrderItem(
-                    id = UuidV7Generator.generate(),
-                    order = order,
-                    product = checkoutItem.product,
-                    variant = checkoutItem.variant,
-                    skuSnapshot = checkoutItem.skuSnapshot,
-                    titleSnapshot = checkoutItem.productTitleSnapshot,
-                    color = checkoutItem.color,
-                    sizeCode = checkoutItem.sizeCode,
-                    quantity = checkoutItem.quantity,
-                    unitPriceAmount = checkoutItem.unitPriceAmount,
-                )
+                val orderItem =
+                    OrderItem(
+                        id = UuidV7Generator.generate(),
+                        order = order,
+                        product = checkoutItem.product,
+                        variant = checkoutItem.variant,
+                        skuSnapshot = checkoutItem.skuSnapshot,
+                        titleSnapshot = checkoutItem.productTitleSnapshot,
+                        color = checkoutItem.color,
+                        sizeCode = checkoutItem.sizeCode,
+                        quantity = checkoutItem.quantity,
+                        unitPriceAmount = checkoutItem.unitPriceAmount,
+                    )
                 order.items.add(orderItem)
 
                 // Atomic stock lock and reservation inside inventoryService
@@ -165,7 +171,10 @@ class OrderService(
     }
 
     @Transactional
-    fun cancelOrder(id: UUID, reason: String?): Order {
+    fun cancelOrder(
+        id: UUID,
+        reason: String?,
+    ): Order {
         val order = getOrder(id)
         if (order.status == OrderStatus.COMPLETED || order.status == OrderStatus.CANCELLED) {
             throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")

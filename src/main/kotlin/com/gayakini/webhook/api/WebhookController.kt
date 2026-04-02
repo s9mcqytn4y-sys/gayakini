@@ -24,14 +24,15 @@ class WebhookController(
 
         val signatureKey = payload.signatureKey
 
-        val payloadMap = mutableMapOf<String, Any>(
-            "order_id" to payload.orderId,
-            "status_code" to payload.statusCode,
-            "transaction_status" to payload.transactionStatus,
-            "gross_amount" to payload.grossAmount,
-            "signature_key" to payload.signatureKey,
-            "transaction_id" to (payload.transactionId ?: "")
-        )
+        val payloadMap =
+            mutableMapOf<String, Any>(
+                "order_id" to payload.orderId,
+                "status_code" to payload.statusCode,
+                "transaction_status" to payload.transactionStatus,
+                "gross_amount" to payload.grossAmount,
+                "signature_key" to payload.signatureKey,
+                "transaction_id" to (payload.transactionId ?: ""),
+            )
 
         paymentService.processMidtransWebhook(payloadMap, signatureKey)
 
@@ -44,10 +45,11 @@ class WebhookController(
     ): WebhookAckResponse {
         logger.info("Menerima webhook Biteship Event: {} untuk Order: {}", payload.event, payload.orderId)
 
-        val payloadMap = mutableMapOf<String, Any>(
-            "event" to payload.event,
-            "id" to payload.id
-        )
+        val payloadMap =
+            mutableMapOf<String, Any>(
+                "event" to payload.event,
+                "id" to payload.id,
+            )
         payload.orderId?.let { payloadMap["order_id"] = it }
         payload.status?.let { payloadMap["status"] = it }
 

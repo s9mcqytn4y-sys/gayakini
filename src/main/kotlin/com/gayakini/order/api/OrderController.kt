@@ -54,13 +54,14 @@ class OrderController(
         return OrderPageResponse(
             message = "Daftar pesanan berhasil diambil.",
             data = orders.map { mapToDto(it) },
-            meta = PageMeta(
-                page = page,
-                size = size,
-                totalElements = orders.size.toLong(),
-                totalPages = 1,
-                requestId = UUID.randomUUID().toString()
-            )
+            meta =
+                PageMeta(
+                    page = page,
+                    size = size,
+                    totalElements = orders.size.toLong(),
+                    totalPages = 1,
+                    requestId = UUID.randomUUID().toString(),
+                ),
         )
     }
 
@@ -69,17 +70,20 @@ class OrderController(
         @PathVariable orderId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
         @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
-        @RequestBody request: CancelOrderRequest
+        @RequestBody request: CancelOrderRequest,
     ): OrderResponse {
         val order = orderService.cancelOrder(orderId, request.reason)
         return mapToResponse(order, "Pesanan berhasil dibatalkan.")
     }
 
-    private fun mapToResponse(order: com.gayakini.order.domain.Order, message: String): OrderResponse {
+    private fun mapToResponse(
+        order: com.gayakini.order.domain.Order,
+        message: String,
+    ): OrderResponse {
         return OrderResponse(
             message = message,
             data = mapToDto(order),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 
@@ -90,37 +94,40 @@ class OrderController(
             customerId = order.customerId,
             status = order.status,
             fulfillmentStatus = order.fulfillmentStatus,
-            paymentSummary = OrderPaymentSummaryDto(
-                provider = "MIDTRANS",
-                status = order.paymentStatus
-            ),
-            shippingAddress = order.shippingAddress!!.let { addr ->
-                OrderAddressDto(
-                    recipientName = addr.recipientName,
-                    phone = addr.phone,
-                    line1 = addr.line1,
-                    line2 = addr.line2,
-                    notes = addr.notes,
-                    areaId = addr.areaId,
-                    district = addr.district,
-                    city = addr.city,
-                    province = addr.province,
-                    postalCode = addr.postalCode,
-                    countryCode = addr.countryCode
-                )
-            },
-            items = order.items.map { item ->
-                OrderItemDto(
-                    id = item.id,
-                    productId = item.product.id,
-                    variantId = item.variant.id,
-                    skuSnapshot = item.skuSnapshot,
-                    titleSnapshot = item.titleSnapshot,
-                    quantity = item.quantity,
-                    unitPrice = MoneyDto(amount = item.unitPriceAmount),
-                    lineTotal = MoneyDto(amount = item.lineTotalAmount)
-                )
-            },
+            paymentSummary =
+                OrderPaymentSummaryDto(
+                    provider = "MIDTRANS",
+                    status = order.paymentStatus,
+                ),
+            shippingAddress =
+                order.shippingAddress!!.let { addr ->
+                    OrderAddressDto(
+                        recipientName = addr.recipientName,
+                        phone = addr.phone,
+                        line1 = addr.line1,
+                        line2 = addr.line2,
+                        notes = addr.notes,
+                        areaId = addr.areaId,
+                        district = addr.district,
+                        city = addr.city,
+                        province = addr.province,
+                        postalCode = addr.postalCode,
+                        countryCode = addr.countryCode,
+                    )
+                },
+            items =
+                order.items.map { item ->
+                    OrderItemDto(
+                        id = item.id,
+                        productId = item.product.id,
+                        variantId = item.variant.id,
+                        skuSnapshot = item.skuSnapshot,
+                        titleSnapshot = item.titleSnapshot,
+                        quantity = item.quantity,
+                        unitPrice = MoneyDto(amount = item.unitPriceAmount),
+                        lineTotal = MoneyDto(amount = item.lineTotalAmount),
+                    )
+                },
             subtotal = MoneyDto(amount = order.subtotalAmount),
             shippingCost = MoneyDto(amount = order.shippingCostAmount),
             total = MoneyDto(amount = order.totalAmount),
@@ -128,7 +135,7 @@ class OrderController(
             customerNotes = order.customerNotes,
             createdAt = order.createdAt,
             paidAt = order.paidAt,
-            cancelledAt = order.cancelledAt
+            cancelledAt = order.cancelledAt,
         )
     }
 }

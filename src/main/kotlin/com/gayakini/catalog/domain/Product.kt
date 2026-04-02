@@ -18,11 +18,9 @@ class Product(
     var subtitle: String?,
     @Column(name = "brand_name", nullable = false, length = 120)
     var brandName: String,
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     var category: Category? = null,
-
     @Column(columnDefinition = "TEXT", nullable = false)
     var description: String,
     @Enumerated(EnumType.STRING)
@@ -32,13 +30,10 @@ class Product(
     var publishedAt: Instant? = null,
     @Column(name = "archived_at")
     var archivedAt: Instant? = null,
-
     @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
     var variants: MutableList<ProductVariant> = mutableListOf(),
-
     @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
     var media: MutableList<ProductMedia> = mutableListOf(),
-
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")

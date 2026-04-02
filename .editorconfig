@@ -4,6 +4,14 @@ insert_final_newline = true
 indent_size = 4
 continuation_indent_size = 4
 trim_trailing_whitespace = true
+
+# Modern ktlint rules (Standard rules control)
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_import-ordering = disabled
+ktlint_standard_final-newline = enabled
+ktlint_standard_trailing-comma-on-call-site = enabled
+ktlint_standard_trailing-comma-on-declaration-site = enabled
+
+# IntelliJ specific
 ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
-disabled_rules=no-wildcard-imports,import-ordering

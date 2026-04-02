@@ -52,7 +52,7 @@ data class StandardResponse<T>(
     val success: Boolean = true,
     val message: String,
     val data: T? = null,
-    val meta: ApiMeta? = ApiMeta()
+    val meta: ApiMeta? = ApiMeta(),
 )
 
 /**
@@ -63,7 +63,7 @@ data class PaginatedResponse<T>(
     val success: Boolean = true,
     val message: String,
     val data: List<T>,
-    val meta: PageMeta
+    val meta: PageMeta,
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -71,9 +71,9 @@ data class WebhookAckResponse(
     val success: Boolean = true,
     val message: String = "Webhook berhasil diterima.",
     val data: WebhookAckData = WebhookAckData(),
-    val meta: ApiMeta? = ApiMeta()
+    val meta: ApiMeta? = ApiMeta(),
 )
 
 data class WebhookAckData(
-    val accepted: Boolean = true
+    val accepted: Boolean = true,
 )

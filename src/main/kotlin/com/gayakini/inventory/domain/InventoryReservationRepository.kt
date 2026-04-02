@@ -9,5 +9,8 @@ interface InventoryReservationRepository : JpaRepository<InventoryReservation, U
 
     fun findByOrderItemId(orderItemId: UUID): Optional<InventoryReservation>
 
-    fun findAllByOrderIdAndStatus(orderId: UUID, status: ReservationStatus): List<InventoryReservation>
+    fun findAllByOrderIdAndStatus(
+        orderId: UUID,
+        status: ReservationStatus,
+    ): List<InventoryReservation>
 }

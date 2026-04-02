@@ -12,7 +12,6 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/locations")
 class LocationController(private val areaRepository: LocationAreaRepository) {
-
     @GetMapping("/areas")
     fun searchAreas(
         @RequestParam input: String,
@@ -26,18 +25,19 @@ class LocationController(private val areaRepository: LocationAreaRepository) {
 
         return LocationAreaListResponse(
             message = "Area tujuan berhasil ditemukan.",
-            data = areas.map { area ->
-                LocationAreaDto(
-                    areaId = area.areaId,
-                    label = area.label,
-                    district = area.district,
-                    city = area.city,
-                    province = area.province,
-                    postalCode = area.postalCode,
-                    countryCode = area.countryCode,
-                )
-            },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString())
+            data =
+                areas.map { area ->
+                    LocationAreaDto(
+                        areaId = area.areaId,
+                        label = area.label,
+                        district = area.district,
+                        city = area.city,
+                        province = area.province,
+                        postalCode = area.postalCode,
+                        countryCode = area.countryCode,
+                    )
+                },
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 }
@@ -55,5 +55,5 @@ data class LocationAreaDto(
 data class LocationAreaListResponse(
     val message: String,
     val data: List<LocationAreaDto>,
-    val meta: ApiMeta? = null
+    val meta: ApiMeta? = null,
 )

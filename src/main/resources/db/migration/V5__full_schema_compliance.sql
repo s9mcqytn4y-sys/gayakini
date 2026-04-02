@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS commerce.merchant_shipping_origins (
     city                 varchar(120) NOT NULL,
     province             varchar(120) NOT NULL,
     postal_code          varchar(20) NOT NULL,
-    country_code         char(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
+    country_code         varchar(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
     latitude             numeric(10,7),
     longitude            numeric(10,7),
     is_default           boolean NOT NULL DEFAULT false,
@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS commerce.checkout_shipping_addresses (
     city                 varchar(120) NOT NULL,
     province             varchar(120) NOT NULL,
     postal_code          varchar(20) NOT NULL,
-    country_code         char(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
+    country_code         varchar(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
     created_at           timestamptz NOT NULL DEFAULT now(),
     updated_at           timestamptz NOT NULL DEFAULT now()
 );
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS commerce.order_shipping_addresses (
     city                 varchar(120) NOT NULL,
     province             varchar(120) NOT NULL,
     postal_code          varchar(20) NOT NULL,
-    country_code         char(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
+    country_code         varchar(2) NOT NULL DEFAULT 'ID' CHECK (country_code = 'ID'),
     created_at           timestamptz NOT NULL DEFAULT now()
 );
 
@@ -142,16 +142,20 @@ CREATE TABLE IF NOT EXISTS commerce.order_shipping_selections (
     service_name         varchar(120) NOT NULL,
     description          varchar(200),
     cost_amount          bigint NOT NULL CHECK (cost_amount >= 0),
-    estimated_days_min   smallint CHECK (estimated_days_min IS NULL OR estimated_days_min >= 1),
-    estimated_days_max   smallint CHECK (estimated_days_max IS NULL OR estimated_days_max >= 1),
+    estimated_days_min   integer CHECK (estimated_days_min IS NULL OR estimated_days_min >= 1),
+    estimated_days_max   integer CHECK (estimated_days_max IS NULL OR estimated_days_max >= 1),
     raw_quote_payload    jsonb,
     created_at           timestamptz NOT NULL DEFAULT now()
 );
 
 -- 6. Payment & Shipment Refactoring
 -- Drop legacy public tables if they still exist or were not properly moved
-DROP TABLE IF EXISTS public.payments CASCADE;
-DROP TABLE IF EXISTS public.shipments CASCADE;
+DO $$ BEGIN
+    DROP TABLE IF EXISTS public.payments CASCADE;
+    DROP TABLE IF EXISTS public.shipments CASCADE;
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END $$;
 
 CREATE TABLE IF NOT EXISTS commerce.payments (
     id                   uuid PRIMARY KEY,
@@ -294,6 +298,11 @@ WHERE p.status = 'PUBLISHED'
 GROUP BY p.id, p.slug, p.title, p.subtitle, p.brand_name, c.slug, pm.url, p.created_at;
 
 -- 10. Triggers for Auditing
-CREATE TRIGGER trg_cart_items_sync_totals
-AFTER INSERT OR UPDATE OR DELETE ON commerce.cart_items
-FOR EACH ROW EXECUTE FUNCTION commerce.sync_cart_totals();
+DO $$ BEGIN
+    DROP TRIGGER IF EXISTS trg_cart_items_sync_totals ON commerce.cart_items;
+    CREATE TRIGGER trg_cart_items_sync_totals
+    AFTER INSERT OR UPDATE OR DELETE ON commerce.cart_items
+    FOR EACH ROW EXECUTE FUNCTION commerce.sync_cart_totals();
+EXCEPTION WHEN OTHERS THEN
+    NULL;
+END $$;
