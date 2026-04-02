@@ -28,7 +28,7 @@ class Checkout(
     @Column(name = "subtotal_amount", nullable = false)
     var subtotalAmount: Long = 0,
     @Column(name = "shipping_cost_amount", nullable = false)
-    var shipping_cost_amount: Long = 0, // Matched to schema renamed column in migration? Actually schema says shipping_cost_amount
+    var shippingCostAmount: Long = 0,
     @Column(name = "total_amount", insertable = false, updatable = false)
     val totalAmount: Long = 0,
     @Column(name = "selected_shipping_quote_id")
@@ -63,10 +63,6 @@ class Checkout(
     fun markNotNew() {
         _isNew = false
     }
-
-    var shippingCostAmount: Long
-        get() = shipping_cost_amount
-        set(value) { shipping_cost_amount = value }
 }
 
 enum class CheckoutStatus { ACTIVE, READY_FOR_ORDER, ORDER_CREATED, EXPIRED }

@@ -11,9 +11,29 @@ spring:
       hibernate:
         format_sql: true
         default_schema: commerce
+  flyway:
+    enabled: true
+    default-schema: commerce
+    schemas: commerce
+    baseline-on-migrate: true
 
 logging:
   level:
     com.gayakini: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# App Specific Properties (Override defaults in GayakiniProperties)
+gayakini:
+  jwt:
+    secret: "super-secret-key-change-this-in-production-at-least-32-chars"
+  cors:
+    allowed-origins:
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+  midtrans:
+    is-production: false
+    server-key: "your-midtrans-server-key"
+    client-key: "your-midtrans-client-key"
+  biteship:
+    api-key: "your-biteship-api-key"

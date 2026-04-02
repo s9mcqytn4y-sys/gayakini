@@ -2,6 +2,9 @@ package com.gayakini.webhook.api
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
+/**
+ * Payload for Midtrans Payment Webhook
+ */
 data class MidtransWebhookPayload(
     @JsonProperty("order_id") val orderId: String,
     @JsonProperty("status_code") val statusCode: String,
@@ -17,6 +20,9 @@ data class MidtransWebhookPayload(
     @JsonProperty("currency") val currency: String? = null,
 )
 
+/**
+ * Payload for Biteship Shipment Webhook
+ */
 data class BiteshipWebhookPayload(
     val event: String,
     val id: String,

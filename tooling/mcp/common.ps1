@@ -38,10 +38,12 @@ function Import-EnvFile {
     }
 }
 
-# Load main .env and MCP overrides
+# Load environment files in order of priority
 function Load-McpEnvironment {
     $RepoRoot = Get-RepoRoot
+    # Priority: .env.mcp > local.env > .env
     Import-EnvFile "$RepoRoot\.env"
+    Import-EnvFile "$RepoRoot\local.env"
     Import-EnvFile "$RepoRoot\.env.mcp"
 }
 

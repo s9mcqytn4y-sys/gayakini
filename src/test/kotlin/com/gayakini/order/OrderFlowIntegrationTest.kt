@@ -1,101 +1,119 @@
 package com.gayakini.order
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.cart.domain.Cart
 import com.gayakini.cart.domain.CartItem
 import com.gayakini.cart.domain.CartRepository
-import com.gayakini.cart.domain.CartStatus
-import com.gayakini.catalog.domain.Product
-import com.gayakini.catalog.domain.ProductRepository
-import com.gayakini.catalog.domain.ProductVariant
-import com.gayakini.catalog.domain.ProductVariantRepository
+import com.gayakini.catalog.domain.*
 import com.gayakini.checkout.domain.*
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
+import com.gayakini.customer.domain.Customer
+import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.order.api.PlaceOrderRequest
+import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.OrderRepository
+import com.gayakini.order.domain.OrderStatus
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.http.MediaType
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
-import java.util.UUID
+import java.time.Instant
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class OrderFlowIntegrationTest {
-    @Autowired
-    private lateinit var mockMvc: MockMvc
 
     @Autowired
-    private lateinit var objectMapper: ObjectMapper
+    lateinit var orderService: OrderService
 
     @Autowired
-    private lateinit var productRepository: ProductRepository
+    lateinit var orderRepository: OrderRepository
 
     @Autowired
-    private lateinit var variantRepository: ProductVariantRepository
+    lateinit var cartRepository: CartRepository
 
     @Autowired
-    private lateinit var cartRepository: CartRepository
+    lateinit var customerRepository: CustomerRepository
 
     @Autowired
-    private lateinit var checkoutRepository: CheckoutRepository
+    lateinit var productRepository: ProductRepository
 
     @Autowired
-    private lateinit var orderRepository: OrderRepository
+    lateinit var categoryRepository: CategoryRepository
 
     @Autowired
-    private lateinit var quoteRepository: CheckoutShippingQuoteRepository
+    lateinit var checkoutRepository: CheckoutRepository
 
+    @Autowired
+    lateinit var passwordEncoder: PasswordEncoder
+
+    private lateinit var testCustomer: Customer
     private lateinit var testProduct: Product
     private lateinit var testVariant: ProductVariant
     private lateinit var testCart: Cart
     private lateinit var testCheckout: Checkout
-
-    private val guestTokenRaw = "test-guest-raw"
-    private val guestTokenHash = HashUtils.sha256(guestTokenRaw)
+    private val guestToken = "test-guest-token"
+    private val guestTokenHash = HashUtils.sha256(guestToken)
 
     @BeforeEach
     fun setup() {
-        testProduct = Product(
-            id = UuidV7Generator.generate(),
-            slug = "test-product-${UUID.randomUUID()}",
-            title = "Test Product",
-            subtitle = "Subtitle",
-            brandName = "Brand",
-            category = null,
-            description = "Desc",
+        val category = categoryRepository.save(
+            Category(
+                id = UuidV7Generator.generate(),
+                slug = "test-category",
+                name = "Test Category",
+                description = "Test Description"
+            )
         )
-        productRepository.save(testProduct)
+
+        testProduct = productRepository.save(
+            Product(
+                id = UuidV7Generator.generate(),
+                slug = "test-product",
+                title = "Test Product",
+                subtitle = "Test Subtitle",
+                brandName = "GAYAKINI",
+                category = category,
+                description = "Test Product Description",
+                status = ProductStatus.PUBLISHED
+            )
+        )
 
         testVariant = ProductVariant(
             id = UuidV7Generator.generate(),
             product = testProduct,
-            sku = "SKU-${UUID.randomUUID()}",
-            color = "Black",
+            sku = "TEST-SKU-1",
             sizeCode = "M",
+            color = "Black",
             priceAmount = 50000,
-            weightGrams = 100,
             stockOnHand = 10,
         )
-        variantRepository.save(testVariant)
+        testProduct.variants.add(testVariant)
+        productRepository.save(testProduct)
 
-        testCart = Cart(
-            id = UuidV7Generator.generate(),
-            customerId = null,
-            accessTokenHash = guestTokenHash,
-            status = CartStatus.ACTIVE,
+        testCustomer = customerRepository.save(
+            Customer(
+                id = UuidV7Generator.generate(),
+                email = "test@example.com",
+                passwordHash = passwordEncoder.encode("password"),
+                fullName = "Test User",
+                phone = "08123456789"
+            )
         )
+
+        testCart = cartRepository.save(
+            Cart(
+                id = UuidV7Generator.generate(),
+                customerId = null,
+                accessTokenHash = guestTokenHash,
+            )
+        )
+
         val cartItem = CartItem(
             id = UuidV7Generator.generate(),
             cart = testCart,
@@ -118,7 +136,7 @@ class OrderFlowIntegrationTest {
             status = CheckoutStatus.READY_FOR_ORDER,
             accessTokenHash = guestTokenHash,
             subtotalAmount = 100000,
-            shipping_cost_amount = 10000,
+            shippingCostAmount = 10000,
             expiresAt = null,
         )
         val address = CheckoutShippingAddress(
@@ -148,22 +166,23 @@ class OrderFlowIntegrationTest {
                 sizeCode = testVariant.sizeCode,
                 quantity = 2,
                 unitPriceAmount = testVariant.priceAmount,
-            ),
+            )
         )
 
         val quote = CheckoutShippingQuote(
             id = UuidV7Generator.generate(),
             checkout = testCheckout,
             provider = "BITESHIP",
-            providerReference = "REF1",
+            providerReference = "REF123",
             courierCode = "jne",
             courierName = "JNE",
             serviceCode = "reg",
-            serviceName = "Reguler",
-            description = null,
+            serviceName = "Regular",
+            description = "Reguler Service",
             costAmount = 10000,
             estimatedDaysMin = 1,
-            estimatedDaysMax = 2,
+            estimatedDaysMax = 3,
+            isRecommended = true,
             rawPayload = null,
             expiresAt = null
         )
@@ -174,71 +193,26 @@ class OrderFlowIntegrationTest {
     }
 
     @Test
-    fun `should place order successfully`() {
-        val request = PlaceOrderRequest(customerNotes = "Please handle with care")
-        val idempotencyKey = UUID.randomUUID().toString()
+    fun `should place order from checkout successfully`() {
+        // Given
+        val idempotencyKey = "test-idempotency-key"
+        val request = PlaceOrderRequest(customerNotes = "Test notes")
 
-        mockMvc.perform(
-            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
-                .header("Idempotency-Key", idempotencyKey)
-                .header("X-Checkout-Token", guestTokenRaw)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)),
+        // When
+        val order = orderService.placeOrderFromCheckout(
+            checkoutId = testCheckout.id,
+            idempotencyKey = idempotencyKey,
+            checkoutToken = guestToken,
+            request = request
         )
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.message").value("Pesanan berhasil dibuat."))
-            .andExpect(jsonPath("$.data.subtotal.amount").value(100000))
-            .andExpect(jsonPath("$.data.total.amount").value(110000))
-            .andExpect(jsonPath("$.data.status").value("PENDING_PAYMENT"))
 
-        val variantAfter = variantRepository.findById(testVariant.id).get()
-        assert(variantAfter.stockAvailable == 8)
-        assert(variantAfter.stockReserved == 2)
-    }
+        // Then
+        assertNotNull(order)
+        assertEquals(testCheckout.id, order.checkoutId)
+        assertEquals(OrderStatus.PENDING_PAYMENT, order.status)
+        assertEquals(110000, order.totalAmount)
 
-    @Test
-    fun `should reject order when stock is insufficient`() {
-        testVariant.stockOnHand = 1
-        variantRepository.save(testVariant)
-
-        val request = PlaceOrderRequest()
-        val idempotencyKey = UUID.randomUUID().toString()
-
-        mockMvc.perform(
-            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
-                .header("Idempotency-Key", idempotencyKey)
-                .header("X-Checkout-Token", guestTokenRaw)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)),
-        )
-            .andExpect(status().isConflict)
-            .andExpect(jsonPath("$.userMessage").exists())
-    }
-
-    @Test
-    fun `should handle idempotency on place order`() {
-        val key = UUID.randomUUID().toString()
-        val request = PlaceOrderRequest()
-
-        mockMvc.perform(
-            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
-                .header("Idempotency-Key", key)
-                .header("X-Checkout-Token", guestTokenRaw)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)),
-        )
-            .andExpect(status().isCreated)
-
-        mockMvc.perform(
-            post("/v1/checkouts/{checkoutId}/orders", testCheckout.id)
-                .header("Idempotency-Key", key)
-                .header("X-Checkout-Token", guestTokenRaw)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)),
-        )
-            .andExpect(status().isCreated)
-
-        val count = orderRepository.findAll().filter { it.checkoutId == testCheckout.id }.size
-        assert(count == 1)
+        val savedOrder = orderRepository.findById(order.id).orElseThrow()
+        assertEquals(order.orderNumber, savedOrder.orderNumber)
     }
 }

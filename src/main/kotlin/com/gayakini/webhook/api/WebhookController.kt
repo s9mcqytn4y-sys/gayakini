@@ -1,5 +1,6 @@
 package com.gayakini.webhook.api
 
+import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
 import jakarta.validation.Valid
@@ -7,7 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/v1/webhooks")
+@RequestMapping("/v1/webhooks", "/api/v1/webhooks")
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
@@ -21,10 +22,8 @@ class WebhookController(
     ): WebhookAckResponse {
         logger.info("Menerima webhook Midtrans untuk Order: {}", payload.orderId)
 
-        // Midtrans typically uses signature_key in payload
         val signatureKey = payload.signatureKey
 
-        // Convert to map for existing service compatibility
         val payloadMap = mutableMapOf<String, Any>(
             "order_id" to payload.orderId,
             "status_code" to payload.statusCode,

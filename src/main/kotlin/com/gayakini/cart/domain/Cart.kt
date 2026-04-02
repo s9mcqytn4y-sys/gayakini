@@ -36,9 +36,9 @@ class Cart(
     var accessTokenHash: String? = null,
     @Column(name = "expires_at")
     var expiresAt: Instant? = null,
-    @Column(name = "item_count", nullable = false)
+    @Column(name = "item_count", nullable = false, updatable = false)
     var itemCount: Int = 0,
-    @Column(name = "subtotal_amount", nullable = false)
+    @Column(name = "subtotal_amount", nullable = false, updatable = false)
     var subtotalAmount: Long = 0,
     @OneToMany(mappedBy = "cart", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<CartItem> = mutableListOf(),
