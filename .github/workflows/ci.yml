@@ -1,4 +1,4 @@
-name: CI
+name: CI - Gayakini Backend
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    name: Build & Test
     runs-on: ubuntu-latest
 
     services:
@@ -25,7 +26,8 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -37,19 +39,20 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
 
-    - name: Run Lint
+    - name: Run Lint (ktlint)
       run: ./gradlew ktlintCheck
 
-    - name: Run Static Analysis
+    - name: Run Static Analysis (detekt)
       run: ./gradlew detekt
 
     - name: Build and Test
-      run: ./gradlew build
+      run: ./gradlew build --info
       env:
+        SPRING_PROFILES_ACTIVE: test
         DB_HOST: localhost
         DB_PORT: 5432
         DB_NAME: gayakini_test
         DB_USERNAME: postgres
         DB_PASSWORD: password
-        MIDTRANS_SERVER_KEY: dummy
-        BITESHIP_API_KEY: dummy
+        MIDTRANS_SERVER_KEY: dummy_test_key
+        BITESHIP_API_KEY: dummy_test_key

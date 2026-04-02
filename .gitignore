@@ -1,11 +1,30 @@
-﻿.idea/
+﻿# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Build & Dependencies
 .gradle/
 build/
 out/
-*.log
-.env
+bin/
+obj/
 
-# Allow shared VS Code config
+# Logs
+*.log
+
+# Environment & Secrets
+.env
+local.env
+*.env.local
+*.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Allow shared VS Code config (Optional - keeping based on previous state)
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json
