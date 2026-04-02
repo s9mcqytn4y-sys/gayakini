@@ -1,0 +1,12 @@
+### 1. List Products
+GET {{protocol}}://{{host}}/api/v1/products?page=0&size=10
+Accept: application/json
+
+### 2. Get Product Detail
+# Replace {slug} with actual slug from list
+GET {{protocol}}://{{host}}/api/v1/products/test-product
+Accept: application/json
+
+### 3. Search Products
+GET {{protocol}}://{{host}}/api/v1/products/search?q=t-shirt
+Accept: application/json

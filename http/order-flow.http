@@ -1,0 +1,19 @@
+### 1. Place Order from Checkout
+POST {{protocol}}://{{host}}/api/v1/checkouts/{{checkoutId}}/orders
+Content-Type: application/json
+Idempotency-Key: {{requestId}}
+
+{
+  "customerNotes": "Please handle with care."
+}
+
+> {% client.global.set("orderId", response.body.data.id); %}
+
+### 2. Get Order Detail
+GET {{protocol}}://{{host}}/api/v1/orders/{{orderId}}
+Accept: application/json
+
+### 3. List My Orders (Authorized)
+GET {{protocol}}://{{host}}/api/v1/me/orders
+Authorization: Bearer {{accessToken}}
+Accept: application/json

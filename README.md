@@ -1,53 +1,88 @@
-# Gayakini API
+# Gayakini Backend API
 
-Backend e-commerce RESTful API berbasis Spring Boot 3.4+ (Java 17 & Kotlin) dengan arsitektur Modular Monolith.
+Professional e-commerce RESTful API built with Spring Boot 3.4+ and Kotlin 2.0, following Modular Monolith and Domain-Driven Design (DDD) principles.
 
-## Operational Readiness: Status MVP
-Proyek ini telah melalui fase Hardening & Verification dengan fitur utama:
-- **Auth Identity Wiring:** Penggunaan `UserPrincipal` untuk mengikat Order ke Customer atau Guest Token secara riil.
-- **Pricing Integrity:** Kalkulasi harga pesanan otomatis berdasarkan data database.
-- **Webhook Processing:** Handler riil untuk Midtrans dan Biteship dengan verifikasi signature.
-- **Idempotency:** Perlindungan terhadap duplikasi pesanan dan pengolahan webhook ganda.
+## 🚀 Quick Start (Local Development)
 
-## Tech Stack
-- **Language:** Kotlin 1.9.25 (JDK 17)
-- **Framework:** Spring Boot 3.4.0
-- **Database:** PostgreSQL 18+ (UUIDv7)
-- **Migration:** Flyway
-- **Security:** Spring Security (Stateless, CORS Configured)
-- **Integrations:** Midtrans Snap (Payments), Biteship (Shipping)
+This project is optimized for a native local development experience without requiring Docker by default, although Docker support is provided.
 
-## Cara Menjalankan di Lokal
+### 1. Prerequisites
+- **JDK 17+**
+- **PostgreSQL 18+** (installed on your OS or running in a container)
 
-### 1. Setup Environment
-Salin `.env.example` menjadi `.env` (atau `local.env` jika menggunakan VS Code):
+### 2. Environment Setup
+Initialize your local environment variables:
 ```bash
-cp .env.example .env
+./gradlew localSetup
 ```
-**PENTING:** Jangan pernah melakukan commit pada file `.env` atau `local.env`. File-file ini sudah masuk dalam `.gitignore`.
+Then, edit the generated `.env` file if your local PostgreSQL credentials differ from:
+- `DB_USERNAME=postgres`
+- `DB_PASSWORD=password`
+- `DB_NAME=gayakini`
 
-### 2. Jalankan Database
+### 3. Run Preflight Check
+Ensure your system is ready:
 ```bash
-docker run --name gayakini-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=gayakini -p 5432:5432 -d postgres:18-alpine
+./gradlew doctor
 ```
 
-### 3. Build & Run
+### 4. Run Application
+Start the server with the `local` profile:
 ```bash
-./gradlew bootRun
+./gradlew bootRunLocal
 ```
 
-## Verifikasi & Quality Gate
-Lakukan urutan ini sebelum melakukan push:
-1. `./gradlew clean`
-2. `./gradlew ktlintCheck`
-3. `./gradlew detekt`
-4. `./gradlew test`
-5. `./gradlew build`
+Once started, access the following:
+- **API Base:** `http://localhost:8080/api/v1`
+- **Swagger UI:** `http://localhost:8080/swagger-ui.html`
+- **Actuator Health:** `http://localhost:8080/actuator/health`
 
-## Dokumentasi API
-- **Swagger UI:** [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-- **OpenAPI JSON:** [http://localhost:8080/api-docs](http://localhost:8080/api-docs)
+## 🛠 Developer Workflow & CLI
 
-## Keamanan
-- **Secrets Management:** Gunakan environment variables. Jangan hardcode API Keys.
-- **Rotation:** Jika secara tidak sengaja melakukan push rahasia ke repository, segera rotate key tersebut di provider terkait (Midtrans/Biteship).
+We use custom Gradle tasks to streamline development:
+
+| Command | Description |
+|---------|-------------|
+| `./gradlew doctor` | Checks Java, DB connectivity, and `.env` status. |
+| `./gradlew localSetup` | Initializes `.env` from template. |
+| `./gradlew bootRunLocal` | Preflight check + Run with `local` profile. |
+| `./gradlew qaAll` | Runs Lint (ktlint), Static Analysis (detekt), and Tests. |
+| `./gradlew verifyMigrations` | Validates Flyway migration history. |
+| `./gradlew releaseCheck` | Final quality gate before pushing (Lints + Tests + Migrations). |
+
+## 📂 Project Structure & Architecture
+
+The repository follows a domain-centric modular monolith structure. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
+```text
+src/main/kotlin/com/gayakini/
+├── common/           # Cross-cutting concerns (UUIDv7, Idempotency)
+├── infrastructure/   # Security, JWT, DB configurations
+├── [domain]/         # Domain boundaries (Catalog, Order, Payment, etc.)
+│   ├── api/          # Controllers & DTOs
+│   ├── application/  # Services (Use Cases)
+│   └── domain/       # Entities & Repositories
+└── GayakiniApplication.kt
+```
+
+## 🧪 Testing & QA
+
+### Automated Testing
+- **Unit & Integration Tests:** `./gradlew test`
+- **Quality Gate:** `./gradlew releaseCheck`
+
+### Manual/HTTP Testing
+We use `.http` files for a Postman-free experience. These are compatible with IntelliJ IDEA and VS Code (REST Client).
+Located in `http/`:
+- `smoke.http`: Health and basic connectivity.
+- `auth.http`: User registration and JWT login.
+- `order-flow.http`: End-to-end checkout to order conversion.
+See [docs/TESTING.md](docs/TESTING.md) for more details.
+
+## 📈 Monitoring & Observability
+- **Logging:** Configured via `logback-spring.xml` with color-coded console output for development.
+- **Metrics:** Micrometer integration with Prometheus endpoint at `/actuator/prometheus`.
+- **Health Checks:** Detailed status at `/actuator/health`.
+
+---
+*Created by Principal Backend Engineering Team.*

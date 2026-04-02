@@ -1,0 +1,11 @@
+### 1. Hello Check
+GET {{protocol}}://{{host}}/api/v1/hello
+Accept: application/json
+
+### 2. Health Check
+GET {{protocol}}://{{host}}/actuator/health
+Accept: application/json
+
+### 3. Product Browsing
+GET {{protocol}}://{{host}}/api/v1/products
+Accept: application/json

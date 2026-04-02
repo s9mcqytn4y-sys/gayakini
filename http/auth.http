@@ -1,0 +1,25 @@
+### 1. Register Customer
+POST {{protocol}}://{{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Password123!",
+  "fullName": "Gaya User"
+}
+
+### 2. Login Customer
+POST {{protocol}}://{{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "Password123!"
+}
+
+> {% client.global.set("accessToken", response.body.data.accessToken); %}
+
+### 3. Get Current Profile
+GET {{protocol}}://{{host}}/api/v1/me/profile
+Authorization: Bearer {{accessToken}}
+Accept: application/json
