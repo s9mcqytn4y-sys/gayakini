@@ -22,7 +22,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     default-schema: ${DB_SCHEMA:commerce}
-    schemas: ${DB_SCHEMA:commerce}
+    schemas: ${DB_SCHEMA:commerce}, public
+    create-schemas: true
 
 server:
   port: ${SERVER_PORT:8080}
@@ -35,10 +36,15 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health, info, prometheus, metrics
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db, flyway
 
 springdoc:
   api-docs:
