@@ -32,14 +32,7 @@ class OrderController(
         @PathVariable orderId: UUID,
         @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
     ): OrderResponse {
-        val order = orderService.getOrder(orderId)
-
-        // Basic ownership validation for guest order token
-        if (order.accessTokenHash != null) {
-            val token = orderToken ?: throw IllegalStateException("Token pesanan diperlukan.")
-            // Verification logic is usually inside service, but for patch we ensure visibility
-        }
-
+        val order = orderService.getAuthorizedOrder(orderId, orderToken)
         return mapToResponse(order, "Detail pesanan berhasil diambil.")
     }
 
@@ -72,7 +65,7 @@ class OrderController(
         @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
         @RequestBody request: CancelOrderRequest,
     ): OrderResponse {
-        val order = orderService.cancelOrder(orderId, request.reason)
+        val order = orderService.cancelOrder(orderId, request.reason, idempotencyKey, orderToken)
         return mapToResponse(order, "Pesanan berhasil dibatalkan.")
     }
 

@@ -83,6 +83,8 @@ class CustomerService(
             createdAt = customer.createdAt,
         )
 
+    fun getProfile(customerId: UUID): CustomerProfileResponse = mapToProfileResponse(getCustomer(customerId))
+
     fun getCustomer(id: UUID): Customer {
         return customerRepository.findById(id)
             .orElseThrow { NoSuchElementException("Customer tidak ditemukan.") }

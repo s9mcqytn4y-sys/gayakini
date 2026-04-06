@@ -16,10 +16,10 @@
    - `DB_PASSWORD=password`
 
 ## Running the Application
-Use the specialized `bootRunLocal` task. This task performs a "preflight check" (`doctor`) before starting the app to ensure your database is reachable.
+Use the existing `bootRun` task. Task ini sudah menjalankan preflight `ensurePostgres` dan `flywayMigrate` sebelum aplikasi start.
 
 ```bash
-./gradlew bootRunLocal
+./gradlew bootRun
 ```
 
 ## Quality Gates

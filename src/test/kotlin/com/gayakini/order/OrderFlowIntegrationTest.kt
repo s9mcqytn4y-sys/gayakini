@@ -13,6 +13,7 @@ import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
+import com.gayakini.payment.application.PaymentService
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -49,6 +50,9 @@ class OrderFlowIntegrationTest {
 
     @Autowired
     lateinit var passwordEncoder: PasswordEncoder
+
+    @Autowired
+    lateinit var paymentService: PaymentService
 
     private lateinit var testCustomer: Customer
     private lateinit var testProduct: Product
@@ -222,5 +226,46 @@ class OrderFlowIntegrationTest {
 
         val savedOrder = orderRepository.findById(order.id).orElseThrow()
         assertEquals(order.orderNumber, savedOrder.orderNumber)
+    }
+
+    @Test
+    fun `should reject guest order access without token`() {
+        val order =
+            orderService.placeOrderFromCheckout(
+                checkoutId = testCheckout.id,
+                idempotencyKey = "guest-order-access-key",
+                checkoutToken = guestToken,
+                request = PlaceOrderRequest(customerNotes = "Test notes"),
+            )
+
+        val error =
+            assertThrows(IllegalStateException::class.java) {
+                orderService.getAuthorizedOrder(order.id, null)
+            }
+
+        assertEquals("Token pesanan diperlukan.", error.message)
+    }
+
+    @Test
+    fun `should reject guest payment session without token`() {
+        val order =
+            orderService.placeOrderFromCheckout(
+                checkoutId = testCheckout.id,
+                idempotencyKey = "guest-payment-access-key",
+                checkoutToken = guestToken,
+                request = PlaceOrderRequest(customerNotes = "Test notes"),
+            )
+
+        val error =
+            assertThrows(IllegalStateException::class.java) {
+                paymentService.createPaymentSession(
+                    orderId = order.id,
+                    idempotencyKey = "payment-session-key",
+                    orderToken = null,
+                    request = null,
+                )
+            }
+
+        assertEquals("Token pesanan diperlukan.", error.message)
     }
 }

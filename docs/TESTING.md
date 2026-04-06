@@ -45,3 +45,4 @@ See the `http/` directory for:
 - `checkout.http`: Shipping calculation and checkout.
 - `order-flow.http`: Placing and viewing orders.
 - `webhooks.http`: Simulating provider notifications.
+- Canonical path prefix is `/v1`, not `/api/v1`.

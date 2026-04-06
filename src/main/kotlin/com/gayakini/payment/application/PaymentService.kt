@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
 import com.gayakini.customer.domain.CustomerRepository
+import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
@@ -39,6 +40,7 @@ class PaymentService(
         orderToken: String?,
         request: CreatePaymentRequest?,
     ): Payment {
+        val currentUserId = SecurityUtils.getCurrentUserId()
         val order =
             orderRepository.findById(orderId)
                 .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
@@ -47,18 +49,13 @@ class PaymentService(
             scope = "create_payment",
             key = idempotencyKey,
             requestPayload = request ?: emptyMap<String, String>(),
-            requesterType = if (order.customerId != null) "CUSTOMER" else "GUEST",
-            requesterId = order.customerId,
+            requesterType = if (currentUserId != null) "CUSTOMER" else "GUEST",
+            requesterId = currentUserId,
         ) {
+            validateOrderAccess(order, orderToken, currentUserId)
+
             if (order.status != OrderStatus.PENDING_PAYMENT) {
                 throw IllegalStateException("Order tidak dalam status menunggu pembayaran.")
-            }
-
-            // Validate token if guest
-            if (order.accessTokenHash != null) {
-                if (HashUtils.sha256(orderToken ?: "") != order.accessTokenHash) {
-                    throw IllegalStateException("Akses order ditolak.")
-                }
             }
 
             // Return existing pending payment if any
@@ -111,6 +108,26 @@ class PaymentService(
             orderRepository.save(order)
 
             savedPayment
+        }
+    }
+
+    private fun validateOrderAccess(
+        order: com.gayakini.order.domain.Order,
+        orderToken: String?,
+        currentUserId: UUID?,
+    ) {
+        if (order.customerId != null) {
+            if (order.customerId != currentUserId) {
+                throw IllegalStateException("Akses pesanan ditolak.")
+            }
+            return
+        }
+
+        if (order.accessTokenHash != null) {
+            val token = orderToken ?: throw IllegalStateException("Token pesanan diperlukan.")
+            if (HashUtils.sha256(token) != order.accessTokenHash) {
+                throw IllegalStateException("Akses pesanan ditolak.")
+            }
         }
     }
 

@@ -1,5 +1,5 @@
 ### 1. Midtrans Webhook (Payment Notification)
-POST {{protocol}}://{{host}}/api/v1/webhooks/midtrans
+POST {{protocol}}://{{host}}/v1/webhooks/midtrans
 Content-Type: application/json
 
 {
@@ -12,11 +12,11 @@ Content-Type: application/json
 }
 
 ### 2. Biteship Webhook (Shipping Notification)
-POST {{protocol}}://{{host}}/api/v1/webhooks/biteship
+POST {{protocol}}://{{host}}/v1/webhooks/biteship
 Content-Type: application/json
 
 {
-  "event": "order.status_updated",
+  "event": "order.status",
   "id": "bit-ship-webhook-789",
   "order_id": "BS-12345",
   "status": "delivered"

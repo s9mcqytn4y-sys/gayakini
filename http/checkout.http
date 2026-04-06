@@ -1,5 +1,5 @@
 ### 1. Initialize Checkout from Cart
-POST {{protocol}}://{{host}}/api/v1/checkouts
+POST {{protocol}}://{{host}}/v1/checkouts
 Content-Type: application/json
 
 {
@@ -9,33 +9,36 @@ Content-Type: application/json
 > {% client.global.set("checkoutId", response.body.data.id); %}
 
 ### 2. Get Checkout Detail
-GET {{protocol}}://{{host}}/api/v1/checkouts/{{checkoutId}}
+GET {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}
 Accept: application/json
 
 ### 3. Update Shipping Address
-PUT {{protocol}}://{{host}}/api/v1/checkouts/{{checkoutId}}/address
+PUT {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-address
 Content-Type: application/json
 
 {
-  "recipientName": "John Doe",
-  "phone": "08123456789",
-  "line1": "Jl. Sudirman No. 1",
-  "line2": "Apartemen ASTA",
-  "notes": "Dekat lobi",
-  "areaId": "REPLACE_WITH_AREA_ID",
-  "district": "Tanah Abang",
-  "city": "Jakarta Pusat",
-  "province": "DKI Jakarta",
-  "postalCode": "10210",
-  "countryCode": "ID"
+  "guestAddress": {
+    "recipientName": "John Doe",
+    "phone": "08123456789",
+    "line1": "Jl. Sudirman No. 1",
+    "line2": "Apartemen ASTA",
+    "notes": "Dekat lobi",
+    "areaId": "REPLACE_WITH_AREA_ID",
+    "district": "Tanah Abang",
+    "city": "Jakarta Pusat",
+    "province": "DKI Jakarta",
+    "postalCode": "10210",
+    "countryCode": "ID"
+  }
 }
 
 ### 4. Get Shipping Quotes
-GET {{protocol}}://{{host}}/api/v1/checkouts/{{checkoutId}}/shipping-quotes
+POST {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-quotes
 Accept: application/json
+Idempotency-Key: {{requestId}}
 
 ### 5. Select Shipping Quote
-PATCH {{protocol}}://{{host}}/api/v1/checkouts/{{checkoutId}}/shipping-quote
+PUT {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-selection
 Content-Type: application/json
 
 {

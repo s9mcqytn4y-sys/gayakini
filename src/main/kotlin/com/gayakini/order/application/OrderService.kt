@@ -7,6 +7,7 @@ import com.gayakini.checkout.domain.CheckoutStatus
 import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
+import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.domain.*
@@ -162,6 +163,15 @@ class OrderService(
             .orElseThrow { NoSuchElementException("Pesanan tidak ditemukan.") }
     }
 
+    fun getAuthorizedOrder(
+        id: UUID,
+        orderToken: String?,
+    ): Order {
+        val order = getOrder(id)
+        validateOrderAccess(order, orderToken)
+        return order
+    }
+
     fun listOrders(customerId: UUID?): List<Order> {
         return if (customerId != null) {
             orderRepository.findAllByCustomerIdOrderByCreatedAtDesc(customerId)
@@ -174,20 +184,58 @@ class OrderService(
     fun cancelOrder(
         id: UUID,
         reason: String?,
+        idempotencyKey: String,
+        orderToken: String?,
     ): Order {
-        val order = getOrder(id)
-        if (order.status == OrderStatus.COMPLETED || order.status == OrderStatus.CANCELLED) {
-            throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")
+        val currentUserId = SecurityUtils.getCurrentUserId()
+
+        return idempotencyService.handle(
+            scope = "cancel_order",
+            key = idempotencyKey,
+            requestPayload = mapOf("orderId" to id, "reason" to (reason ?: "")),
+            requesterType = if (currentUserId != null) "CUSTOMER" else "GUEST",
+            requesterId = currentUserId,
+        ) {
+            val order = getOrder(id)
+            validateOrderAccess(order, orderToken)
+
+            if (order.status == OrderStatus.CANCELLED) {
+                return@handle order
+            }
+
+            if (order.status == OrderStatus.COMPLETED) {
+                throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")
+            }
+
+            order.status = OrderStatus.CANCELLED
+            order.cancelledAt = Instant.now()
+            order.cancellationReason = reason
+            order.updatedAt = Instant.now()
+
+            inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
+
+            orderRepository.save(order)
+        }
+    }
+
+    private fun validateOrderAccess(
+        order: Order,
+        orderToken: String?,
+    ) {
+        val currentUserId = SecurityUtils.getCurrentUserId()
+
+        if (order.customerId != null) {
+            if (order.customerId != currentUserId) {
+                throw IllegalStateException("Akses pesanan ditolak.")
+            }
+            return
         }
 
-        order.status = OrderStatus.CANCELLED
-        order.cancelledAt = Instant.now()
-        order.cancellationReason = reason
-        order.updatedAt = Instant.now()
-
-        // Release inventory reservations
-        inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
-
-        return orderRepository.save(order)
+        if (order.accessTokenHash != null) {
+            val token = orderToken ?: throw IllegalStateException("Token pesanan diperlukan.")
+            if (HashUtils.sha256(token) != order.accessTokenHash) {
+                throw IllegalStateException("Akses pesanan ditolak.")
+            }
+        }
     }
 }

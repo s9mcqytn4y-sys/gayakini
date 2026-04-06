@@ -101,8 +101,26 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 userMessage = "Permintaan tidak dapat diproses. Pastikan data benar.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
                 requestId = UUID.randomUUID().toString(),
-            )
+        )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
+    }
+
+    @ExceptionHandler(UnsupportedOperationException::class)
+    fun handleNotImplemented(
+        ex: UnsupportedOperationException,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
+        val problem =
+            ProblemDetails(
+                type = URI.create("kb://probs/not-implemented"),
+                title = "Not Implemented",
+                status = HttpStatus.NOT_IMPLEMENTED.value(),
+                detail = ex.message ?: "Fitur belum tersedia.",
+                userMessage = ex.message ?: "Fitur ini belum tersedia.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+                requestId = UUID.randomUUID().toString(),
+            )
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(problem)
     }
 
     @ExceptionHandler(Exception::class)
