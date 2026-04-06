@@ -1,0 +1,39 @@
+name: Validate Local MCP Launchers
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'tooling/mcp/**'
+      - '.github/workflows/mcp-launchers.yml'
+      - '.vscode/**'
+      - 'AGENTS.md'
+      - 'gemini.md'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'tooling/mcp/**'
+      - '.github/workflows/mcp-launchers.yml'
+      - '.vscode/**'
+      - 'AGENTS.md'
+      - 'gemini.md'
+
+jobs:
+  validate-launchers:
+    name: PowerShell MCP launcher validation
+    runs-on: windows-latest
+    env:
+      PROJECT_ROOT: ${{ github.workspace }}
+      GITHUB_PERSONAL_ACCESS_TOKEN: dummy_local_token
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate each launcher in tooling/mcp
+        shell: powershell
+        run: |
+          Get-ChildItem "$env:GITHUB_WORKSPACE\tooling\mcp\start-*.ps1" |
+            Sort-Object Name |
+            ForEach-Object {
+              powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName -ValidateOnly
+            }

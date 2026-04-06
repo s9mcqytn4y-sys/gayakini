@@ -8,5 +8,18 @@
     "source.organizeImports": "explicit"
   },
   "java.compile.nullAnalysis.mode": "automatic",
-  "spring-boot.ls.symbols.enabled": true
+  "spring-boot.ls.symbols.enabled": false,
+  "gradle.nestedProjects": true,
+  "java.import.gradle.enabled": true,
+  "java.import.gradle.wrapper.enabled": true,
+  "java.import.gradle.java.home": "",
+  "java.configuration.runtimes": [],
+  "terminal.integrated.defaultProfile.windows": "PowerShell",
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "chatgpt.openOnStartup": true,
+  "chatgpt.commentCodeLensEnabled": true,
+  "chatgpt.localeOverride": "id",
+  "chatgpt.runCodexInWindowsSubsystemForLinux": false,
+  "chat.fontSize": 14,
+  "chat.editor.fontSize": 13
 }

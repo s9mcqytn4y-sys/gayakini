@@ -1,13 +1,19 @@
+param(
+    [string]$Root,
+    [switch]$ValidateOnly
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . "$PSScriptRoot\common.ps1"
 
-$RepoRoot = Get-RepoRoot
-# Resolve the path to ensure it's absolute and standardized
-$AbsRepoRoot = (Get-Item $RepoRoot).FullName
+Load-McpEnvironment
 
-Write-Host "Starting gayakini-filesystem MCP server..."
-Write-Host "Restricting to: $AbsRepoRoot"
+$ResolvedRoot = Assert-Directory -Path (Get-RepoRoot -Root $Root) -Label 'Filesystem root'
 
-Start-McpNpx -Package "@modelcontextprotocol/server-filesystem" -Args $AbsRepoRoot
+if ($ValidateOnly) {
+    Write-Output "Filesystem root: $ResolvedRoot"
+}
+
+Start-McpNpx -Package "@modelcontextprotocol/server-filesystem" -Args @($ResolvedRoot) -ValidateOnly:$ValidateOnly

@@ -1,12 +1,16 @@
+param(
+    [switch]$ValidateOnly
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . "$PSScriptRoot\common.ps1"
 
-# Load environment variables (for Gradle etc)
 Load-McpEnvironment
 
-Write-Host "Starting gayakini-terminal MCP server..."
+if ($ValidateOnly) {
+    Write-Output "Terminal launcher ready."
+}
 
-# Launch the terminal server
-Start-McpNpx -Package "@modelcontextprotocol/server-terminal"
+Start-McpNpx -Package "@modelcontextprotocol/server-terminal" -ValidateOnly:$ValidateOnly

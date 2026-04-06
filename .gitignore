@@ -25,6 +25,7 @@ local.env
 .env.production.local
 
 # Allow shared VS Code config (Optional - keeping based on previous state)
+!.vscode/
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json

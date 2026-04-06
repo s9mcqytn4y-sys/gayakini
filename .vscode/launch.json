@@ -8,7 +8,12 @@
       "mainClass": "com.gayakini.GayakiniApplicationKt",
       "projectName": "gayakini",
       "env": {
-        "SPRING_PROFILES_ACTIVE": "local"
+        "SPRING_PROFILES_ACTIVE": "local",
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "gayakini",
+        "DB_USERNAME": "postgres",
+        "DB_PASSWORD": "password"
       }
     },
     {

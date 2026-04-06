@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "MCP: Validate launchers",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$env:PROJECT_ROOT='${workspaceFolder}'; if (-not $env:GITHUB_PERSONAL_ACCESS_TOKEN) { $env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_local_token' }; Get-ChildItem '${workspaceFolder}\\tooling\\mcp\\start-*.ps1' | Sort-Object Name | ForEach-Object { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName -ValidateOnly }"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: release verification",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "& .\\gradlew.bat clean ktlintCheck detekt test build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

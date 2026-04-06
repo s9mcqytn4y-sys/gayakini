@@ -1,15 +1,24 @@
+param(
+    [string]$Repository,
+    [switch]$ValidateOnly
+)
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 . "$PSScriptRoot\common.ps1"
 
-$RepoRoot = Get-RepoRoot
-$AbsRepoRoot = (Get-Item $RepoRoot).FullName
+Load-McpEnvironment
 
-# Validate git is present
-Assert-Command "git.exe"
+$RepositoryRoot = Assert-Directory -Path (Get-RepoRoot -Root $Repository) -Label 'Git repository root'
+$null = Assert-Command "git.exe"
 
-Write-Host "Starting gayakini-git MCP server..."
-Write-Host "Repository: $AbsRepoRoot"
+if (-not (Test-Path -LiteralPath (Join-Path -Path $RepositoryRoot -ChildPath '.git'))) {
+    throw "Git repository metadata not found under: $RepositoryRoot"
+}
 
-Start-McpNpx -Package "@modelcontextprotocol/server-git" -Args "--repository", $AbsRepoRoot
+if ($ValidateOnly) {
+    Write-Output "Git repository: $RepositoryRoot"
+}
+
+Start-McpNpx -Package "@modelcontextprotocol/server-git" -Args @("--repository", $RepositoryRoot) -ValidateOnly:$ValidateOnly
