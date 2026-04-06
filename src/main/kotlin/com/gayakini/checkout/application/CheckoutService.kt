@@ -3,6 +3,8 @@ package com.gayakini.checkout.application
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
 import com.gayakini.checkout.api.CheckoutShippingAddressRequest
+import com.gayakini.common.api.ForbiddenException
+import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.checkout.domain.*
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
@@ -45,10 +47,16 @@ class CheckoutService(
 
         // Validate cart ownership
         if (cart.customerId != null && cart.customerId != customerId) {
-            throw IllegalStateException("Akses keranjang ditolak.")
+            if (customerId == null) {
+                throw UnauthorizedException("Silakan login untuk mengakses keranjang ini.")
+            }
+            throw ForbiddenException("Akses keranjang ditolak.")
         }
-        if (cart.accessTokenHash != null && HashUtils.sha256(cartToken ?: "") != cart.accessTokenHash) {
-            throw IllegalStateException("Akses keranjang ditolak.")
+        if (cart.accessTokenHash != null) {
+            val token = cartToken ?: throw UnauthorizedException("Token keranjang diperlukan.")
+            if (HashUtils.sha256(token) != cart.accessTokenHash) {
+                throw UnauthorizedException("Token keranjang tidak valid.")
+            }
         }
 
         // Close existing checkout for this cart if any
@@ -107,9 +115,11 @@ class CheckoutService(
     @Transactional
     fun updateShippingAddress(
         checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
         request: CheckoutShippingAddressRequest,
     ): Checkout {
-        val checkout = getCheckout(checkoutId)
+        val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
 
         if (request.addressId != null) {
             val customerId = checkout.customerId ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
@@ -193,8 +203,12 @@ class CheckoutService(
     }
 
     @Transactional
-    fun calculateShippingQuotes(checkoutId: UUID): Checkout {
-        val checkout = getCheckout(checkoutId)
+    fun calculateShippingQuotes(
+        checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
+    ): Checkout {
+        val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
         val address = checkout.shippingAddress ?: throw IllegalStateException("Alamat pengiriman belum diset.")
 
         val origin =
@@ -249,9 +263,11 @@ class CheckoutService(
     @Transactional
     fun selectShippingQuote(
         checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
         quoteId: UUID,
     ): Checkout {
-        val checkout = getCheckout(checkoutId)
+        val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
         val quote =
             checkout.availableShippingQuotes.find { it.id == quoteId }
                 ?: throw NoSuchElementException("Pilihan pengiriman tidak ditemukan.")
@@ -267,5 +283,29 @@ class CheckoutService(
     fun getCheckout(checkoutId: UUID): Checkout {
         return checkoutRepository.findById(checkoutId)
             .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
+    }
+
+    fun getValidatedCheckout(
+        checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
+    ): Checkout {
+        val checkout = getCheckout(checkoutId)
+
+        if (checkout.customerId != null && checkout.customerId != customerId) {
+            if (customerId == null) {
+                throw UnauthorizedException("Silakan login untuk mengakses checkout ini.")
+            }
+            throw ForbiddenException("Akses checkout ditolak.")
+        }
+
+        if (checkout.accessTokenHash != null) {
+            val token = checkoutToken ?: throw UnauthorizedException("Token checkout diperlukan.")
+            if (HashUtils.sha256(token) != checkout.accessTokenHash) {
+                throw UnauthorizedException("Token checkout tidak valid.")
+            }
+        }
+
+        return checkout
     }
 }

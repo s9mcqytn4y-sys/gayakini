@@ -7,6 +7,7 @@ on:
       - 'tooling/mcp/**'
       - '.github/workflows/**'
       - '.vscode/**'
+      - '.agents/**'
       - 'AGENTS.md'
       - 'gemini.md'
       - 'CLAUDE.md'
@@ -19,6 +20,7 @@ on:
       - 'tooling/mcp/**'
       - '.github/workflows/**'
       - '.vscode/**'
+      - '.agents/**'
       - 'AGENTS.md'
       - 'gemini.md'
       - 'CLAUDE.md'
@@ -81,7 +83,12 @@ jobs:
             '.vscode/settings.json',
             '.vscode/launch.json',
             '.vscode/tasks.json',
-            '.vscode/extensions.json'
+            '.vscode/extensions.json',
+            '.agents/workflows/validate-mcp-launchers.md',
+            '.agents/workflows/docs-parity-check.md',
+            '.agents/workflows/mcp-hardening-preflight.md',
+            '.agents/workflows/gradle-release-verification.md',
+            '.agents/workflows/run-application.md'
           )
           foreach ($file in $requiredFiles) {
             if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {

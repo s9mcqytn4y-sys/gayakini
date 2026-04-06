@@ -41,13 +41,10 @@
     {
       "label": "Gradle: release verification",
       "type": "shell",
-      "command": "powershell.exe",
+      "command": "cmd.exe",
       "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "& .\\gradlew.bat clean ktlintCheck detekt test build"
+        "/c",
+        ".\\gradlew.bat clean ktlintCheck detekt test build --console=plain"
       ],
       "options": {
         "cwd": "${workspaceFolder}"

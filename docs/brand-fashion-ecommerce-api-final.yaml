@@ -244,7 +244,7 @@ paths:
       tags:
       - Auth
       summary: Refresh access token
-      description: Refresh token rotation belum diaktifkan di backend ini. Endpoint sementara mengembalikan 501 sampai flow session persistence siap.
+      description: Menukar refresh token valid menjadi pasangan access token dan refresh token baru.
       operationId: refreshCustomerToken
       requestBody:
         required: true
@@ -253,8 +253,12 @@ paths:
             schema:
               $ref: '#/components/schemas/RefreshTokenRequest'
       responses:
-        '501':
-          $ref: '#/components/responses/Problem'
+        '200':
+          description: Sesi login berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
         '401':
           $ref: '#/components/responses/Problem'
         default:

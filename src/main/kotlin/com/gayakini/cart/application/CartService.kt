@@ -6,6 +6,8 @@ import com.gayakini.cart.domain.CartItemRepository
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
 import com.gayakini.catalog.domain.ProductVariantRepository
+import com.gayakini.common.api.ForbiddenException
+import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.common.util.HashUtils
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -24,6 +26,9 @@ class CartService(
         customerId: UUID?,
         currency: String,
     ): Pair<Cart, String?> {
+        val normalizedCurrency = currency.trim().uppercase()
+        require(normalizedCurrency.length == 3) { "Kode mata uang harus terdiri dari 3 huruf." }
+
         val cartId = UUID.randomUUID()
         var rawToken: String? = null
         var tokenHash: String? = null
@@ -37,7 +42,7 @@ class CartService(
             Cart(
                 id = cartId,
                 customerId = customerId,
-                currencyCode = currency,
+                currencyCode = normalizedCurrency,
                 status = CartStatus.ACTIVE,
                 accessTokenHash = tokenHash,
                 expiresAt = Instant.now().plusSeconds(86400 * 7), // 7 days
@@ -59,6 +64,8 @@ class CartService(
         if (cart.status != CartStatus.ACTIVE) {
             throw IllegalStateException("Keranjang sudah tidak aktif.")
         }
+
+        require(quantity in 1..99) { "Jumlah item harus antara 1 dan 99." }
 
         val variant =
             variantRepository.findById(variantId)
@@ -90,6 +97,53 @@ class CartService(
         return cartRepository.save(cart)
     }
 
+    @Transactional
+    fun updateItem(
+        cartId: UUID,
+        itemId: UUID,
+        quantity: Int,
+        customerId: UUID? = null,
+        cartToken: String? = null,
+    ): Cart {
+        require(quantity in 1..99) { "Jumlah item harus antara 1 dan 99." }
+
+        val cart = getValidatedCart(cartId, customerId, cartToken)
+        if (cart.status != CartStatus.ACTIVE) {
+            throw IllegalStateException("Keranjang sudah tidak aktif.")
+        }
+
+        val item =
+            cart.items.find { it.id == itemId }
+                ?: throw NoSuchElementException("Item keranjang tidak ditemukan.")
+
+        item.quantity = quantity
+        item.updatedAt = Instant.now()
+        updateTotals(cart)
+        return cartRepository.save(cart)
+    }
+
+    @Transactional
+    fun removeItem(
+        cartId: UUID,
+        itemId: UUID,
+        customerId: UUID? = null,
+        cartToken: String? = null,
+    ): Cart {
+        val cart = getValidatedCart(cartId, customerId, cartToken)
+        if (cart.status != CartStatus.ACTIVE) {
+            throw IllegalStateException("Keranjang sudah tidak aktif.")
+        }
+
+        val item =
+            cart.items.find { it.id == itemId }
+                ?: throw NoSuchElementException("Item keranjang tidak ditemukan.")
+
+        cart.items.remove(item)
+        cartItemRepository.delete(item)
+        updateTotals(cart)
+        return cartRepository.save(cart)
+    }
+
     fun getValidatedCart(
         cartId: UUID,
         customerId: UUID?,
@@ -100,12 +154,15 @@ class CartService(
                 .orElseThrow { NoSuchElementException("Keranjang tidak ditemukan.") }
 
         if (cart.customerId != null && cart.customerId != customerId) {
-            throw IllegalStateException("Akses keranjang ditolak.")
+            if (customerId == null) {
+                throw UnauthorizedException("Silakan login untuk mengakses keranjang ini.")
+            }
+            throw ForbiddenException("Akses keranjang ditolak.")
         }
 
         if (cart.accessTokenHash != null) {
             if (cartToken == null || HashUtils.sha256(cartToken) != cart.accessTokenHash) {
-                throw IllegalStateException("Akses keranjang ditolak.")
+                throw UnauthorizedException("Token keranjang tidak valid.")
             }
         }
 

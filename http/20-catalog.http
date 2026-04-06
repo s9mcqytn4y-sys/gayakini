@@ -1,15 +1,15 @@
 ### 1. Get All Products
-GET {{protocol}}://{{host}}/api/v1/products
+GET {{protocol}}://{{host}}/v1/products
 Accept: application/json
 
 ### 2. Search Products
-GET {{protocol}}://{{host}}/api/v1/products?search=tee
+GET {{protocol}}://{{host}}/v1/products?q=tee
 Accept: application/json
 
 ### 3. Get Product Details (Classic Tee from Seed)
-GET {{protocol}}://{{host}}/api/v1/products/gayakini-classic-tee
+GET {{protocol}}://{{host}}/v1/products/REPLACE_WITH_PRODUCT_ID
 Accept: application/json
 
 ### 4. Get All Locations (Areas)
-GET {{protocol}}://{{host}}/api/v1/locations/areas?input=Jakarta
+GET {{protocol}}://{{host}}/v1/locations/areas?input=Jakarta
 Accept: application/json

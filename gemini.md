@@ -47,6 +47,14 @@ Repository Root: `C:\Software\gayakini`
 - Entities must use JPA annotations correctly with Kotlin.
 - Ensure all new API endpoints are documented in OpenAPI/Swagger.
 
+## Antigravity IDE Workflows
+Equivalent workflows tersedia di `.agents/workflows/`:
+- `/validate-mcp-launchers` — MCP launcher preflight
+- `/docs-parity-check` — Doc parity check
+- `/mcp-hardening-preflight` — Full MCP hardening
+- `/gradle-release-verification` — Full Gradle quality gate
+- `/run-application` — Jalankan server lokal
+
 ## Verification Workflow
 Before task completion:
 1. Run `./gradlew clean`
@@ -59,6 +67,7 @@ Before task completion:
 ## Maintenance Notes
 - Treat `AGENTS.md` as authoritative.
 - Keep Gemini-specific guidance additive, not divergent.
+- Jika `.agents/workflows/` berubah, sinkronkan ke `AGENTS.md` dan overlay provider.
 - If HTTP or browser assumptions change, update this file together with `AGENTS.md` and `docs/tooling/mcp-servers.md`.
 
 ## Troubleshooting Workflow

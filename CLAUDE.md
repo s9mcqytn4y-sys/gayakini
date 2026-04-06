@@ -21,11 +21,19 @@
 - Browser launcher memakai Puppeteer MCP server. Edge tidak punya browser-type flag native; gunakan path `msedge.exe` via `BROWSER_EXECUTABLE_PATH`, `EDGE_PATH`, atau `MS_EDGE_PATH`.
 - Jangan simpan token atau env sensitif ke file repo.
 
+## Antigravity IDE Workflows
+Equivalent workflows tersedia di `.agents/workflows/`:
+- `/validate-mcp-launchers` — MCP launcher preflight
+- `/docs-parity-check` — Doc parity check
+- `/mcp-hardening-preflight` — Full MCP hardening
+- `/gradle-release-verification` — Full Gradle quality gate
+- `/run-application` — Jalankan server lokal
+
 ## Verification
 Sebelum menyimpulkan setup MCP siap:
 1. Jalankan `-ValidateOnly` untuk semua `tooling\mcp\start-*.ps1`.
 2. Sinkronkan perubahan launcher ke `AGENTS.md`, `gemini.md`, `CLAUDE.md`, `CODEX.md`, dan dokumen di `docs/`.
-3. Pastikan task `.vscode` dan workflow `.github` masih sejalan dengan flow launcher.
+3. Pastikan task `.vscode`, `.agents/workflows/`, dan workflow `.github` masih sejalan dengan flow launcher.
 
 ## Maintenance Workflow
 1. Perlakukan `AGENTS.md` sebagai sumber aturan utama.

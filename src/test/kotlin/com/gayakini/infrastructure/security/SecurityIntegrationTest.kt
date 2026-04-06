@@ -1,6 +1,7 @@
 package com.gayakini.infrastructure.security
 
 import com.gayakini.customer.domain.Customer
+import com.gayakini.customer.domain.CustomerRole
 import com.gayakini.customer.domain.CustomerRepository
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -64,6 +65,22 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    fun `admin endpoints should return unauthorized without token`() {
+        mockMvc.perform(
+            get("/v1/admin/orders"),
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `non public actuator endpoints should return unauthorized without token`() {
+        mockMvc.perform(
+            get("/actuator/prometheus"),
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `guest checkout endpoint should not be blocked by authentication layer`() {
         val checkoutId = UUID.randomUUID()
         mockMvc.perform(
@@ -121,5 +138,36 @@ class SecurityIntegrationTest {
             get("/v1/me").with(authentication(auth)),
         )
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `admin shipment endpoint should be mapped for admin principal`() {
+        val admin =
+            customerRepository.save(
+                Customer(
+                    email = "admin-security-test@example.com",
+                    passwordHash = passwordEncoder.encode("Password123!"),
+                    fullName = "Admin Security Test",
+                    phone = "08123456780",
+                    role = CustomerRole.ADMIN,
+                ),
+            )
+        val principal =
+            UserPrincipal(
+                id = admin.id,
+                email = admin.email,
+                role = admin.role.name,
+                permissions = admin.role.permissions.map { it.name }.toSet(),
+            )
+        val auth = UsernamePasswordAuthenticationToken(principal, null, principal.toAuthorities())
+
+        mockMvc.perform(
+            post("/v1/admin/orders/{orderId}/shipments", UUID.randomUUID())
+                .with(authentication(auth))
+                .header("Idempotency-Key", "shipment-route-check")
+                .contentType("application/json")
+                .content("{}"),
+        )
+            .andExpect(status().isNotFound)
     }
 }

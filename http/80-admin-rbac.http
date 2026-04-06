@@ -1,5 +1,5 @@
 ### 1. Admin: Create Product (Allowed)
-POST {{protocol}}://{{host}}/api/v1/admin/products
+POST {{protocol}}://{{host}}/v1/admin/products
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
@@ -13,7 +13,7 @@ Content-Type: application/json
 }
 
 ### 2. Admin: Create Product (Denied - Customer Role)
-POST {{protocol}}://{{host}}/api/v1/admin/products
+POST {{protocol}}://{{host}}/v1/admin/products
 Authorization: Bearer {{customerToken}}
 Content-Type: application/json
 
@@ -24,10 +24,15 @@ Content-Type: application/json
 }
 
 ### 3. Admin: Create Product (Denied - Anonymous)
-POST {{protocol}}://{{host}}/api/v1/admin/products
+POST {{protocol}}://{{host}}/v1/admin/products
 Content-Type: application/json
 
 {
   "slug": "denied-product",
   "title": "Should Fail"
 }
+
+### 4. Admin: List Orders
+GET {{protocol}}://{{host}}/v1/admin/orders
+Authorization: Bearer {{adminToken}}
+Accept: application/json

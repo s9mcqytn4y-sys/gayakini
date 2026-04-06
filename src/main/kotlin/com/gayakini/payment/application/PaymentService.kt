@@ -1,6 +1,8 @@
 package com.gayakini.payment.application
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.gayakini.common.api.ForbiddenException
+import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
 import com.gayakini.customer.domain.CustomerRepository
@@ -118,15 +120,18 @@ class PaymentService(
     ) {
         if (order.customerId != null) {
             if (order.customerId != currentUserId) {
-                throw IllegalStateException("Akses pesanan ditolak.")
+                if (currentUserId == null) {
+                    throw UnauthorizedException("Silakan login untuk mengakses pesanan ini.")
+                }
+                throw ForbiddenException("Akses pesanan ditolak.")
             }
             return
         }
 
         if (order.accessTokenHash != null) {
-            val token = orderToken ?: throw IllegalStateException("Token pesanan diperlukan.")
+            val token = orderToken ?: throw UnauthorizedException("Token pesanan diperlukan.")
             if (HashUtils.sha256(token) != order.accessTokenHash) {
-                throw IllegalStateException("Akses pesanan ditolak.")
+                throw UnauthorizedException("Token pesanan tidak valid.")
             }
         }
     }

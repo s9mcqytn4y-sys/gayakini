@@ -5,6 +5,7 @@ import com.gayakini.cart.api.ProductVariantAttributeDto
 import com.gayakini.checkout.application.CheckoutService
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
+import com.gayakini.infrastructure.security.SecurityUtils
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -20,7 +21,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
     ): CheckoutResponse {
         val checkout = checkoutService.createCheckout(request.cartId, null, cartToken)
-        return mapToResponse(checkout, "Checkout berhasil dibuat.")
+        return mapToResponse(checkout, "Checkout berhasil dibuat.", cartToken)
     }
 
     @GetMapping("/{checkoutId}")
@@ -28,40 +29,44 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @PathVariable checkoutId: UUID,
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
     ): CheckoutResponse {
-        val checkout = checkoutService.getCheckout(checkoutId)
-        return mapToResponse(checkout, "Checkout berhasil diambil.")
+        val checkout = checkoutService.getValidatedCheckout(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken)
+        return mapToResponse(checkout, "Checkout berhasil diambil.", checkoutToken)
     }
 
     @PutMapping("/{checkoutId}/shipping-address")
     fun upsertShippingAddress(
         @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: CheckoutShippingAddressRequest,
     ): CheckoutResponse {
-        val checkout = checkoutService.updateShippingAddress(checkoutId, request)
-        return mapToResponse(checkout, "Alamat pengiriman berhasil dipilih.")
+        val checkout = checkoutService.updateShippingAddress(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken, request)
+        return mapToResponse(checkout, "Alamat pengiriman berhasil dipilih.", checkoutToken)
     }
 
     @PostMapping("/{checkoutId}/shipping-quotes")
     fun createShippingQuotes(
         @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
     ): CheckoutResponse {
-        val checkout = checkoutService.calculateShippingQuotes(checkoutId)
-        return mapToResponse(checkout, "Pilihan pengiriman berhasil dihitung.")
+        val checkout = checkoutService.calculateShippingQuotes(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken)
+        return mapToResponse(checkout, "Pilihan pengiriman berhasil dihitung.", checkoutToken)
     }
 
     @PutMapping("/{checkoutId}/shipping-selection")
     fun setShippingSelection(
         @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: SelectShippingQuoteRequest,
     ): CheckoutResponse {
-        val checkout = checkoutService.selectShippingQuote(checkoutId, request.quoteId)
-        return mapToResponse(checkout, "Pilihan pengiriman berhasil dipilih.")
+        val checkout = checkoutService.selectShippingQuote(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken, request.quoteId)
+        return mapToResponse(checkout, "Pilihan pengiriman berhasil dipilih.", checkoutToken)
     }
 
     private fun mapToResponse(
         checkout: com.gayakini.checkout.domain.Checkout,
         message: String,
+        accessToken: String? = null,
     ): CheckoutResponse {
         return CheckoutResponse(
             message = message,
@@ -70,6 +75,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
                     id = checkout.id,
                     cartId = checkout.cart.id,
                     customerId = checkout.customerId,
+                    accessToken = accessToken,
                     status = checkout.status,
                     currency = checkout.currencyCode,
                     items =

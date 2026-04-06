@@ -3,19 +3,29 @@ package com.gayakini.cart.api
 import com.gayakini.cart.domain.CartStatus
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import java.time.Instant
 import java.util.UUID
 
 data class CreateCartRequest(
+    @field:NotBlank
+    @field:Pattern(regexp = "^[A-Z]{3}$")
     val currency: String = "IDR",
 )
 
 data class AddCartItemRequest(
     val variantId: UUID,
+    @field:Min(1)
+    @field:Max(99)
     val quantity: Int,
 )
 
 data class UpdateCartItemRequest(
+    @field:Min(1)
+    @field:Max(99)
     val quantity: Int,
 )
 

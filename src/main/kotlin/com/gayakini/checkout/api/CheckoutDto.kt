@@ -4,6 +4,10 @@ import com.gayakini.cart.api.CartItemDto
 import com.gayakini.checkout.domain.CheckoutStatus
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
 
@@ -66,20 +70,40 @@ data class CheckoutResponse(
 
 data class CheckoutShippingAddressRequest(
     val addressId: UUID? = null,
+    @field:Valid
     val guestAddress: GuestAddressRequest? = null,
 )
 
 data class GuestAddressRequest(
+    @field:NotBlank
+    @field:Size(max = 120)
     val recipientName: String,
+    @field:NotBlank
+    @field:Pattern(regexp = "^[0-9+]{8,20}$")
     val phone: String,
+    @field:NotBlank
+    @field:Size(max = 200)
     val line1: String,
+    @field:Size(max = 200)
     val line2: String? = null,
+    @field:Size(max = 200)
     val notes: String? = null,
+    @field:NotBlank
+    @field:Size(max = 100)
     val areaId: String,
+    @field:NotBlank
+    @field:Size(max = 120)
     val district: String,
+    @field:NotBlank
+    @field:Size(max = 120)
     val city: String,
+    @field:NotBlank
+    @field:Size(max = 120)
     val province: String,
+    @field:NotBlank
+    @field:Size(max = 20)
     val postalCode: String,
+    @field:Pattern(regexp = "^[A-Z]{2}$")
     val countryCode: String = "ID",
 )
 

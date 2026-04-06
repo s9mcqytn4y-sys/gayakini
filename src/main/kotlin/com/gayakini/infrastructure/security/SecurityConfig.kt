@@ -51,7 +51,8 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/admin/**", "/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                     // Documentation & Actuator
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                    .requestMatchers("/actuator/**").permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                    .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                     .anyRequest().authenticated()
             }
             .exceptionHandling {

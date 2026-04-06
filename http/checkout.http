@@ -1,19 +1,22 @@
 ### 1. Initialize Checkout from Cart
 POST {{protocol}}://{{host}}/v1/checkouts
+X-Cart-Token: {{cartToken}}
 Content-Type: application/json
 
 {
   "cartId": "{{cartId}}"
 }
 
-> {% client.global.set("checkoutId", response.body.data.id); %}
+> {% client.global.set("checkoutId", response.body.data.id); client.global.set("checkoutToken", response.body.data.accessToken); %}
 
 ### 2. Get Checkout Detail
 GET {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}
+X-Checkout-Token: {{checkoutToken}}
 Accept: application/json
 
 ### 3. Update Shipping Address
 PUT {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-address
+X-Checkout-Token: {{checkoutToken}}
 Content-Type: application/json
 
 {
@@ -34,11 +37,13 @@ Content-Type: application/json
 
 ### 4. Get Shipping Quotes
 POST {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-quotes
+X-Checkout-Token: {{checkoutToken}}
 Accept: application/json
 Idempotency-Key: {{requestId}}
 
 ### 5. Select Shipping Quote
 PUT {{protocol}}://{{host}}/v1/checkouts/{{checkoutId}}/shipping-selection
+X-Checkout-Token: {{checkoutToken}}
 Content-Type: application/json
 
 {

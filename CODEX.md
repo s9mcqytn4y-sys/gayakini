@@ -27,6 +27,7 @@
 Jika mengubah salah satu dari berikut:
 - `tooling/mcp/**`
 - `.vscode/**`
+- `.agents/**`
 - `.github/workflows/**`
 - `docs/agents/**`
 - `docs/tooling/**`
@@ -36,6 +37,14 @@ maka sinkronkan juga:
 - `gemini.md`
 - `CLAUDE.md`
 - `CODEX.md`
+
+## Antigravity IDE Workflows
+Equivalent workflows tersedia di `.agents/workflows/`:
+- `/validate-mcp-launchers` — MCP launcher preflight
+- `/docs-parity-check` — Doc parity check
+- `/mcp-hardening-preflight` — Full MCP hardening
+- `/gradle-release-verification` — Full Gradle quality gate
+- `/run-application` — Jalankan server lokal
 
 ## Verification Workflow
 1. Jalankan `-ValidateOnly` untuk semua launcher.

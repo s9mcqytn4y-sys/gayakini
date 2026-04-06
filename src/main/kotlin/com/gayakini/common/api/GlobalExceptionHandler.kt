@@ -54,7 +54,12 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
         ex: IllegalStateException,
         request: WebRequest,
     ): ResponseEntity<ProblemDetails> {
-        val status = if (ex.message?.contains("stok", ignoreCase = true) == true) HttpStatus.CONFLICT else HttpStatus.BAD_REQUEST
+        val status =
+            if (ex.message?.contains("stok", ignoreCase = true) == true) {
+                HttpStatus.CONFLICT
+            } else {
+                HttpStatus.BAD_REQUEST
+            }
 
         val problem =
             ProblemDetails(
@@ -65,8 +70,44 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 userMessage = ex.message ?: "Maaf, permintaan Anda tidak dapat diproses saat ini.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
                 requestId = UUID.randomUUID().toString(),
-            )
+        )
         return ResponseEntity.status(status).body(problem)
+    }
+
+    @ExceptionHandler(UnauthorizedException::class)
+    fun handleUnauthorized(
+        ex: UnauthorizedException,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
+        val problem =
+            ProblemDetails(
+                type = URI.create("kb://probs/unauthorized"),
+                title = "Unauthorized",
+                status = HttpStatus.UNAUTHORIZED.value(),
+                detail = ex.message ?: "Autentikasi diperlukan.",
+                userMessage = ex.message ?: "Silakan login atau gunakan token akses yang benar.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+                requestId = UUID.randomUUID().toString(),
+            )
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem)
+    }
+
+    @ExceptionHandler(ForbiddenException::class)
+    fun handleForbidden(
+        ex: ForbiddenException,
+        request: WebRequest,
+    ): ResponseEntity<ProblemDetails> {
+        val problem =
+            ProblemDetails(
+                type = URI.create("kb://probs/forbidden"),
+                title = "Forbidden",
+                status = HttpStatus.FORBIDDEN.value(),
+                detail = ex.message ?: "Akses ditolak.",
+                userMessage = ex.message ?: "Anda tidak memiliki akses untuk operasi ini.",
+                instance = URI.create((request as ServletWebRequest).request.requestURI),
+                requestId = UUID.randomUUID().toString(),
+            )
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(problem)
     }
 
     @ExceptionHandler(NoSuchElementException::class)
@@ -101,7 +142,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 userMessage = "Permintaan tidak dapat diproses. Pastikan data benar.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
                 requestId = UUID.randomUUID().toString(),
-        )
+            )
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problem)
     }
 

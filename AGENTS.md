@@ -15,7 +15,7 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 - **GitHub MCP:** Gunakan read/query oriented workflow. Hindari write/publish kecuali user minta eksplisit dan sudah diverifikasi.
 - **HTTP MCP:** Default ke OpenAPI lokal repo + base URL aplikasi lokal. Jangan arahkan ke production API.
 - **Browser MCP:** Untuk automation lokal saja. Jangan pakai launch options berisiko kecuali perlu dan user paham dampaknya.
-- **Doc sync:** Setiap perubahan di `tooling/mcp/**`, `.vscode/**`, atau workflow validasi wajib disinkronkan ke dokumen agent/provider terkait pada turn yang sama.
+- **Doc sync:** Setiap perubahan di `tooling/mcp/**`, `.vscode/**`, `.agents/**`, atau workflow validasi wajib disinkronkan ke dokumen agent/provider terkait pada turn yang sama.
 
 ## Source Of Truth Model
 - `AGENTS.md` adalah operational source of truth untuk perilaku agent lokal di repo ini.
@@ -79,11 +79,19 @@ Tujuh server MCP lokal yang didukung:
 6. `gayakini-http`
 7. `gayakini-browser`
 
+## Antigravity IDE Workflows
+Equivalent `.agents/workflows/` untuk task VSCode di `.vscode/tasks.json`:
+- `/validate-mcp-launchers` — Validate semua launcher `-ValidateOnly`
+- `/docs-parity-check` — Cek doc parity launcher terms
+- `/mcp-hardening-preflight` — Combine validate + docs-parity + workspace JSON
+- `/gradle-release-verification` — Full quality gate: clean + ktlint + detekt + test + build
+- `/run-application` — Jalankan aplikasi lokal dengan Spring profile `local`
+
 ## Maintenance Workflow
 1. Ubah helper bersama di `tooling\mcp\common.ps1` hanya bila ada manfaat lintas launcher yang jelas.
 2. Setelah mengubah launcher, jalankan `-ValidateOnly` untuk launcher terkait, lalu seluruh set jika perubahan menyentuh helper/doc/workflow.
 3. Sinkronkan `AGENTS.md`, overlay provider, dan dokumen MCP jika ada perubahan nama launcher, env vars, assumptions, atau flow verifikasi.
-4. Jika `.vscode` atau workflow berubah, pastikan task/CI tetap cocok dengan launcher pattern Windows-first.
+4. Jika `.vscode`, `.agents`, atau workflow berubah, pastikan task/CI tetap cocok dengan launcher pattern Windows-first.
 
 ## Troubleshooting Workflow
 1. Jika launcher gagal, cek `npx.cmd` resolution dan env vars yang dipakai launcher.

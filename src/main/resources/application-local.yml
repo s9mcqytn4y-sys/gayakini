@@ -37,8 +37,12 @@ gayakini:
       - "http://localhost:3000"
       - "http://localhost:5173"
   midtrans:
-    is-production: false
+    is-production: ${MIDTRANS_IS_PRODUCTION:false}
     server-key: ${MIDTRANS_SERVER_KEY:your-midtrans-server-key}
     client-key: ${MIDTRANS_CLIENT_KEY:your-midtrans-client-key}
+    api-url: ${MIDTRANS_API_URL:https://api.sandbox.midtrans.com/v2}
+    snap-url: ${MIDTRANS_SNAP_URL:https://app.sandbox.midtrans.com/snap/v1/transactions}
   biteship:
     api-key: ${BITESHIP_API_KEY:your-biteship-api-key}
+    api-url: ${BITESHIP_API_URL:https://api.biteship.com/v1}
+    webhook-secret: ${BITESHIP_WEBHOOK_SECRET:dummy-webhook-secret}

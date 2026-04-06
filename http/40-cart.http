@@ -1,5 +1,5 @@
 ### 1. Create Anonymous Cart
-POST {{protocol}}://{{host}}/api/v1/carts
+POST {{protocol}}://{{host}}/v1/carts
 Accept: application/json
 
 > {%
@@ -9,7 +9,7 @@ Accept: application/json
 
 ### 2. Add Item to Cart (Classic Tee from Seed)
 # Replace variantId with a real UUID from the DB for full E2E automation
-POST {{protocol}}://{{host}}/api/v1/carts/{{cartId}}/items
+POST {{protocol}}://{{host}}/v1/carts/{{cartId}}/items
 X-Cart-Token: {{cartToken}}
 Content-Type: application/json
 
@@ -19,6 +19,19 @@ Content-Type: application/json
 }
 
 ### 3. Get Cart Detail
-GET {{protocol}}://{{host}}/api/v1/carts/{{cartId}}
+GET {{protocol}}://{{host}}/v1/carts/{{cartId}}
 X-Cart-Token: {{cartToken}}
 Accept: application/json
+
+### 4. Update Cart Item Quantity
+PATCH {{protocol}}://{{host}}/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+X-Cart-Token: {{cartToken}}
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+### 5. Remove Cart Item
+DELETE {{protocol}}://{{host}}/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+X-Cart-Token: {{cartToken}}

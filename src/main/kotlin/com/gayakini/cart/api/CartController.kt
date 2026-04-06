@@ -4,6 +4,7 @@ import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.Cart
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
+import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -31,10 +32,31 @@ class CartController(private val cartService: CartService) {
     fun addCartItem(
         @PathVariable cartId: UUID,
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
-        @RequestBody request: AddCartItemRequest,
+        @Valid @RequestBody request: AddCartItemRequest,
     ): CartResponse {
         val cart = cartService.addItem(cartId, request.variantId, request.quantity, null, cartToken)
         return mapToResponse(cart, "Produk berhasil dimasukkan ke keranjang.")
+    }
+
+    @PatchMapping("/{cartId}/items/{itemId}")
+    fun updateCartItem(
+        @PathVariable cartId: UUID,
+        @PathVariable itemId: UUID,
+        @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
+        @Valid @RequestBody request: UpdateCartItemRequest,
+    ): CartResponse {
+        val cart = cartService.updateItem(cartId, itemId, request.quantity, null, cartToken)
+        return mapToResponse(cart, "Item keranjang berhasil diperbarui.")
+    }
+
+    @DeleteMapping("/{cartId}/items/{itemId}")
+    fun deleteCartItem(
+        @PathVariable cartId: UUID,
+        @PathVariable itemId: UUID,
+        @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
+    ): CartResponse {
+        val cart = cartService.removeItem(cartId, itemId, null, cartToken)
+        return mapToResponse(cart, "Item keranjang berhasil dihapus.")
     }
 
     private fun mapToResponse(

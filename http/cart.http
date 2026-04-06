@@ -1,11 +1,12 @@
 ### 1. Create/Get Anonymous Cart
-POST {{protocol}}://{{host}}/api/v1/carts
+POST {{protocol}}://{{host}}/v1/carts
 Accept: application/json
 
-> {% client.global.set("cartId", response.body.data.id); %}
+> {% client.global.set("cartId", response.body.data.id); client.global.set("cartToken", response.body.data.accessToken); %}
 
 ### 2. Add Item to Cart
-POST {{protocol}}://{{host}}/api/v1/carts/{{cartId}}/items
+POST {{protocol}}://{{host}}/v1/carts/{{cartId}}/items
+X-Cart-Token: {{cartToken}}
 Content-Type: application/json
 
 {
@@ -14,11 +15,13 @@ Content-Type: application/json
 }
 
 ### 3. Get Cart Detail
-GET {{protocol}}://{{host}}/api/v1/carts/{{cartId}}
+GET {{protocol}}://{{host}}/v1/carts/{{cartId}}
+X-Cart-Token: {{cartToken}}
 Accept: application/json
 
 ### 4. Update Item Quantity
-PATCH {{protocol}}://{{host}}/api/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+PATCH {{protocol}}://{{host}}/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+X-Cart-Token: {{cartToken}}
 Content-Type: application/json
 
 {
@@ -26,4 +29,5 @@ Content-Type: application/json
 }
 
 ### 5. Remove Item from Cart
-DELETE {{protocol}}://{{host}}/api/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+DELETE {{protocol}}://{{host}}/v1/carts/{{cartId}}/items/REPLACE_WITH_ITEM_ID
+X-Cart-Token: {{cartToken}}

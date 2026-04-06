@@ -114,6 +114,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browse
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browser.ps1 -BrowserPreference edge -ValidateOnly
 ```
 
+## Antigravity IDE Workflows
+
+Equivalent workflows untuk VSCode tasks tersedia di `.agents/workflows/`:
+
+| Workflow | Equivalent VSCode Task |
+|---|---|
+| `/validate-mcp-launchers` | MCP: Validate launchers |
+| `/docs-parity-check` | MCP: Docs parity check |
+| `/mcp-hardening-preflight` | MCP: Hardening preflight |
+| `/gradle-release-verification` | Gradle: release verification |
+| `/run-application` | GayakiniApplication (launch config) |
+
 ## Safety Rules
 
 - Jangan commit token atau local env.
@@ -126,7 +138,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browse
 
 1. Ubah `common.ps1` hanya untuk kebutuhan lintas launcher yang jelas.
 2. Jika menambah env var, parameter, atau default baru, update launcher, `AGENTS.md`, overlay provider, dan dokumen ini bersama-sama.
-3. Jika mengubah `.vscode` atau workflow, verifikasi task/CI masih cocok dengan launcher pattern Windows-first.
+3. Jika mengubah `.vscode`, `.agents/workflows/`, atau workflow, verifikasi task/CI masih cocok dengan launcher pattern Windows-first.
 
 ## Troubleshooting Workflow
 

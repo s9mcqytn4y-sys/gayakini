@@ -1,88 +1,97 @@
 # Gayakini Backend API
 
-Professional e-commerce RESTful API built with Spring Boot 3.4+ and Kotlin 2.0, following Modular Monolith and Domain-Driven Design (DDD) principles.
+Backend e-commerce berbasis Spring Boot 3.4 + Kotlin 2.0 dengan arsitektur modular monolith. Fokus repo saat ini adalah local-first retail core yang stabil untuk operasi single-outlet, dengan kontrak REST yang jujur dan asset QA yang bisa dipakai ulang.
 
-## 🚀 Quick Start (Local Development)
+## Quick Start Lokal
 
-This project is optimized for a native local development experience without requiring Docker by default, although Docker support is provided.
+### 1. Prasyarat
+- JDK 17
+- PostgreSQL 18+ lokal
+- Node.js bila ingin memakai MCP launcher lokal
 
-### 1. Prerequisites
-- **JDK 17+**
-- **PostgreSQL 18+** (installed on your OS or running in a container)
-
-### 2. Environment Setup
-Initialize your local environment variables:
+### 2. Setup environment
 ```bash
 ./gradlew localSetup
 ```
-Then, edit the generated `.env` file if your local PostgreSQL credentials differ from:
+
+Default lokal pada `.env.example`:
+- `DB_HOST=localhost`
+- `DB_PORT=5432`
+- `DB_NAME=gayakini`
 - `DB_USERNAME=postgres`
 - `DB_PASSWORD=password`
-- `DB_NAME=gayakini`
+- `DB_SCHEMA=commerce`
 
-### 3. Run Preflight Check
-Ensure your system is ready:
+### 3. Preflight lokal
 ```bash
 ./gradlew doctor
 ```
 
-### 4. Run Application
-Start the server with the `local` profile:
+### 4. Run server
 ```bash
-./gradlew bootRunLocal
+./gradlew bootRun
 ```
 
-Once started, access the following:
-- **API Base:** `http://localhost:8080/api/v1`
-- **Swagger UI:** `http://localhost:8080/swagger-ui.html`
-- **Actuator Health:** `http://localhost:8080/actuator/health`
+Endpoint utama:
+- API base: `http://localhost:8080/v1`
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/api-docs`
+- Health: `http://localhost:8080/actuator/health`
 
-## 🛠 Developer Workflow & CLI
+## Workflow Gradle
 
-We use custom Gradle tasks to streamline development:
+| Command | Fungsi |
+|---|---|
+| `./gradlew clean` | Bersihkan output build |
+| `./gradlew doctor` | Cek Java, `.env`, dan PostgreSQL lokal |
+| `./gradlew test` | Jalankan suite unit/integration saat ini |
+| `./gradlew build` | Build aplikasi |
+| `./gradlew smokeTest` | Quick HTTP smoke terhadap server yang sedang running |
+| `./gradlew releaseCheck` | Verifikasi sebelum push: doctor + ktlint + detekt + test + flywayValidateLocal |
 
-| Command | Description |
-|---------|-------------|
-| `./gradlew doctor` | Checks Java, DB connectivity, and `.env` status. |
-| `./gradlew localSetup` | Initializes `.env` from template. |
-| `./gradlew bootRunLocal` | Preflight check + Run with `local` profile. |
-| `./gradlew qaAll` | Runs Lint (ktlint), Static Analysis (detekt), and Tests. |
-| `./gradlew verifyMigrations` | Validates Flyway migration history. |
-| `./gradlew releaseCheck` | Final quality gate before pushing (Lints + Tests + Migrations). |
+Catatan: `ktlintCheck` dan `detekt` saat ini masih advisory karena repo masih punya debt historis yang belum diratchet menjadi strict gate.
 
-## 📂 Project Structure & Architecture
-
-The repository follows a domain-centric modular monolith structure. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+## Struktur Repo
 
 ```text
 src/main/kotlin/com/gayakini/
-├── common/           # Cross-cutting concerns (UUIDv7, Idempotency)
-├── infrastructure/   # Security, JWT, DB configurations
-├── [domain]/         # Domain boundaries (Catalog, Order, Payment, etc.)
-│   ├── api/          # Controllers & DTOs
-│   ├── application/  # Services (Use Cases)
-│   └── domain/       # Entities & Repositories
-└── GayakiniApplication.kt
+|- api              # endpoint platform/global
+|- cart             # cart guest + customer
+|- catalog          # public catalog + admin catalog
+|- checkout         # checkout dan shipping selection
+|- common           # response/error/idempotency/util
+|- customer         # auth, me, addresses, roles
+|- infrastructure   # config, security, HTTP clients
+|- inventory        # stock reservation/release
+|- location         # shipping area lookup
+|- order            # order lifecycle + admin order ops
+|- payment          # payment session + Midtrans processing
+|- shipping         # shipping quote, shipment booking, tracking state
+|- webhook          # webhook ingress
 ```
 
-## 🧪 Testing & QA
+## Testing dan HTTP Assets
 
-### Automated Testing
-- **Unit & Integration Tests:** `./gradlew test`
-- **Quality Gate:** `./gradlew releaseCheck`
+Asset manual test ada di `http/` dan sudah memakai prefix canonical `/v1`.
 
-### Manual/HTTP Testing
-We use `.http` files for a Postman-free experience. These are compatible with IntelliJ IDEA and VS Code (REST Client).
-Located in `http/`:
-- `smoke.http`: Health and basic connectivity.
-- `auth.http`: User registration and JWT login.
-- `order-flow.http`: End-to-end checkout to order conversion.
-See [docs/TESTING.md](docs/TESTING.md) for more details.
+File utama:
+- `http/smoke.http`
+- `http/auth.http`
+- `http/catalog.http`
+- `http/cart.http`
+- `http/checkout.http`
+- `http/order-flow.http`
+- `http/webhooks.http`
+- `http/80-admin-rbac.http`
 
-## 📈 Monitoring & Observability
-- **Logging:** Configured via `logback-spring.xml` with color-coded console output for development.
-- **Metrics:** Micrometer integration with Prometheus endpoint at `/actuator/prometheus`.
-- **Health Checks:** Detailed status at `/actuator/health`.
+Dokumen pendukung:
+- [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+- [docs/TESTING.md](docs/TESTING.md)
+- [docs/FRONTEND_SANDBOX_INTEGRATION.md](docs/FRONTEND_SANDBOX_INTEGRATION.md)
 
----
-*Created by Principal Backend Engineering Team.*
+## Observability dan Security Notes
+
+- `GET /actuator/health` dan `GET /actuator/info` public.
+- Endpoint actuator lain tidak dibuka untuk anonymous access.
+- Error envelope aplikasi dibentuk oleh `GlobalExceptionHandler`; server-level message leakage dimatikan di config utama.
+- Default Midtrans/Biteship tetap sandbox/local oriented. Jangan arahkan config default ke production.

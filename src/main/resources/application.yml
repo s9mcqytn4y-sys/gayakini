@@ -27,14 +27,15 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
   error:
-    include-message: always
-    include-binding-errors: always
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,prometheus
+        include: health,info
   endpoint:
     health:
       show-details: when_authorized
@@ -46,4 +47,4 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: alpha
     tags-sorter: alpha
-  show-actuator: true
+  show-actuator: false

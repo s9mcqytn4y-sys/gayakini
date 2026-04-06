@@ -7,10 +7,12 @@ import com.gayakini.common.api.PageMeta
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderStatus
 import com.gayakini.order.domain.PaymentStatus
+import jakarta.validation.constraints.Size
 import java.time.Instant
 import java.util.UUID
 
 data class PlaceOrderRequest(
+    @field:Size(max = 500)
     val customerNotes: String? = null,
 )
 
@@ -113,5 +115,16 @@ data class OrderPageResponse(
 )
 
 data class CancelOrderRequest(
+    @field:Size(max = 300)
     val reason: String? = null,
+)
+
+data class AdminCancelOrderRequest(
+    @field:Size(max = 300)
+    val reason: String? = null,
+)
+
+data class AdminCreateShipmentRequest(
+    @field:Size(max = 300)
+    val note: String? = null,
 )

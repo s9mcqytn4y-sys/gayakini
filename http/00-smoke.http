@@ -1,5 +1,5 @@
 ### 1. Platform: Hello Check
-GET {{protocol}}://{{host}}/api/v1/hello
+GET {{protocol}}://{{host}}/v1/hello
 Accept: application/json
 
 ### 2. Platform: Health Check

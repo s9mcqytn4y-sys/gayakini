@@ -36,8 +36,9 @@ class AuthController(private val customerService: CustomerService) {
     fun refresh(
         @Valid @RequestBody request: RefreshTokenRequest,
     ): StandardResponse<AuthTokensData> {
-        // TODO: Implement refresh token rotation logic in CustomerService
-        // For now, it's a stub to keep the path but mark it as needing implementation if not already done.
-        throw UnsupportedOperationException("Token refresh rotation is being implemented.")
+        return StandardResponse(
+            message = "Sesi login berhasil diperbarui.",
+            data = customerService.refresh(request),
+        )
     }
 }

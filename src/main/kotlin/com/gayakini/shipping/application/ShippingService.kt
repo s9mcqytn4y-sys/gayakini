@@ -1,9 +1,16 @@
 package com.gayakini.shipping.application
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.gayakini.common.infrastructure.IdempotencyService
+import com.gayakini.common.util.UuidV7Generator
+import com.gayakini.customer.domain.CustomerRepository
+import com.gayakini.order.api.AdminCreateShipmentRequest
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
+import com.gayakini.shipping.domain.ContactInfo
+import com.gayakini.shipping.domain.MerchantShippingOriginRepository
+import com.gayakini.shipping.domain.ShippingItem
+import com.gayakini.shipping.domain.ShippingProvider
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,7 +23,10 @@ import java.util.UUID
 class ShippingService(
     private val orderRepository: OrderRepository,
     private val shipmentRepository: ShipmentRepository,
-    private val objectMapper: ObjectMapper,
+    private val merchantOriginRepository: MerchantShippingOriginRepository,
+    private val shippingProvider: ShippingProvider,
+    private val customerRepository: CustomerRepository,
+    private val idempotencyService: IdempotencyService,
 ) {
     private val logger = LoggerFactory.getLogger(ShippingService::class.java)
 
@@ -52,6 +62,99 @@ class ShippingService(
         shipmentRepository.save(shipment)
     }
 
+    @Transactional
+    fun bookShipment(
+        orderId: UUID,
+        idempotencyKey: String,
+        request: AdminCreateShipmentRequest?,
+    ): Shipment {
+        return idempotencyService.handle(
+            scope = "book_shipment",
+            key = idempotencyKey,
+            requestPayload = mapOf("orderId" to orderId, "note" to (request?.note ?: "")),
+            requesterType = "ADMIN",
+            requesterId = null,
+        ) {
+            shipmentRepository.findByOrderId(orderId).orElse(null)?.let { return@handle it }
+
+            val order =
+                orderRepository.findById(orderId)
+                    .orElseThrow { NoSuchElementException("Order tidak ditemukan") }
+
+            if (order.status != OrderStatus.PAID && order.status != OrderStatus.READY_TO_SHIP) {
+                throw IllegalStateException("Order belum siap dibuatkan pengiriman.")
+            }
+
+            val selection = order.shippingSelection ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
+            val address = order.shippingAddress ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
+            val origin =
+                merchantOriginRepository.findDefaultActive()
+                    .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }
+
+            val sender =
+                ContactInfo(
+                    fullName = origin.contactName,
+                    phone = origin.contactPhone,
+                    email = origin.contactEmail,
+                    address = listOfNotNull(origin.line1, origin.line2, origin.district, origin.city, origin.province, origin.postalCode).joinToString(", "),
+                    areaId = origin.areaId,
+                )
+            val receiver =
+                ContactInfo(
+                    fullName = address.recipientName,
+                    phone = address.phone,
+                    email = order.customerId?.let { customerRepository.findById(it).orElse(null)?.email },
+                    address = listOfNotNull(address.line1, address.line2, address.district, address.city, address.province, address.postalCode).joinToString(", "),
+                    areaId = address.areaId,
+                )
+            val items =
+                order.items.map {
+                    ShippingItem(
+                        name = it.titleSnapshot,
+                        weightGrams = it.variant.weightGrams,
+                        quantity = it.quantity,
+                        valueIdr = it.unitPriceAmount,
+                    )
+                }
+
+            val booking =
+                shippingProvider.createShipment(
+                    orderId = order.id.toString(),
+                    rateId = selection.providerReference ?: "${selection.courierCode}_${selection.serviceCode}",
+                    sender = sender,
+                    receiver = receiver,
+                    items = items,
+                )
+
+            val shipment =
+                Shipment(
+                    id = UuidV7Generator.generate(),
+                    orderId = order.id,
+                    provider = selection.provider,
+                    providerOrderId = booking.bookingId,
+                    status = FulfillmentStatus.BOOKED,
+                    rawProviderStatus = booking.status,
+                    courierCode = selection.courierCode,
+                    courierName = selection.courierName,
+                    serviceCode = selection.serviceCode,
+                    serviceName = selection.serviceName,
+                    trackingNumber = booking.waybillId,
+                    note = request?.note,
+                    providerResponsePayload = booking.rawPayload,
+                    bookedAt = Instant.now(),
+                )
+
+            order.status = OrderStatus.READY_TO_SHIP
+            order.fulfillmentStatus = FulfillmentStatus.BOOKED
+            order.updatedAt = Instant.now()
+            orderRepository.save(order)
+
+            shipmentRepository.save(shipment)
+        }
+    }
+
+    fun findShipmentByOrderId(orderId: UUID): Shipment? = shipmentRepository.findByOrderId(orderId).orElse(null)
+
     private fun handleStatusUpdate(
         shipment: Shipment,
         payload: Map<String, Any>,
@@ -65,12 +168,17 @@ class ShippingService(
 
         when (status) {
             "picked", "shipped" -> {
+                if (shipment.status == FulfillmentStatus.DELIVERED) {
+                    return
+                }
                 shipment.status = FulfillmentStatus.IN_TRANSIT
+                shipment.shippedAt = shipment.shippedAt ?: Instant.now()
                 order.status = OrderStatus.SHIPPED
                 order.fulfillmentStatus = FulfillmentStatus.IN_TRANSIT
             }
             "delivered" -> {
                 shipment.status = FulfillmentStatus.DELIVERED
+                shipment.deliveredAt = shipment.deliveredAt ?: Instant.now()
                 order.status = OrderStatus.COMPLETED
                 order.fulfillmentStatus = FulfillmentStatus.DELIVERED
             }
@@ -126,6 +234,16 @@ class Shipment(
     var trackingNumber: String? = null,
     @jakarta.persistence.Column(name = "tracking_url", columnDefinition = "TEXT")
     var trackingUrl: String? = null,
+    @jakarta.persistence.Column(length = 300)
+    var note: String? = null,
+    @jakarta.persistence.Column(name = "provider_response_payload", columnDefinition = "JSONB")
+    var providerResponsePayload: String? = null,
+    @jakarta.persistence.Column(name = "booked_at")
+    var bookedAt: Instant? = null,
+    @jakarta.persistence.Column(name = "shipped_at")
+    var shippedAt: Instant? = null,
+    @jakarta.persistence.Column(name = "delivered_at")
+    var deliveredAt: Instant? = null,
     @jakarta.persistence.Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @jakarta.persistence.Column(name = "updated_at")

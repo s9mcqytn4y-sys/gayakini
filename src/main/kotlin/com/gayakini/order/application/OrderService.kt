@@ -4,6 +4,8 @@ import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
 import com.gayakini.checkout.domain.CheckoutRepository
 import com.gayakini.checkout.domain.CheckoutStatus
+import com.gayakini.common.api.ForbiddenException
+import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
@@ -58,11 +60,15 @@ class OrderService(
 
             // Validate ownership
             if (checkout.customerId != null && checkout.customerId != currentUser?.id) {
-                throw IllegalStateException("Akses checkout ditolak.")
+                if (currentUser == null) {
+                    throw UnauthorizedException("Silakan login untuk mengakses checkout ini.")
+                }
+                throw ForbiddenException("Akses checkout ditolak.")
             }
             if (checkout.accessTokenHash != null) {
-                if (HashUtils.sha256(checkoutToken ?: "") != checkout.accessTokenHash) {
-                    throw IllegalStateException("Akses checkout ditolak.")
+                val token = checkoutToken ?: throw UnauthorizedException("Token checkout diperlukan.")
+                if (HashUtils.sha256(token) != checkout.accessTokenHash) {
+                    throw UnauthorizedException("Token checkout tidak valid.")
                 }
             }
 
@@ -180,6 +186,19 @@ class OrderService(
         }
     }
 
+    fun listOrdersForAdmin(
+        status: OrderStatus?,
+        paymentStatus: PaymentStatus?,
+        fulfillmentStatus: FulfillmentStatus?,
+        orderNumber: String?,
+    ): List<Order> {
+        return orderRepository.findAllByOrderByCreatedAtDesc()
+            .filter { status == null || it.status == status }
+            .filter { paymentStatus == null || it.paymentStatus == paymentStatus }
+            .filter { fulfillmentStatus == null || it.fulfillmentStatus == fulfillmentStatus }
+            .filter { orderNumber.isNullOrBlank() || it.orderNumber.contains(orderNumber.trim(), ignoreCase = true) }
+    }
+
     @Transactional
     fun cancelOrder(
         id: UUID,
@@ -218,6 +237,43 @@ class OrderService(
         }
     }
 
+    @Transactional
+    fun cancelOrderAsAdmin(
+        id: UUID,
+        reason: String?,
+        idempotencyKey: String,
+    ): Order {
+        val currentUserId = SecurityUtils.getCurrentUserId()
+
+        return idempotencyService.handle(
+            scope = "admin_cancel_order",
+            key = idempotencyKey,
+            requestPayload = mapOf("orderId" to id, "reason" to (reason ?: "")),
+            requesterType = "ADMIN",
+            requesterId = currentUserId,
+        ) {
+            val order = getOrder(id)
+
+            if (order.status == OrderStatus.CANCELLED) {
+                return@handle order
+            }
+
+            if (order.status == OrderStatus.COMPLETED) {
+                throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")
+            }
+
+            order.status = OrderStatus.CANCELLED
+            order.fulfillmentStatus = FulfillmentStatus.CANCELLED
+            order.cancelledAt = Instant.now()
+            order.cancellationReason = reason
+            order.updatedAt = Instant.now()
+
+            inventoryService.releaseReservations(order.id, "Order cancelled by admin: $reason")
+
+            orderRepository.save(order)
+        }
+    }
+
     private fun validateOrderAccess(
         order: Order,
         orderToken: String?,
@@ -226,15 +282,18 @@ class OrderService(
 
         if (order.customerId != null) {
             if (order.customerId != currentUserId) {
-                throw IllegalStateException("Akses pesanan ditolak.")
+                if (currentUserId == null) {
+                    throw UnauthorizedException("Silakan login untuk mengakses pesanan ini.")
+                }
+                throw ForbiddenException("Akses pesanan ditolak.")
             }
             return
         }
 
         if (order.accessTokenHash != null) {
-            val token = orderToken ?: throw IllegalStateException("Token pesanan diperlukan.")
+            val token = orderToken ?: throw UnauthorizedException("Token pesanan diperlukan.")
             if (HashUtils.sha256(token) != order.accessTokenHash) {
-                throw IllegalStateException("Akses pesanan ditolak.")
+                throw UnauthorizedException("Token pesanan tidak valid.")
             }
         }
     }

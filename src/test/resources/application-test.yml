@@ -15,10 +15,19 @@ spring:
   flyway:
     enabled: false
 
-# Dummy keys for testing
-midtrans:
-  server-key: dummy-server-key
-  base-url: http://localhost:8081
-biteship:
-  api-key: dummy-api-key
-  base-url: http://localhost:8082
+gayakini:
+  jwt:
+    secret: test-secret-key-that-is-long-enough-for-jwt-signing
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+  midtrans:
+    is-production: false
+    server-key: dummy-server-key
+    client-key: dummy-client-key
+    api-url: http://localhost:8081
+    snap-url: http://localhost:8081/snap
+  biteship:
+    api-key: dummy-api-key
+    api-url: http://localhost:8082/v1
+    webhook-secret: dummy-webhook-secret

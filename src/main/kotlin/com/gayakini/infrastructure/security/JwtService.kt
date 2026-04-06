@@ -54,6 +54,20 @@ class JwtService(private val properties: GayakiniProperties) {
             .compact()
     }
 
+    fun parseRefreshTokenSubject(token: String): UUID? {
+        return try {
+            val claims: Claims =
+                Jwts.parser()
+                    .verifyWith(signingKey)
+                    .build()
+                    .parseSignedClaims(token)
+                    .payload
+            UUID.fromString(claims.subject)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     fun parseToken(token: String): UserPrincipal? {
         return try {

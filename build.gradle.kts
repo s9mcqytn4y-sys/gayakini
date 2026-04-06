@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.flywaydb.core.Flyway
 import java.net.Socket
 import java.net.HttpURLConnection
 import java.net.URL
@@ -9,6 +10,8 @@ buildscript {
     }
     dependencies {
         classpath("org.postgresql:postgresql:42.7.4")
+        classpath("org.flywaydb:flyway-core:10.20.1")
+        classpath("org.flywaydb:flyway-database-postgresql:10.20.1")
     }
 }
 
@@ -161,12 +164,13 @@ $ANSI_BOLD$ANSI_CYAN
   2. $ANSI_GREEN./gradlew doctor$ANSI_RESET          - Diagnostic check
   3. $ANSI_GREEN./gradlew bootRun$ANSI_RESET         - Run app with pre-flight checks
   4. $ANSI_GREEN./gradlew smokeTest$ANSI_RESET       - Quick API health verification
-  5. $ANSI_GREEN./gradlew apiTest$ANSI_RESET         - Business flow verification
+  5. $ANSI_GREEN./gradlew apiTest$ANSI_RESET         - Public API verification
   6. $ANSI_GREEN./gradlew rbacTest$ANSI_RESET        - Security/RBAC verification
-  7. $ANSI_GREEN./gradlew releaseCheck$ANSI_RESET    - Full quality gate
+  7. $ANSI_GREEN./gradlew releaseCheck$ANSI_RESET    - Full quality gate (advisory quality tools + tests + Flyway)
 
   $ANSI_YELLOW  Swagger UI: http://localhost:8080/swagger-ui.html
-  API Docs:   http://localhost:8080/api-docs$ANSI_RESET
+  API Docs:   http://localhost:8080/api-docs
+  API Base:   http://localhost:8080/v1$ANSI_RESET
         """.trimIndent())
     }
 }
@@ -199,7 +203,7 @@ tasks.register("doctor") {
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    dependsOn("ensurePostgres", "flywayMigrate")
+    dependsOn("ensurePostgres", "flywayMigrateLocal")
     localEnv.forEach { (k, v) -> environment(k, v) }
     systemProperty("spring.profiles.active", "local")
 }
@@ -229,10 +233,10 @@ tasks.register("smokeTest") {
     doLast {
         println("\n$ANSI_BOLD[SMOKE TEST]$ANSI_RESET")
         checkEndpoint("/actuator/health", 200, "Health")
-        checkEndpoint("/api/v1/hello", 200, "Hello")
+        checkEndpoint("/v1/hello", 200, "Hello")
         checkEndpoint("/swagger-ui.html", 200, "Swagger UI")
         checkEndpoint("/api-docs", 200, "OpenAPI Docs")
-        checkEndpoint("/api/v1/products", 200, "Public Catalog")
+        checkEndpoint("/v1/products", 200, "Public Catalog")
     }
 }
 
@@ -241,7 +245,7 @@ tasks.register("apiTest") {
     description = "Verifies basic business flows (Public)."
     doLast {
         println("\n$ANSI_BOLD[API BUSINESS TEST]$ANSI_RESET")
-        checkEndpoint("/api/v1/locations", 200, "Locations")
+        checkEndpoint("/v1/locations/areas", 200, "Locations")
         // Add more sequence tests here or point to .http
         println("Recommended: Use IntelliJ HTTP Client for full business flows in /http/*.http")
     }
@@ -252,22 +256,73 @@ tasks.register("rbacTest") {
     description = "Verifies RBAC security constraints."
     doLast {
         println("\n$ANSI_BOLD[RBAC SECURITY TEST]$ANSI_RESET")
-        checkEndpoint("/api/v1/admin/products", 401, "Admin Deny Anonymous")
-        checkEndpoint("/api/v1/me", 401, "Customer Deny Anonymous")
+        checkEndpoint("/v1/admin/products", 401, "Admin Deny Anonymous")
+        checkEndpoint("/v1/me", 401, "Customer Deny Anonymous")
     }
 }
 
 tasks.register("verifyMigrations") {
     group = "verification"
-    dependsOn("ensurePostgres", "flywayValidate")
+    dependsOn("ensurePostgres", "flywayValidateLocal")
 }
 
 tasks.register("releaseCheck") {
     group = "verification"
-    dependsOn("doctor", "ktlintCheck", "detekt", "test", "flywayValidate")
+    dependsOn("doctor", "ktlintCheck", "detekt", "test", "flywayValidateLocal")
 }
 
 // --- FLYWAY ---
+
+fun createLocalFlyway(): Flyway {
+    val url =
+        System.getProperty("DB_URL")
+            ?: "jdbc:postgresql://${System.getProperty("DB_HOST") ?: "localhost"}:${System.getProperty("DB_PORT") ?: "5432"}/${System.getProperty("DB_NAME") ?: "gayakini"}"
+    val user = System.getProperty("DB_USERNAME") ?: "postgres"
+    val password = System.getProperty("DB_PASSWORD") ?: "password"
+
+    return Flyway.configure()
+        .dataSource(url, user, password)
+        .schemas("commerce", "public")
+        .defaultSchema("commerce")
+        .baselineOnMigrate(true)
+        .locations("filesystem:${project.projectDir}/src/main/resources/db/migration")
+        .load()
+}
+
+tasks.register("flywayInfoLocal") {
+    group = "database"
+    dependsOn("ensurePostgres")
+    doLast {
+        val flyway = createLocalFlyway()
+        val info = flyway.info()
+        println("\n$ANSI_BOLD[FLYWAY INFO LOCAL]$ANSI_RESET")
+        info.all().forEach { migration ->
+            println("${migration.state} | ${migration.version ?: "<<repeatable>>"} | ${migration.description}")
+        }
+    }
+}
+
+tasks.register("flywayMigrateLocal") {
+    group = "database"
+    dependsOn("ensurePostgres")
+    doLast {
+        val result = createLocalFlyway().migrate()
+        println("[$ANSI_GREEN\u2705$ANSI_RESET] Flyway migrate local complete. Migrations executed: ${result.migrationsExecuted}")
+    }
+}
+
+tasks.register("flywayValidateLocal") {
+    group = "verification"
+    dependsOn("ensurePostgres")
+    doLast {
+        val result = createLocalFlyway().validateWithResult()
+        if (!result.validationSuccessful) {
+            val message = result.invalidMigrations.firstOrNull()?.errorDetails?.errorMessage ?: "Flyway validation gagal."
+            throw GradleException(message)
+        }
+        println("[$ANSI_GREEN\u2705$ANSI_RESET] Flyway validation local passed.")
+    }
+}
 
 flyway {
     driver = "org.postgresql.Driver"
@@ -278,7 +333,7 @@ flyway {
     defaultSchema = "commerce"
     createSchemas = true
     baselineOnMigrate = true
-    configurations = arrayOf("flywayMigration")
+    configurations = arrayOf("runtimeClasspath", "flywayMigration")
 }
 
 tasks.withType<KotlinCompile> {

@@ -1,12 +1,14 @@
-﻿# IDE
+# IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 .DS_Store
 
 # Build & Dependencies
 .gradle/
+.kotlin/
 build/
 out/
 bin/
@@ -24,9 +26,13 @@ local.env
 .env.test.local
 .env.production.local
 
-# Allow shared VS Code config (Optional - keeping based on previous state)
+# Allow shared VS Code config
 !.vscode/
 !.vscode/extensions.json
 !.vscode/launch.json
 !.vscode/settings.json
 !.vscode/tasks.json
+
+# Allow shared Antigravity IDE config
+!.agents/
+!.agents/workflows/
