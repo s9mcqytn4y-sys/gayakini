@@ -80,6 +80,39 @@ function Assert-Directory {
     return (Resolve-Path -LiteralPath $Path).Path
 }
 
+function Assert-File {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path,
+        [string]$Label = 'File'
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$Label not found: $Path"
+    }
+
+    return (Resolve-Path -LiteralPath $Path).Path
+}
+
+function Assert-HttpUrl {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Url,
+        [string]$Label = 'URL'
+    )
+
+    $ParsedUrl = $null
+    if (-not [System.Uri]::TryCreate($Url, [System.UriKind]::Absolute, [ref]$ParsedUrl)) {
+        throw "$Label is not a valid absolute URL: $Url"
+    }
+
+    if ($ParsedUrl.Scheme -notin @('http', 'https')) {
+        throw "$Label must use http or https: $Url"
+    }
+
+    return $ParsedUrl.AbsoluteUri.TrimEnd('/')
+}
+
 function Format-CommandPreview {
     param(
         [Parameter(Mandatory = $true)]

@@ -16,10 +16,7 @@
   "java.configuration.runtimes": [],
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.cwd": "${workspaceFolder}",
-  "chatgpt.openOnStartup": true,
-  "chatgpt.commentCodeLensEnabled": true,
   "chatgpt.localeOverride": "id",
   "chatgpt.runCodexInWindowsSubsystemForLinux": false,
-  "chat.fontSize": 14,
-  "chat.editor.fontSize": 13
+  "powershell.powerShellDefaultVersion": "PowerShell (x64)"
 }
