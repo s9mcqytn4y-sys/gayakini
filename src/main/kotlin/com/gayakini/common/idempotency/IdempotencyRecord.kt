@@ -14,8 +14,8 @@ import java.util.UUID
 class IdempotencyRecord(
     @Id
     val id: UUID,
-    @Column(unique = true, nullable = false)
-    val key: String,
+    @Column(name = "idempotency_key", unique = true, nullable = false)
+    val idempotencyKey: String,
     @Column(name = "request_hash")
     val requestHash: String?,
     @Column(name = "response_body", columnDefinition = "JSONB")
@@ -36,5 +36,5 @@ enum class IdempotencyStatus {
 }
 
 interface IdempotencyRecordRepository : org.springframework.data.jpa.repository.JpaRepository<IdempotencyRecord, UUID> {
-    fun findByKey(key: String): java.util.Optional<IdempotencyRecord>
+    fun findByIdempotencyKey(idempotencyKey: String): java.util.Optional<IdempotencyRecord>
 }

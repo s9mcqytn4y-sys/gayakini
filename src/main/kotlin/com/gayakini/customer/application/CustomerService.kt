@@ -86,7 +86,8 @@ class CustomerService(
         return JwtTokenPair(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            expiresIn = 3600, // This should ideally come from config or JwtService
+            // This should ideally come from config or JwtService
+            expiresIn = 3600,
         )
     }
 

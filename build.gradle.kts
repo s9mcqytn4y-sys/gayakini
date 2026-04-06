@@ -39,12 +39,12 @@ repositories {
     mavenCentral()
 }
 
-val ANSI_RESET = "\u001B[0m"
-val ANSI_GREEN = "\u001B[32m"
-val ANSI_YELLOW = "\u001B[33m"
-val ANSI_CYAN = "\u001B[36m"
-val ANSI_BOLD = "\u001B[1m"
-val ANSI_RED = "\u001B[31m"
+val ansiReset = "\u001B[0m"
+val ansiGreen = "\u001B[32m"
+val ansiYellow = "\u001B[33m"
+val ansiCyan = "\u001B[36m"
+val ansiBold = "\u001B[1m"
+val ansiRed = "\u001B[31m"
 
 // 1. CRITICAL: Isolated configuration for Flyway Plugin Classpath
 val flywayMigration by configurations.creating
@@ -86,7 +86,7 @@ dependencies {
 ktlint {
     verbose.set(true)
     outputToConsole.set(true)
-    ignoreFailures.set(true)
+    ignoreFailures.set(false)
 }
 
 detekt {
@@ -94,7 +94,7 @@ detekt {
     allRules = false
     config.setFrom(file("config/detekt/detekt.yml"))
     baseline = file("config/detekt/baseline.xml")
-    ignoreFailures = true
+    ignoreFailures = false
 }
 
 tasks.named("detekt") {
@@ -125,15 +125,20 @@ tasks.register("ensurePostgres") {
     description = "Checks and starts local PostgreSQL."
     doLast {
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
-        val isUp = try { Socket("localhost", dbPort).use { true } } catch (e: Exception) { false }
+        val isUp =
+            try {
+                Socket("localhost", dbPort).use { true }
+            } catch (e: Exception) {
+                false
+            }
 
         if (isUp) {
-            println("[$ANSI_GREEN\u2705$ANSI_RESET] PostgreSQL is already running on port $dbPort.")
+            println("[$ansiGreen\u2705$ansiReset] PostgreSQL is already running on port $dbPort.")
         } else {
             if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
                 throw GradleException("PostgreSQL is not running. Please start it manually.")
             }
-            println("[$ANSI_CYAN\uD83D\uDE80$ANSI_RESET] Attempting to start PostgreSQL via pg_ctl...")
+            println("[$ansiCyan\uD83D\uDE80$ansiReset] Attempting to start PostgreSQL via pg_ctl...")
             val userProfile = System.getenv("USERPROFILE")
             val pgData = System.getenv("PGDATA") ?: "$userProfile\\scoop\\persist\\postgresql\\data"
 
@@ -144,7 +149,7 @@ tasks.register("ensurePostgres") {
                 }
                 Thread.sleep(3000)
             } else {
-                println("$ANSI_YELLOW[WARN]$ANSI_RESET PGDATA not found. Skipping auto-start. Ensure DB is running.")
+                println("$ansiYellow[WARN]$ansiReset PGDATA not found. Skipping auto-start. Ensure DB is running.")
             }
         }
     }
@@ -156,22 +161,24 @@ tasks.register("devHelp") {
     group = "help"
     description = "Displays the local development workflow guide."
     doLast {
-        println("""
-$ANSI_BOLD$ANSI_CYAN
-  GAYAKINI BACKEND - DEVELOPER WORKFLOW$ANSI_RESET
-  --------------------------------------
-  1. $ANSI_GREEN./gradlew localSetup$ANSI_RESET      - Initial .env setup
-  2. $ANSI_GREEN./gradlew doctor$ANSI_RESET          - Diagnostic check
-  3. $ANSI_GREEN./gradlew bootRun$ANSI_RESET         - Run app with pre-flight checks
-  4. $ANSI_GREEN./gradlew smokeTest$ANSI_RESET       - Quick API health verification
-  5. $ANSI_GREEN./gradlew apiTest$ANSI_RESET         - Public API verification
-  6. $ANSI_GREEN./gradlew rbacTest$ANSI_RESET        - Security/RBAC verification
-  7. $ANSI_GREEN./gradlew releaseCheck$ANSI_RESET    - Full quality gate (advisory quality tools + tests + Flyway)
+        println(
+            """
+            $ansiBold$ansiCyan
+              GAYAKINI BACKEND - DEVELOPER WORKFLOW$ansiReset
+              --------------------------------------
+              1. $ansiGreen./gradlew localSetup$ansiReset      - Initial .env setup
+              2. $ansiGreen./gradlew doctor$ansiReset          - Diagnostic check
+              3. $ansiGreen./gradlew bootRun$ansiReset         - Run app with pre-flight checks
+              4. $ansiGreen./gradlew smokeTest$ansiReset       - Quick API health verification
+              5. $ansiGreen./gradlew apiTest$ansiReset         - Public API verification
+              6. $ansiGreen./gradlew rbacTest$ansiReset        - Security/RBAC verification
+              7. $ansiGreen./gradlew releaseCheck$ansiReset    - Full quality gate (advisory quality tools + tests + Flyway)
 
-  $ANSI_YELLOW  Swagger UI: http://localhost:8080/swagger-ui.html
-  API Docs:   http://localhost:8080/api-docs
-  API Base:   http://localhost:8080/v1$ANSI_RESET
-        """.trimIndent())
+              $ansiYellow  Swagger UI: http://localhost:8080/swagger-ui.html
+              API Docs:   http://localhost:8080/api-docs
+              API Base:   http://localhost:8080/v1$ansiReset
+            """.trimIndent(),
+        )
     }
 }
 
@@ -182,7 +189,7 @@ tasks.register("localSetup") {
         val target = file(".env")
         if (example.exists() && !target.exists()) {
             example.copyTo(target)
-            println("[$ANSI_GREEN\u2705$ANSI_RESET] .env file created.")
+            println("[$ansiGreen\u2705$ansiReset] .env file created.")
         }
     }
 }
@@ -191,14 +198,26 @@ tasks.register("doctor") {
     group = "verification"
     dependsOn("ensurePostgres")
     doLast {
-        println("\n$ANSI_BOLD[DIAGNOSTICS]$ANSI_RESET")
+        println("\n$ansiBold[DIAGNOSTICS]$ansiReset")
         val dbHost = System.getProperty("DB_HOST") ?: "localhost"
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
         print("Database ($dbHost:$dbPort): ")
-        try { Socket(dbHost, dbPort).use { println("${ANSI_GREEN}UP${ANSI_RESET}") } } catch (e: Exception) { println("${ANSI_RED}DOWN${ANSI_RESET}") }
+        try {
+            Socket(dbHost, dbPort).use { println("$ansiGreen UP$ansiReset") }
+        } catch (
+            e: Exception,
+        ) {
+            println("$ansiRed DOWN$ansiReset")
+        }
 
         println("Java Version: ${System.getProperty("java.version")}")
-        println(".env file: ${if (file(".env").exists()) "${ANSI_GREEN}FOUND${ANSI_RESET}" else "${ANSI_RED}MISSING${ANSI_RESET}"}")
+        println(
+            ".env file: ${if (file(".env").exists()) {
+                "$ansiGreen FOUND$ansiReset"
+            } else {
+                "$ansiRed MISSING$ansiReset"
+            }}",
+        )
     }
 }
 
@@ -210,7 +229,11 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 
 // --- TEST SUITES ---
 
-fun checkEndpoint(path: String, expectedStatus: Int = 200, name: String = "") {
+fun checkEndpoint(
+    path: String,
+    expectedStatus: Int = 200,
+    name: String = "",
+) {
     val url = URL("http://localhost:8080$path")
     print("Testing $path ${if (name.isNotEmpty()) "($name) " else ""}... ")
     try {
@@ -219,19 +242,19 @@ fun checkEndpoint(path: String, expectedStatus: Int = 200, name: String = "") {
         connection.connect()
         val status = connection.responseCode
         if (status == expectedStatus) {
-            println("${ANSI_GREEN}PASSED ($status)${ANSI_RESET}")
+            println("$ansiGreen PASSED ($status)$ansiReset")
         } else {
-            println("${ANSI_RED}FAILED (Expected $expectedStatus, got $status)${ANSI_RESET}")
+            println("$ansiRed FAILED (Expected $expectedStatus, got $status)$ansiReset")
         }
     } catch (e: Exception) {
-        println("${ANSI_RED}ERROR (${e.message})${ANSI_RESET}")
+        println("$ansiRed ERROR (${e.message})$ansiReset")
     }
 }
 
 tasks.register("smokeTest") {
     group = "verification"
     doLast {
-        println("\n$ANSI_BOLD[SMOKE TEST]$ANSI_RESET")
+        println("\n$ansiBold[SMOKE TEST]$ansiReset")
         checkEndpoint("/actuator/health", 200, "Health")
         checkEndpoint("/v1/hello", 200, "Hello")
         checkEndpoint("/swagger-ui.html", 200, "Swagger UI")
@@ -244,7 +267,7 @@ tasks.register("apiTest") {
     group = "verification"
     description = "Verifies basic business flows (Public)."
     doLast {
-        println("\n$ANSI_BOLD[API BUSINESS TEST]$ANSI_RESET")
+        println("\n$ansiBold[API BUSINESS TEST]$ansiReset")
         checkEndpoint("/v1/locations/areas", 200, "Locations")
         // Add more sequence tests here or point to .http
         println("Recommended: Use IntelliJ HTTP Client for full business flows in /http/*.http")
@@ -255,7 +278,7 @@ tasks.register("rbacTest") {
     group = "verification"
     description = "Verifies RBAC security constraints."
     doLast {
-        println("\n$ANSI_BOLD[RBAC SECURITY TEST]$ANSI_RESET")
+        println("\n$ansiBold[RBAC SECURITY TEST]$ansiReset")
         checkEndpoint("/v1/admin/products", 401, "Admin Deny Anonymous")
         checkEndpoint("/v1/me", 401, "Customer Deny Anonymous")
     }
@@ -274,14 +297,16 @@ tasks.register("releaseCheck") {
 // --- FLYWAY ---
 
 fun createLocalFlyway(): Flyway {
-    val url =
-        System.getProperty("DB_URL")
-            ?: "jdbc:postgresql://${System.getProperty("DB_HOST") ?: "localhost"}:${System.getProperty("DB_PORT") ?: "5432"}/${System.getProperty("DB_NAME") ?: "gayakini"}"
+    val host = System.getProperty("DB_HOST") ?: "localhost"
+    val port = System.getProperty("DB_PORT") ?: "5432"
+    val name = System.getProperty("DB_NAME") ?: "gayakini"
+    val defaultUrl = "jdbc:postgresql://$host:$port/$name"
+    val dbUrl = System.getProperty("DB_URL") ?: defaultUrl
     val user = System.getProperty("DB_USERNAME") ?: "postgres"
     val password = System.getProperty("DB_PASSWORD") ?: "password"
 
     return Flyway.configure()
-        .dataSource(url, user, password)
+        .dataSource(dbUrl, user, password)
         .schemas("commerce", "public")
         .defaultSchema("commerce")
         .baselineOnMigrate(true)
@@ -295,7 +320,7 @@ tasks.register("flywayInfoLocal") {
     doLast {
         val flyway = createLocalFlyway()
         val info = flyway.info()
-        println("\n$ANSI_BOLD[FLYWAY INFO LOCAL]$ANSI_RESET")
+        println("\n$ansiBold[FLYWAY INFO LOCAL]$ansiReset")
         info.all().forEach { migration ->
             println("${migration.state} | ${migration.version ?: "<<repeatable>>"} | ${migration.description}")
         }
@@ -307,7 +332,8 @@ tasks.register("flywayMigrateLocal") {
     dependsOn("ensurePostgres")
     doLast {
         val result = createLocalFlyway().migrate()
-        println("[$ANSI_GREEN\u2705$ANSI_RESET] Flyway migrate local complete. Migrations executed: ${result.migrationsExecuted}")
+        val count = result.migrationsExecuted
+        println("[$ansiGreen\u2705$ansiReset] Flyway migrate local complete. Migrations executed: $count")
     }
 }
 
@@ -317,16 +343,21 @@ tasks.register("flywayValidateLocal") {
     doLast {
         val result = createLocalFlyway().validateWithResult()
         if (!result.validationSuccessful) {
-            val message = result.invalidMigrations.firstOrNull()?.errorDetails?.errorMessage ?: "Flyway validation gagal."
+            val invalid = result.invalidMigrations.firstOrNull()
+            val message = invalid?.errorDetails?.errorMessage ?: "Flyway validation gagal."
             throw GradleException(message)
         }
-        println("[$ANSI_GREEN\u2705$ANSI_RESET] Flyway validation local passed.")
+        println("[$ansiGreen\u2705$ansiReset] Flyway validation local passed.")
     }
 }
 
 flyway {
     driver = "org.postgresql.Driver"
-    url = System.getProperty("DB_URL") ?: "jdbc:postgresql://${System.getProperty("DB_HOST") ?: "localhost"}:${System.getProperty("DB_PORT") ?: "5432"}/${System.getProperty("DB_NAME") ?: "gayakini"}"
+    val host = System.getProperty("DB_HOST") ?: "localhost"
+    val port = System.getProperty("DB_PORT") ?: "5432"
+    val name = System.getProperty("DB_NAME") ?: "gayakini"
+    val defaultDbUrl = "jdbc:postgresql://$host:$port/$name"
+    url = System.getProperty("DB_URL") ?: defaultDbUrl
     user = System.getProperty("DB_USERNAME") ?: "postgres"
     password = System.getProperty("DB_PASSWORD") ?: "password"
     schemas = arrayOf("commerce", "public")

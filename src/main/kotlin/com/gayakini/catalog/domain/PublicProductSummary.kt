@@ -21,12 +21,15 @@ class PublicProductSummary(
     val brandName: String,
     @Column(name = "category_slug")
     val categorySlug: String,
+    // Added to support filtering in view
     @Column(name = "collection_slug")
-    val collectionSlug: String?, // Added to support filtering in view
+    val collectionSlug: String?,
+    // Added to support filtering in view
     @Column(name = "color")
-    val color: String?, // Added to support filtering in view
+    val color: String?,
+    // Added to support filtering in view
     @Column(name = "size_code")
-    val sizeCode: String?, // Added to support filtering in view
+    val sizeCode: String?,
     @Column(name = "primary_image_url")
     val primaryImageUrl: String?,
     @Column(name = "min_price_amount")

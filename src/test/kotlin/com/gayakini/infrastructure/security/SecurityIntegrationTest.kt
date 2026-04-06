@@ -32,7 +32,7 @@ class SecurityIntegrationTest {
 
     @Test
     fun `public endpoints should be accessible without token`() {
-        mockMvc.perform(get("/api/v1/hello"))
+        mockMvc.perform(get("/v1/hello"))
             .andExpect(status().isOk)
     }
 
@@ -40,7 +40,7 @@ class SecurityIntegrationTest {
     fun `webhook endpoints should be accessible without token`() {
         // Mock a real biteship webhook path with valid JSON structure to avoid 400
         mockMvc.perform(
-            post("/api/v1/webhooks/biteship")
+            post("/v1/webhooks/biteship")
                 .contentType("application/json")
                 .content(
                     """

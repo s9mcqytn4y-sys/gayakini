@@ -1,0 +1,27 @@
+### 1. Get Order Details
+GET {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### 2. Get Payment Details for Order
+GET {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/payments
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+### 3. Create Payment Redirect (Midtrans)
+POST {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/payments
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "paymentMethod": "credit_card"
+}
+
+### 4. Cancel Order
+POST {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/cancellations
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "reason": "Changed my mind"
+}

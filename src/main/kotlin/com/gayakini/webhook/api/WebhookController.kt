@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
 
 @RestController
-@RequestMapping("/v1/webhooks", "/api/v1/webhooks")
+@RequestMapping("/v1/webhooks")
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,

@@ -70,7 +70,7 @@ class GlobalExceptionHandler : ResponseEntityExceptionHandler() {
                 userMessage = ex.message ?: "Maaf, permintaan Anda tidak dapat diproses saat ini.",
                 instance = URI.create((request as ServletWebRequest).request.requestURI),
                 requestId = UUID.randomUUID().toString(),
-        )
+            )
         return ResponseEntity.status(status).body(problem)
     }
 

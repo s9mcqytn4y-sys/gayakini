@@ -19,7 +19,7 @@ class HelloControllerTest {
 
     @Test
     fun `should return hello message`() {
-        mockMvc.perform(get("/api/v1/hello"))
+        mockMvc.perform(get("/v1/hello"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.success").value(true))
             .andExpect(jsonPath("$.data").value("Halo, layanan gayakini API sudah aktif."))

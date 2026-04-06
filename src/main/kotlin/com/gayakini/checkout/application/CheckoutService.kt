@@ -76,7 +76,8 @@ class CheckoutService(
                 status = CheckoutStatus.ACTIVE,
                 currencyCode = cart.currencyCode,
                 subtotalAmount = cart.subtotalAmount,
-                expiresAt = Instant.now().plusSeconds(3600), // 1 hour
+                // 1 hour
+                expiresAt = Instant.now().plusSeconds(3600),
             )
 
         if (customerId == null && cartToken != null) {
@@ -122,7 +123,8 @@ class CheckoutService(
         val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
 
         if (request.addressId != null) {
-            val customerId = checkout.customerId ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
+            val customerId = checkout.customerId
+                ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
             val customerAddress =
                 customerAddressRepository.findById(request.addressId)
                     .filter { it.customer.id == customerId }

@@ -1,5 +1,5 @@
 ### 1. Hello Check
-GET {{protocol}}://{{host}}/v1/hello
+GET {{protocol}}://{{host}}{{apiPrefix}}/hello
 Accept: application/json
 
 ### 2. Health Check
@@ -7,5 +7,5 @@ GET {{protocol}}://{{host}}/actuator/health
 Accept: application/json
 
 ### 3. Product Browsing
-GET {{protocol}}://{{host}}/v1/products
+GET {{protocol}}://{{host}}{{apiPrefix}}/products
 Accept: application/json

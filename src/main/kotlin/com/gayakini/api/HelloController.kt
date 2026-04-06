@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/v1/hello", "/v1/hello")
+@RequestMapping("/v1/hello")
 @Tag(name = "Hello", description = "Endpoint penanda sistem aktif")
 class HelloController {
     @GetMapping

@@ -85,8 +85,10 @@ class ShippingService(
                 throw IllegalStateException("Order belum siap dibuatkan pengiriman.")
             }
 
-            val selection = order.shippingSelection ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
-            val address = order.shippingAddress ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
+            val selection = order.shippingSelection
+                ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
+            val address = order.shippingAddress
+                ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
             val origin =
                 merchantOriginRepository.findDefaultActive()
                     .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }
@@ -96,7 +98,15 @@ class ShippingService(
                     fullName = origin.contactName,
                     phone = origin.contactPhone,
                     email = origin.contactEmail,
-                    address = listOfNotNull(origin.line1, origin.line2, origin.district, origin.city, origin.province, origin.postalCode).joinToString(", "),
+                    address =
+                        listOfNotNull(
+                            origin.line1,
+                            origin.line2,
+                            origin.district,
+                            origin.city,
+                            origin.province,
+                            origin.postalCode,
+                        ).joinToString(", "),
                     areaId = origin.areaId,
                 )
             val receiver =
@@ -104,7 +114,15 @@ class ShippingService(
                     fullName = address.recipientName,
                     phone = address.phone,
                     email = order.customerId?.let { customerRepository.findById(it).orElse(null)?.email },
-                    address = listOfNotNull(address.line1, address.line2, address.district, address.city, address.province, address.postalCode).joinToString(", "),
+                    address =
+                        listOfNotNull(
+                            address.line1,
+                            address.line2,
+                            address.district,
+                            address.city,
+                            address.province,
+                            address.postalCode,
+                        ).joinToString(", "),
                     areaId = address.areaId,
                 )
             val items =

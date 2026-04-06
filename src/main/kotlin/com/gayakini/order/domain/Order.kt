@@ -39,8 +39,9 @@ class Order(
     val subtotalAmount: Long,
     @Column(name = "shipping_cost_amount", nullable = false)
     val shippingCostAmount: Long,
+    // Matched to schema generated column
     @Column(name = "total_amount", insertable = false, updatable = false)
-    private val total_amount: Long = 0, // Matched to schema generated column
+    private val totalAmountGenerated: Long = 0,
     @Column(name = "current_payment_id")
     var currentPaymentId: UUID? = null,
     @Column(name = "customer_notes", length = 500)
@@ -65,19 +66,19 @@ class Order(
     var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Transient
-    private var _isNew = true
+    private var isNewRecord = true
 
     val totalAmount: Long
         get() = subtotalAmount + shippingCostAmount
 
     override fun getId(): UUID = id
 
-    override fun isNew(): Boolean = _isNew
+    override fun isNew(): Boolean = isNewRecord
 
     @PostPersist
     @PostLoad
     fun markNotNew() {
-        _isNew = false
+        isNewRecord = false
     }
 }
 
@@ -114,25 +115,26 @@ class OrderItem(
     val quantity: Int,
     @Column(name = "unit_price_amount", nullable = false)
     val unitPriceAmount: Long,
+    // Matched to schema generated column
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    private val line_total_amount: Long = 0, // Matched to schema generated column
+    private val lineTotalAmountGenerated: Long = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Transient
-    private var _isNew = true
+    private var isNewRecord = true
 
     val lineTotalAmount: Long
         get() = unitPriceAmount * quantity
 
     override fun getId(): UUID = id
 
-    override fun isNew(): Boolean = _isNew
+    override fun isNew(): Boolean = isNewRecord
 
     @PostPersist
     @PostLoad
     fun markNotNew() {
-        _isNew = false
+        isNewRecord = false
     }
 }
 
@@ -172,16 +174,16 @@ class OrderShippingAddress(
     val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Transient
-    private var _isNew = true
+    private var isNewRecord = true
 
     override fun getId(): UUID = orderId
 
-    override fun isNew(): Boolean = _isNew
+    override fun isNew(): Boolean = isNewRecord
 
     @PostPersist
     @PostLoad
     fun markNotNew() {
-        _isNew = false
+        isNewRecord = false
     }
 }
 
@@ -221,15 +223,15 @@ class OrderShippingSelection(
     val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Transient
-    private var _isNew = true
+    private var isNewRecord = true
 
     override fun getId(): UUID = orderId
 
-    override fun isNew(): Boolean = _isNew
+    override fun isNew(): Boolean = isNewRecord
 
     @PostPersist
     @PostLoad
     fun markNotNew() {
-        _isNew = false
+        isNewRecord = false
     }
 }

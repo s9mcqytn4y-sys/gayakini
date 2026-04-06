@@ -106,7 +106,8 @@ class ProductController(private val productService: ProductService) {
                 ),
             inStock = activeVariants.any { it.stockAvailable > 0 },
             description = product.description,
-            collections = listOf(), // TODO: Map collections relationship if available in Product entity
+            // TODO: Map collections relationship if available in Product entity
+            collections = listOf(),
             media =
                 product.media.map {
                     ProductMediaDto(

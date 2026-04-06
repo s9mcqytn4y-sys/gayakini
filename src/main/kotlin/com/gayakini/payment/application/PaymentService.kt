@@ -100,7 +100,8 @@ class PaymentService(
                     status = PaymentStatus.PENDING,
                     snapToken = session.token,
                     snapRedirectUrl = session.redirectUrl,
-                    expiresAt = Instant.now().plusSeconds(86400), // 24 hours
+                    // 24 hours
+                    expiresAt = Instant.now().plusSeconds(86400),
                 )
 
             val savedPayment = paymentRepository.save(payment)
@@ -170,7 +171,9 @@ class PaymentService(
                 order.status = OrderStatus.PAID
                 order.paymentStatus = PaymentStatus.PAID
                 order.paidAt = Instant.now()
-            } else if (reconciledStatus == PaymentStatus.CANCELLED || reconciledStatus == PaymentStatus.EXPIRED || reconciledStatus == PaymentStatus.FAILED) {
+            } else if (reconciledStatus == PaymentStatus.CANCELLED || 
+                reconciledStatus == PaymentStatus.EXPIRED || 
+                reconciledStatus == PaymentStatus.FAILED) {
                 order.status = OrderStatus.CANCELLED
                 order.paymentStatus = reconciledStatus
                 order.cancelledAt = Instant.now()

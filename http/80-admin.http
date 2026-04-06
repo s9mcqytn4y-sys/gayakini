@@ -1,0 +1,41 @@
+### 1. Admin Login (Obtain Admin Token)
+POST {{protocol}}://{{host}}{{apiPrefix}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "AdminPassword123!"
+}
+
+> {% client.global.set("adminToken", response.body.data.tokens.accessToken); %}
+
+### 2. List Orders (Admin)
+GET {{protocol}}://{{host}}{{apiPrefix}}/admin/orders?page=0&size=10
+Authorization: Bearer {{adminToken}}
+Accept: application/json
+
+### 3. Get Order Details (Admin)
+GET {{protocol}}://{{host}}{{apiPrefix}}/admin/orders/{{orderId}}
+Authorization: Bearer {{adminToken}}
+
+### 4. Create Product (Admin)
+POST {{protocol}}://{{host}}{{apiPrefix}}/admin/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Admin New Product",
+  "description": "Created via API",
+  "price": 100000,
+  "variants": []
+}
+
+### 5. Update Order Status (Admin Flow)
+POST {{protocol}}://{{host}}{{apiPrefix}}/admin/orders/{{orderId}}/shipments
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "waybill": "WAYBILL-123",
+  "courierCode": "jne"
+}

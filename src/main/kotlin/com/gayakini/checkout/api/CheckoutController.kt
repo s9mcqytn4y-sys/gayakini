@@ -39,7 +39,13 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: CheckoutShippingAddressRequest,
     ): CheckoutResponse {
-        val checkout = checkoutService.updateShippingAddress(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken, request)
+        val checkout =
+            checkoutService.updateShippingAddress(
+                checkoutId,
+                SecurityUtils.getCurrentUserId(),
+                checkoutToken,
+                request,
+            )
         return mapToResponse(checkout, "Alamat pengiriman berhasil dipilih.", checkoutToken)
     }
 
@@ -49,7 +55,12 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
     ): CheckoutResponse {
-        val checkout = checkoutService.calculateShippingQuotes(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken)
+        val checkout =
+            checkoutService.calculateShippingQuotes(
+                checkoutId,
+                SecurityUtils.getCurrentUserId(),
+                checkoutToken,
+            )
         return mapToResponse(checkout, "Pilihan pengiriman berhasil dihitung.", checkoutToken)
     }
 
@@ -59,7 +70,13 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: SelectShippingQuoteRequest,
     ): CheckoutResponse {
-        val checkout = checkoutService.selectShippingQuote(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken, request.quoteId)
+        val checkout =
+            checkoutService.selectShippingQuote(
+                checkoutId,
+                SecurityUtils.getCurrentUserId(),
+                checkoutToken,
+                request.quoteId,
+            )
         return mapToResponse(checkout, "Pilihan pengiriman berhasil dipilih.", checkoutToken)
     }
 

@@ -1,0 +1,41 @@
+### 1. Initialize Checkout
+POST {{protocol}}://{{host}}{{apiPrefix}}/checkouts
+Content-Type: application/json
+
+{
+  "cartId": "{{cartId}}"
+}
+
+> {% client.global.set("checkoutId", response.body.data.id); %}
+
+### 2. Set Shipping Address
+# Requires login/auth or session
+PUT {{protocol}}://{{host}}{{apiPrefix}}/checkouts/{{checkoutId}}/shipping-address
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "addressId": "0194db43-ca6a-7fec-a342-837894a480e6"
+}
+
+### 3. Set Logistics (Shipment Method)
+PUT {{protocol}}://{{host}}{{apiPrefix}}/checkouts/{{checkoutId}}/shipment
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "courierCode": "jne",
+  "courierService": "REG"
+}
+
+### 4. Create Order from Checkout
+POST {{protocol}}://{{host}}{{apiPrefix}}/checkouts/{{checkoutId}}/orders
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+Idempotency-Key: "order-12345"
+
+{
+  "notes": "Please handle carefully"
+}
+
+> {% client.global.set("orderId", response.body.data.id); %}

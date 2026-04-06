@@ -56,3 +56,6 @@ jobs:
         DB_PASSWORD: password
         MIDTRANS_SERVER_KEY: dummy_test_key
         BITESHIP_API_KEY: dummy_test_key
+    
+    - name: Build Docker Image
+      run: docker build -t gayakini-backend:latest .

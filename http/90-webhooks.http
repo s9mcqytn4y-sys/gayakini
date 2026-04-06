@@ -1,0 +1,28 @@
+### 1. Midtrans Notification (Simulated)
+POST {{protocol}}://{{host}}{{apiPrefix}}/webhooks/midtrans
+Content-Type: application/json
+
+{
+  "transaction_time": "2021-06-23 11:01:11",
+  "transaction_status": "settlement",
+  "transaction_id": "82be6c64-7744-4e4b-9752-9659",
+  "status_message": "midtrans payment notification",
+  "status_code": "200",
+  "signature_key": "dummy-signature",
+  "payment_type": "credit_card",
+  "order_id": "{{orderId}}",
+  "merchant_id": "G123456789",
+  "gross_amount": "10000.00",
+  "currency": "IDR"
+}
+
+### 2. Biteship Notification (Simulated)
+POST {{protocol}}://{{host}}{{apiPrefix}}/webhooks/biteship
+Content-Type: application/json
+
+{
+  "event": "order.status_updated",
+  "id": "biteship-event-id",
+  "order_id": "{{orderId}}",
+  "status": "delivered"
+}

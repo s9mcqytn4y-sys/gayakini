@@ -1,15 +1,12 @@
-### 1. Get All Products
-GET {{protocol}}://{{host}}/v1/products
+### 1. List Products
+GET {{protocol}}://{{host}}{{apiPrefix}}/products?page=0&size=10
 Accept: application/json
 
 ### 2. Search Products
-GET {{protocol}}://{{host}}/v1/products?q=tee
+GET {{protocol}}://{{host}}{{apiPrefix}}/products?q=t-shirt
 Accept: application/json
 
-### 3. Get Product Details (Classic Tee from Seed)
-GET {{protocol}}://{{host}}/v1/products/REPLACE_WITH_PRODUCT_ID
-Accept: application/json
-
-### 4. Get All Locations (Areas)
-GET {{protocol}}://{{host}}/v1/locations/areas?input=Jakarta
+### 3. Get Product Detail
+# Use a valid UUID from the list products results
+GET {{protocol}}://{{host}}{{apiPrefix}}/products/{{productId}}
 Accept: application/json

@@ -87,7 +87,8 @@ class OrderService(
                 )
 
             // Snapshot Address
-            val checkoutAddress = checkout.shippingAddress ?: throw IllegalStateException("Alamat pengiriman belum diset.")
+            val checkoutAddress = checkout.shippingAddress
+                ?: throw IllegalStateException("Alamat pengiriman belum diset.")
             order.shippingAddress =
                 OrderShippingAddress(
                     orderId = order.id,

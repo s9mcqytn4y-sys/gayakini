@@ -88,7 +88,8 @@ class AdminProductController(
                     stockOnHand = variant.stockOnHand,
                     stockReserved = variant.stockReserved,
                     stockAvailable = variant.stockAvailable,
-                    lastAdjustmentId = UUID.randomUUID(), // TODO: Record in adjustment table
+                    // TODO: Record in adjustment table
+                    lastAdjustmentId = UUID.randomUUID(),
                 ),
             meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
@@ -103,7 +104,8 @@ class AdminProductController(
             brandName = product.brandName,
             categorySlug = product.category?.slug,
             description = product.description,
-            collections = listOf(), // TODO: Map collections
+            // TODO: Map collections
+            collections = listOf(),
             media =
                 product.media.map {
                     ProductMediaDto(

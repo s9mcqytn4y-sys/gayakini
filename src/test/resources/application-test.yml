@@ -15,6 +15,13 @@ spring:
   flyway:
     enabled: false
 
+management:
+  endpoint:
+    health:
+      group:
+        readiness:
+          include: db
+
 gayakini:
   jwt:
     secret: test-secret-key-that-is-long-enough-for-jwt-signing

@@ -45,7 +45,8 @@ class CartService(
                 currencyCode = normalizedCurrency,
                 status = CartStatus.ACTIVE,
                 accessTokenHash = tokenHash,
-                expiresAt = Instant.now().plusSeconds(86400 * 7), // 7 days
+                // 7 days
+                expiresAt = Instant.now().plusSeconds(86400 * 7),
             )
 
         return cartRepository.save(cart) to rawToken

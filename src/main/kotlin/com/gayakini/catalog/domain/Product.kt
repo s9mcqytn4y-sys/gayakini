@@ -40,16 +40,16 @@ class Product(
     var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Transient
-    private var _isNew = true
+    private var isNewRecord = true
 
     override fun getId(): UUID = id
 
-    override fun isNew(): Boolean = _isNew
+    override fun isNew(): Boolean = isNewRecord
 
     @PostPersist
     @PostLoad
     fun markNotNew() {
-        _isNew = false
+        isNewRecord = false
     }
 }
 
