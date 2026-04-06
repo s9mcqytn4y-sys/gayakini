@@ -6,6 +6,7 @@ import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.util.UuidV7Generator
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -18,6 +19,7 @@ class AdminProductController(
 ) {
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
     fun createProduct(
         @Valid @RequestBody request: AdminCreateProductRequest,
     ): AdminProductResponse {
@@ -41,6 +43,7 @@ class AdminProductController(
     }
 
     @PatchMapping("/products/{productId}")
+    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
     fun updateProduct(
         @PathVariable productId: UUID,
         @Valid @RequestBody request: AdminUpdateProductRequest,
@@ -64,6 +67,7 @@ class AdminProductController(
     }
 
     @PostMapping("/variants/{variantId}/stock-adjustments")
+    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
     fun adjustStock(
         @PathVariable variantId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,

@@ -1,0 +1,36 @@
+### 1. Register Customer
+POST {{protocol}}://{{host}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "email": "user_{{$randomInt}}@example.com",
+  "password": "Password123!",
+  "fullName": "Gaya User"
+}
+
+### 2. Login as Customer (Seed)
+POST {{protocol}}://{{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+
+> {% client.global.set("customerToken", response.body.data.tokens.accessToken); %}
+
+### 3. Login as Admin (Seed)
+POST {{protocol}}://{{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@gayakini.com",
+  "password": "password"
+}
+
+> {% client.global.set("adminToken", response.body.data.tokens.accessToken); %}
+
+### 4. Verify Customer Token
+GET {{protocol}}://{{host}}/api/v1/me/profile
+Authorization: Bearer {{customerToken}}
+Accept: application/json

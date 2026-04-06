@@ -47,5 +47,3 @@ class Customer(
         _isNew = false
     }
 }
-
-enum class CustomerRole { CUSTOMER }

@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.net.Socket
+import java.net.HttpURLConnection
+import java.net.URL
 
 buildscript {
     repositories {
@@ -33,6 +35,13 @@ java {
 repositories {
     mavenCentral()
 }
+
+val ANSI_RESET = "\u001B[0m"
+val ANSI_GREEN = "\u001B[32m"
+val ANSI_YELLOW = "\u001B[33m"
+val ANSI_CYAN = "\u001B[36m"
+val ANSI_BOLD = "\u001B[1m"
+val ANSI_RED = "\u001B[31m"
 
 // 1. CRITICAL: Isolated configuration for Flyway Plugin Classpath
 val flywayMigration by configurations.creating
@@ -69,12 +78,12 @@ dependencies {
     testImplementation("com.ninja-squad:springmockk:4.0.2")
 }
 
-// --- QUALITY GATES (REALISTIC STRATEGY) ---
+// --- QUALITY GATES ---
 
 ktlint {
     verbose.set(true)
     outputToConsole.set(true)
-    ignoreFailures.set(true) // Don't block local dev, report only
+    ignoreFailures.set(true)
 }
 
 detekt {
@@ -82,10 +91,9 @@ detekt {
     allRules = false
     config.setFrom(file("config/detekt/detekt.yml"))
     baseline = file("config/detekt/baseline.xml")
-    ignoreFailures = true // Don't block local dev
+    ignoreFailures = true
 }
 
-// Ensure detekt baseline exists or is created before checks
 tasks.named("detekt") {
     mustRunAfter("detektBaseline")
 }
@@ -111,113 +119,155 @@ localEnv.forEach { (k, v) -> System.setProperty(k, v) }
 
 tasks.register("ensurePostgres") {
     group = "database"
-    description = "Checks and starts local PostgreSQL via pg_ctl if needed (Windows/Scoop aware)."
+    description = "Checks and starts local PostgreSQL."
     doLast {
-        if (!org.gradle.internal.os.OperatingSystem.current().isWindows) return@doLast
-
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
         val isUp = try { Socket("localhost", dbPort).use { true } } catch (e: Exception) { false }
 
         if (isUp) {
-            println("[\uD83D\uDDB3] PostgreSQL is already running on port $dbPort. \u2705")
+            println("[$ANSI_GREEN\u2705$ANSI_RESET] PostgreSQL is already running on port $dbPort.")
         } else {
-            println("[\uD83D\uDDB3] PostgreSQL not detected. Attempting to start via pg_ctl... \uD83D\uDE80")
+            if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
+                throw GradleException("PostgreSQL is not running. Please start it manually.")
+            }
+            println("[$ANSI_CYAN\uD83D\uDE80$ANSI_RESET] Attempting to start PostgreSQL via pg_ctl...")
             val userProfile = System.getenv("USERPROFILE")
             val pgData = System.getenv("PGDATA") ?: "$userProfile\\scoop\\persist\\postgresql\\data"
 
-            if (!file(pgData).exists()) {
-                println("[\u274C] ERROR: PGDATA not found at $pgData")
-                throw GradleException("PostgreSQL Data directory not found. Ensure PostgreSQL is installed via Scoop.")
+            if (file(pgData).exists()) {
+                project.exec {
+                    commandLine("cmd", "/c", "pg_ctl", "-D", pgData, "start")
+                    isIgnoreExitValue = true
+                }
+                Thread.sleep(3000)
+            } else {
+                println("$ANSI_YELLOW[WARN]$ANSI_RESET PGDATA not found. Skipping auto-start. Ensure DB is running.")
             }
-
-            project.exec {
-                commandLine("cmd", "/c", "pg_ctl", "-D", pgData, "start")
-                isIgnoreExitValue = true
-            }
-            Thread.sleep(3000) // Grace period
         }
     }
 }
 
-// --- DEVELOPER UX TASKS ---
+// --- DEVELOPER WORKFLOW TASKS ---
+
+tasks.register("devHelp") {
+    group = "help"
+    description = "Displays the local development workflow guide."
+    doLast {
+        println("""
+$ANSI_BOLD$ANSI_CYAN
+  GAYAKINI BACKEND - DEVELOPER WORKFLOW$ANSI_RESET
+  --------------------------------------
+  1. $ANSI_GREEN./gradlew localSetup$ANSI_RESET      - Initial .env setup
+  2. $ANSI_GREEN./gradlew doctor$ANSI_RESET          - Diagnostic check
+  3. $ANSI_GREEN./gradlew bootRun$ANSI_RESET         - Run app with pre-flight checks
+  4. $ANSI_GREEN./gradlew smokeTest$ANSI_RESET       - Quick API health verification
+  5. $ANSI_GREEN./gradlew apiTest$ANSI_RESET         - Business flow verification
+  6. $ANSI_GREEN./gradlew rbacTest$ANSI_RESET        - Security/RBAC verification
+  7. $ANSI_GREEN./gradlew releaseCheck$ANSI_RESET    - Full quality gate
+
+  $ANSI_YELLOW  Swagger UI: http://localhost:8080/swagger-ui.html
+  API Docs:   http://localhost:8080/api-docs$ANSI_RESET
+        """.trimIndent())
+    }
+}
 
 tasks.register("localSetup") {
     group = "setup"
-    description = "Bootstraps local environment variables."
     doLast {
         val example = file(".env.example")
         val target = file(".env")
         if (example.exists() && !target.exists()) {
             example.copyTo(target)
-            println("[\u2705] .env file created from .env.example")
-        } else if (target.exists()) {
-            println("[\u2139\uFE0F] .env already exists.")
+            println("[$ANSI_GREEN\u2705$ANSI_RESET] .env file created.")
         }
     }
 }
 
 tasks.register("doctor") {
     group = "verification"
-    description = "Release-quality environment diagnostic."
     dependsOn("ensurePostgres")
     doLast {
-        println("\n\uD83D\uDE80 GAYAKINI PREFLIGHT DIAGNOSTICS")
-        println("================================")
-        println("[JVM] Version: ${System.getProperty("java.version")}")
+        println("\n$ANSI_BOLD[DIAGNOSTICS]$ANSI_RESET")
         val dbHost = System.getProperty("DB_HOST") ?: "localhost"
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
-        print("[DB]  Checking $dbHost:$dbPort... ")
-        try {
-            Socket(dbHost, dbPort).use { println("SUCCESS \u2705") }
-        } catch (e: Exception) {
-            println("FAILED \u274C")
-        }
-        println("================================")
+        print("Database ($dbHost:$dbPort): ")
+        try { Socket(dbHost, dbPort).use { println("${ANSI_GREEN}UP${ANSI_RESET}") } } catch (e: Exception) { println("${ANSI_RED}DOWN${ANSI_RESET}") }
+
+        println("Java Version: ${System.getProperty("java.version")}")
+        println(".env file: ${if (file(".env").exists()) "${ANSI_GREEN}FOUND${ANSI_RESET}" else "${ANSI_RED}MISSING${ANSI_RESET}"}")
     }
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    dependsOn("ensurePostgres")
+    dependsOn("ensurePostgres", "flywayMigrate")
     localEnv.forEach { (k, v) -> environment(k, v) }
-    if (System.getProperty("spring.profiles.active") == null) {
-        systemProperty("spring.profiles.active", "local")
+    systemProperty("spring.profiles.active", "local")
+}
+
+// --- TEST SUITES ---
+
+fun checkEndpoint(path: String, expectedStatus: Int = 200, name: String = "") {
+    val url = URL("http://localhost:8080$path")
+    print("Testing $path ${if (name.isNotEmpty()) "($name) " else ""}... ")
+    try {
+        val connection = url.openConnection() as HttpURLConnection
+        connection.requestMethod = "GET"
+        connection.connect()
+        val status = connection.responseCode
+        if (status == expectedStatus) {
+            println("${ANSI_GREEN}PASSED ($status)${ANSI_RESET}")
+        } else {
+            println("${ANSI_RED}FAILED (Expected $expectedStatus, got $status)${ANSI_RESET}")
+        }
+    } catch (e: Exception) {
+        println("${ANSI_RED}ERROR (${e.message})${ANSI_RESET}")
     }
 }
 
-tasks.register("bootRunLocal") {
-    group = "application"
-    description = "Runs the app with local environment automation."
-    dependsOn("bootRun")
+tasks.register("smokeTest") {
+    group = "verification"
+    doLast {
+        println("\n$ANSI_BOLD[SMOKE TEST]$ANSI_RESET")
+        checkEndpoint("/actuator/health", 200, "Health")
+        checkEndpoint("/api/v1/hello", 200, "Hello")
+        checkEndpoint("/swagger-ui.html", 200, "Swagger UI")
+        checkEndpoint("/api-docs", 200, "OpenAPI Docs")
+        checkEndpoint("/api/v1/products", 200, "Public Catalog")
+    }
 }
 
-tasks.register("fixStyle") {
+tasks.register("apiTest") {
     group = "verification"
-    description = "Auto-fix code formatting issues."
-    dependsOn("ktlintFormat")
+    description = "Verifies basic business flows (Public)."
+    doLast {
+        println("\n$ANSI_BOLD[API BUSINESS TEST]$ANSI_RESET")
+        checkEndpoint("/api/v1/locations", 200, "Locations")
+        // Add more sequence tests here or point to .http
+        println("Recommended: Use IntelliJ HTTP Client for full business flows in /http/*.http")
+    }
 }
 
-tasks.register("checkQuality") {
+tasks.register("rbacTest") {
     group = "verification"
-    description = "Run all code quality checks (ktlint, detekt)."
-    dependsOn("ktlintCheck", "detekt")
+    description = "Verifies RBAC security constraints."
+    doLast {
+        println("\n$ANSI_BOLD[RBAC SECURITY TEST]$ANSI_RESET")
+        checkEndpoint("/api/v1/admin/products", 401, "Admin Deny Anonymous")
+        checkEndpoint("/api/v1/me", 401, "Customer Deny Anonymous")
+    }
 }
 
 tasks.register("verifyMigrations") {
     group = "verification"
-    description = "Validate Flyway migrations against the database."
     dependsOn("ensurePostgres", "flywayValidate")
 }
 
 tasks.register("releaseCheck") {
     group = "verification"
-    description = "The ultimate quality gate before merging."
-    dependsOn("ensurePostgres", "checkQuality", "test", "flywayValidate")
-    doLast {
-        println("\n\u2728 RELEASE CHECK PASSED \u2728")
-    }
+    dependsOn("doctor", "ktlintCheck", "detekt", "test", "flywayValidate")
 }
 
-// --- FLYWAY CONFIG ---
+// --- FLYWAY ---
 
 flyway {
     driver = "org.postgresql.Driver"
@@ -228,7 +278,6 @@ flyway {
     defaultSchema = "commerce"
     createSchemas = true
     baselineOnMigrate = true
-    cleanDisabled = false
     configurations = arrayOf("flywayMigration")
 }
 

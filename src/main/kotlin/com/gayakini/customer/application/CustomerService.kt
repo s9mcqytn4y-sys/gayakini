@@ -58,7 +58,13 @@ class CustomerService(
     }
 
     private fun generateTokenPair(customer: Customer): JwtTokenPair {
-        val accessToken = jwtService.generateAccessToken(customer.id, customer.email, customer.role.name)
+        val accessToken =
+            jwtService.generateAccessToken(
+                userId = customer.id,
+                email = customer.email,
+                role = customer.role.name,
+                permissions = customer.role.permissions.map { it.name }.toSet(),
+            )
         val refreshToken = jwtService.generateRefreshToken(customer.id)
         return JwtTokenPair(
             accessToken = accessToken,

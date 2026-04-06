@@ -1,0 +1,33 @@
+### 1. Admin: Create Product (Allowed)
+POST {{protocol}}://{{host}}/api/v1/admin/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "slug": "new-admin-product-{{$randomInt}}",
+  "title": "Admin Created Product",
+  "subtitle": "Subtitle",
+  "brandName": "GAYAKINI",
+  "description": "Description",
+  "status": "PUBLISHED"
+}
+
+### 2. Admin: Create Product (Denied - Customer Role)
+POST {{protocol}}://{{host}}/api/v1/admin/products
+Authorization: Bearer {{customerToken}}
+Content-Type: application/json
+
+{
+  "slug": "denied-product",
+  "title": "Should Fail",
+  "status": "PUBLISHED"
+}
+
+### 3. Admin: Create Product (Denied - Anonymous)
+POST {{protocol}}://{{host}}/api/v1/admin/products
+Content-Type: application/json
+
+{
+  "slug": "denied-product",
+  "title": "Should Fail"
+}

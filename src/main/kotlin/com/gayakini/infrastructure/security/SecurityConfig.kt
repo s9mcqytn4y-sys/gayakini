@@ -39,14 +39,14 @@ class SecurityConfig(
                     .requestMatchers("/api/v1/locations/**", "/v1/locations/**").permitAll()
                     .requestMatchers("/api/v1/auth/**", "/v1/auth/**").permitAll()
                     .requestMatchers("/api/v1/webhooks/**", "/v1/webhooks/**").permitAll()
-                    // Cart & Checkout
+                    // Cart & Checkout (Allow guest usage)
                     .requestMatchers("/api/v1/carts/**", "/v1/carts/**").permitAll()
                     .requestMatchers("/api/v1/checkouts/**", "/v1/checkouts/**").permitAll()
                     .requestMatchers("/api/v1/orders/{orderId}", "/v1/orders/{orderId}").permitAll()
                     // Customer Profile & Personal Orders
                     .requestMatchers("/api/v1/me/**", "/v1/me/**").authenticated()
-                    // Admin
-                    .requestMatchers("/api/v1/admin/**", "/v1/admin/**").hasRole("ADMIN")
+                    // Admin (Strictly guarded, method security handles granular permissions)
+                    .requestMatchers("/api/v1/admin/**", "/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                     // Documentation & Actuator
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/**").permitAll()
