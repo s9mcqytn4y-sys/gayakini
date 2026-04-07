@@ -1,8 +1,11 @@
 import java.net.HttpURLConnection
 import java.net.Socket
-import java.net.URL
+import java.net.URI
 import org.flywaydb.core.Flyway
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.process.ExecOperations
+import org.gradle.kotlin.dsl.support.serviceOf
 
 buildscript {
     repositories {
@@ -46,7 +49,7 @@ val ansiCyan = "\u001B[36m"
 val ansiBold = "\u001B[1m"
 val ansiRed = "\u001B[31m"
 
-// 1. CRITICAL: Isolated configuration for Flyway Plugin Classpath
+// 1. Isolated configuration for Flyway Plugin Classpath
 val flywayMigration by configurations.creating
 
 dependencies {
@@ -62,7 +65,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core:10.20.1")
     implementation("org.flywaydb:flyway-database-postgresql:10.20.1")
 
-    // 2. CRITICAL: Fix Flyway Plugin "No database found"
+    // Fix Flyway Plugin "No database found"
     flywayMigration("org.postgresql:postgresql:42.7.4")
     flywayMigration("org.flywaydb:flyway-core:10.20.1")
     flywayMigration("org.flywaydb:flyway-database-postgresql:10.20.1")
@@ -71,7 +74,8 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    // UPGRADED to 2.7.0 for Spring Boot 3.4 compatibility
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     implementation("io.micrometer:micrometer-registry-prometheus")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -103,9 +107,9 @@ tasks.named("detekt") {
 
 // --- AUTOMATION: ENVIRONMENT & POSTGRES ---
 
-fun loadDotEnv(): Map<String, String> {
+fun loadDotEnv(projectDir: File): Map<String, String> {
     val envMap = mutableMapOf<String, String>()
-    val dotEnv = file(".env")
+    val dotEnv = File(projectDir, ".env")
     if (dotEnv.exists()) {
         dotEnv.readLines().forEach { line ->
             if (line.isNotBlank() && !line.startsWith("#")) {
@@ -117,8 +121,11 @@ fun loadDotEnv(): Map<String, String> {
     return envMap
 }
 
-val localEnv = loadDotEnv()
+val localEnv = loadDotEnv(projectDir)
 localEnv.forEach { (k, v) -> System.setProperty(k, v) }
+
+// FIX: Use serviceOf for ExecOperations (requires imports)
+val execOperations = serviceOf<ExecOperations>()
 
 tasks.register("dbStart") {
     group = "database"
@@ -145,9 +152,8 @@ tasks.register("dbStart") {
                 System.getProperty("PGDATA") ?: System.getenv("PGDATA")
                     ?: "$userProfile\\scoop\\persist\\postgresql\\data"
 
-            if (file(pgData).exists()) {
-                project.exec {
-                    // Removed commandLine indentation to fix ktlint multiline issue
+            if (File(pgData).exists()) {
+                execOperations.exec {
                     commandLine("cmd", "/c", "start", "/b", "pg_ctl", "-D", pgData, "start")
                     isIgnoreExitValue = true
                 }
@@ -186,13 +192,13 @@ tasks.register("devHelp") {
 tasks.register("localSetup") {
     group = "setup"
     description = "Creates .env from .env.example if it doesn't exist."
+    val exampleFile = file(".env.example")
+    val targetFile = file(".env")
     doLast {
-        val example = file(".env.example")
-        val target = file(".env")
-        if (example.exists() && !target.exists()) {
-            example.copyTo(target)
+        if (exampleFile.exists() && !targetFile.exists()) {
+            exampleFile.copyTo(targetFile)
             println("[$ansiGreen\u2705$ansiReset] .env file created.")
-        } else if (target.exists()) {
+        } else if (targetFile.exists()) {
             println("[$ansiCyan\u2139$ansiReset] .env already exists.")
         }
     }
@@ -202,6 +208,7 @@ tasks.register("dbDoctor") {
     group = "verification"
     description = "Detailed database connectivity and environment check."
     dependsOn("dbStart")
+    val envFileExists = file(".env").exists()
     doLast {
         println("\n$ansiBold[DATABASE DIAGNOSTICS]$ansiReset")
         val dbHost = System.getProperty("DB_HOST") ?: "localhost"
@@ -217,7 +224,7 @@ tasks.register("dbDoctor") {
 
         println("Database Name: $dbName")
         println("Java Version: ${System.getProperty("java.version")}")
-        val envFound = if (file(".env").exists()) "$ansiGreen FOUND$ansiReset" else "$ansiRed MISSING$ansiReset"
+        val envFound = if (envFileExists) "$ansiGreen FOUND$ansiReset" else "$ansiRed MISSING$ansiReset"
         println(".env file: $envFound")
     }
 }
@@ -259,7 +266,7 @@ fun checkEndpoint(
     expectedStatus: Int = 200,
     name: String = "",
 ) {
-    val url = URL("http://localhost:8080$path")
+    val url = URI("http://localhost:8080$path").toURL()
     print("Testing $path ${if (name.isNotEmpty()) "($name) " else ""}... ")
     try {
         val connection = url.openConnection() as HttpURLConnection
@@ -292,6 +299,8 @@ tasks.register("smokeTest") {
 tasks.register("validateMcp") {
     group = "verification"
     description = "Validates all MCP launchers in -ValidateOnly mode."
+    // Configuration cache compatibility: capture projectDir as String
+    val projectDirStr = projectDir.absolutePath
     doLast {
         if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
             println("$ansiYellow[SKIP]$ansiReset MCP validation only on Windows.")
@@ -300,7 +309,7 @@ tasks.register("validateMcp") {
         println("\n$ansiBold[MCP LAUNCHER VALIDATION]$ansiReset")
 
         val mcpCommand =
-            "\$env:PROJECT_ROOT='$projectDir'; " +
+            "\$env:PROJECT_ROOT='$projectDirStr'; " +
                 "\$env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_token'; " +
                 "Get-ChildItem 'tooling/mcp/start-*.ps1' | " +
                 "Sort-Object Name | " +
@@ -308,7 +317,7 @@ tasks.register("validateMcp") {
                 "Write-Host \"`n--- Validating \$(\$_.Name) ---\" -ForegroundColor Cyan; " +
                 "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File \$_.FullName -ValidateOnly }"
 
-        project.exec {
+        execOperations.exec {
             commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", mcpCommand)
         }
     }
@@ -316,7 +325,7 @@ tasks.register("validateMcp") {
 
 // --- FLYWAY ---
 
-fun createLocalFlyway(): Flyway {
+fun createLocalFlyway(projectDir: File): Flyway {
     val host = System.getProperty("DB_HOST") ?: "localhost"
     val port = System.getProperty("DB_PORT") ?: "5432"
     val name = System.getProperty("DB_NAME") ?: "gayakini"
@@ -330,7 +339,7 @@ fun createLocalFlyway(): Flyway {
         .schemas("commerce", "public")
         .defaultSchema("commerce")
         .baselineOnMigrate(true)
-        .locations("filesystem:${project.projectDir}/src/main/resources/db/migration")
+        .locations("filesystem:$projectDir/src/main/resources/db/migration")
         .load()
 }
 
@@ -338,8 +347,9 @@ tasks.register("flywayInfoLocal") {
     group = "database"
     description = "Shows local Flyway migration status."
     dependsOn("dbStart")
+    val pDir = projectDir
     doLast {
-        val flyway = createLocalFlyway()
+        val flyway = createLocalFlyway(pDir)
         val info = flyway.info()
         println("\n$ansiBold[FLYWAY INFO LOCAL]$ansiReset")
         info.all().forEach { migration ->
@@ -352,8 +362,9 @@ tasks.register("flywayMigrateLocal") {
     group = "database"
     description = "Runs Flyway migrations against local database."
     dependsOn("dbStart")
+    val pDir = projectDir
     doLast {
-        val result = createLocalFlyway().migrate()
+        val result = createLocalFlyway(pDir).migrate()
         val count = result.migrationsExecuted
         println("[$ansiGreen\u2705$ansiReset] Flyway migrate local complete. Migrations executed: $count")
     }
@@ -363,8 +374,9 @@ tasks.register("flywayValidateLocal") {
     group = "verification"
     description = "Validates local migrations against local database."
     dependsOn("dbStart")
+    val pDir = projectDir
     doLast {
-        val result = createLocalFlyway().validateWithResult()
+        val result = createLocalFlyway(pDir).validateWithResult()
         if (!result.validationSuccessful) {
             val invalid = result.invalidMigrations.firstOrNull()
             val message = invalid?.errorDetails?.errorMessage ?: "Flyway validation gagal."
@@ -394,10 +406,10 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("app.jar")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "17"
+tasks.withType<KotlinCompile>().configureEach {
+    compilerOptions {
+        freeCompilerArgs.add("-Xjsr305=strict")
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 

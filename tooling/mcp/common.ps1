@@ -208,12 +208,17 @@ function Start-McpNpx {
     )
 
     $NpxPath = Get-NpxCommandPath
-    $InvocationArgs = @('-y', $Package) + $Args
+    # --no-install ensures we don't output "Need to install..." to stdout if package is missing
+    # but we usually want -y to auto-install. To avoid stdout pollution during install,
+    # we can try to suppress npx's own noise.
+    $InvocationArgs = @('--quiet', '-y', $Package) + $Args
 
     if ($ValidateOnly) {
         Write-Host ("Launcher check OK: " + (Format-CommandPreview -Command $NpxPath -Arguments $InvocationArgs)) -ForegroundColor Green
         return
     }
 
+    # Use Start-Process for true clean handoff or ensure no extra output in this script.
+    # In PowerShell, the current process will wait for the child process.
     & $NpxPath @InvocationArgs
 }

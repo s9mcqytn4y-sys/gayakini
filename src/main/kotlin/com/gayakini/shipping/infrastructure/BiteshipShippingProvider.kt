@@ -44,9 +44,9 @@ class BiteshipShippingProvider(
         return try {
             val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
             if (response.statusCode.is2xxSuccessful) {
-                val body = response.body as Map<*, *>
-                val pricing = body["pricing"] as List<Map<String, Any>>
-                pricing.map {
+                val body = response.body as? Map<*, *> ?: return emptyList()
+                val pricing = body["pricing"] as? List<*> ?: return emptyList()
+                pricing.mapNotNull { it as? Map<*, *> }.map {
                     ShippingRate(
                         id = it["company"].toString() + "_" + it["type"].toString(),
                         courierCode = it["company"].toString(),
@@ -54,7 +54,7 @@ class BiteshipShippingProvider(
                         serviceCode = it["type"].toString(),
                         serviceName = it["courier_service_name"].toString(),
                         description = it["description"]?.toString(),
-                        price = (it["price"] as Number).toLong(),
+                        price = (it["price"] as? Number)?.toLong() ?: 0L,
                         minDuration = parseDuration(it["duration"]?.toString(), true),
                         maxDuration = parseDuration(it["duration"]?.toString(), false),
                     )
@@ -121,7 +121,7 @@ class BiteshipShippingProvider(
         return try {
             val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
             if (response.statusCode.is2xxSuccessful) {
-                val body = response.body as Map<*, *>
+                val body = response.body as? Map<*, *> ?: throw IllegalStateException("Empty body")
                 ShipmentBooking(
                     bookingId = body["id"].toString(),
                     waybillId = body["waybill_id"]?.toString(),
@@ -145,9 +145,10 @@ class BiteshipShippingProvider(
         return try {
             val response = restTemplate.getForEntity(url, Map::class.java, headers)
             if (response.statusCode.is2xxSuccessful) {
-                val body = response.body as Map<*, *>
+                val body = response.body as? Map<*, *> ?: throw IllegalStateException("Empty body")
+                val historyRaw = body["history"] as? List<*> ?: emptyList<Any>()
                 val history =
-                    (body["history"] as List<Map<String, Any>>).map {
+                    historyRaw.mapNotNull { it as? Map<*, *> }.map {
                         TrackingEvent(
                             timestamp = it["updated_at"].toString(),
                             description = it["note"].toString(),
