@@ -20,7 +20,6 @@ spring:
     baseline-on-migrate: true
     validate-on-migrate: true
     clean-disabled: false
-    clean-on-validation-error: true
 
 management:
   endpoint:
@@ -30,7 +29,7 @@ management:
       show-details: always
       group:
         readiness:
-          include: db, flyway
+          include: db
   health:
     livenessstate:
       enabled: true
@@ -47,7 +46,7 @@ logging:
 
 gayakini:
   jwt:
-    secret: ${JWT_SECRET:super-secret-key-change-this-in-production-at-least-32-chars}
+    secret: ${JWT_SECRET:super-secret-key-change-this-in-production-at-least-chars-32}
   cors:
     allowed-origins:
       - "http://localhost:3000"

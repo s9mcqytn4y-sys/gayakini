@@ -14,7 +14,6 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           time_zone: UTC
         default_schema: ${DB_SCHEMA:commerce}
@@ -44,7 +43,7 @@ management:
         enabled: true
       group:
         readiness:
-          include: db, flyway
+          include: db
 
 springdoc:
   api-docs:

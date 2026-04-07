@@ -136,24 +136,25 @@ tasks.register("dbStart") {
             println("[$ansiGreen\u2705$ansiReset] PostgreSQL is already running on port $dbPort.")
         } else {
             if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
-                println("$ansiYellow[SKIP]$ansiReset PostgreSQL is not running. Auto-start only supported on Windows.")
+                println("$ansiYellow[SKIP]$ansiReset PostgreSQL auto-start only on Windows.")
                 return@doLast
             }
             println("[$ansiCyan\uD83D\uDE80$ansiReset] Attempting to start PostgreSQL via pg_ctl...")
             val userProfile = System.getenv("USERPROFILE")
-            val pgData = System.getenv("PGDATA") ?: "$userProfile\\scoop\\persist\\postgresql\\data"
+            val pgData =
+                System.getProperty("PGDATA") ?: System.getenv("PGDATA")
+                    ?: "$userProfile\\scoop\\persist\\postgresql\\data"
 
             if (file(pgData).exists()) {
                 project.exec {
-                    commandLine("cmd", "/c", "pg_ctl", "-D", pgData, "start")
+                    // Removed commandLine indentation to fix ktlint multiline issue
+                    commandLine("cmd", "/c", "start", "/b", "pg_ctl", "-D", pgData, "start")
                     isIgnoreExitValue = true
                 }
                 println("$ansiCyan[WAIT]$ansiReset Giving PostgreSQL 3 seconds to warm up...")
                 Thread.sleep(3000)
             } else {
-                println(
-                    "$ansiYellow[WARN]$ansiReset PGDATA not found ($pgData). Skipping auto-start. Ensure DB is running.",
-                )
+                println("$ansiYellow[WARN]$ansiReset PGDATA not found ($pgData). Skipping.")
             }
         }
     }
@@ -177,10 +178,6 @@ tasks.register("devHelp") {
               5. $ansiGreen./gradlew validateMcp$ansiReset     - Validate all MCP launchers
               6. $ansiGreen./gradlew releaseCheck$ansiReset    - Full quality gate (CI equivalent)
               7. $ansiGreen./gradlew releaseCheckLocal$ansiReset - Full gate + DB + MCP validation
-
-              $ansiYellow  Swagger UI: http://localhost:8080/swagger-ui.html
-              API Docs:   http://localhost:8080/api-docs
-              API Base:   http://localhost:8080/v1$ansiReset
             """.trimIndent(),
         )
     }
@@ -220,13 +217,8 @@ tasks.register("dbDoctor") {
 
         println("Database Name: $dbName")
         println("Java Version: ${System.getProperty("java.version")}")
-        println(
-            ".env file: ${if (file(".env").exists()) {
-                "$ansiGreen FOUND$ansiReset"
-            } else {
-                "$ansiRed MISSING$ansiReset"
-            }}",
-        )
+        val envFound = if (file(".env").exists()) "$ansiGreen FOUND$ansiReset" else "$ansiRed MISSING$ansiReset"
+        println(".env file: $envFound")
     }
 }
 
@@ -255,8 +247,6 @@ tasks.register("releaseCheckLocal") {
 // --- BOOTRUN & LOCAL RUN ---
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    // We make DB setup explicit but non-blocking for bootRun if the user wants to handle it
-    // But for "magical" experience, we keep it but ensure it's healthy
     dependsOn("dbStart", "flywayMigrateLocal")
     localEnv.forEach { (k, v) -> environment(k, v) }
     systemProperty("spring.profiles.active", "local")
@@ -304,7 +294,7 @@ tasks.register("validateMcp") {
     description = "Validates all MCP launchers in -ValidateOnly mode."
     doLast {
         if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
-            println("$ansiYellow[SKIP]$ansiReset MCP launcher validation currently only supported on Windows.")
+            println("$ansiYellow[SKIP]$ansiReset MCP validation only on Windows.")
             return@doLast
         }
         println("\n$ansiBold[MCP LAUNCHER VALIDATION]$ansiReset")
@@ -314,7 +304,8 @@ tasks.register("validateMcp") {
                 "\$env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_token'; " +
                 "Get-ChildItem 'tooling/mcp/start-*.ps1' | " +
                 "Sort-Object Name | " +
-                "ForEach-Object { Write-Host \"`n--- Validating \$(\$_.Name) ---\" -ForegroundColor Cyan; " +
+                "ForEach-Object { " +
+                "Write-Host \"`n--- Validating \$(\$_.Name) ---\" -ForegroundColor Cyan; " +
                 "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File \$_.FullName -ValidateOnly }"
 
         project.exec {
