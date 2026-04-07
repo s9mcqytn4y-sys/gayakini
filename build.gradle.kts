@@ -42,13 +42,6 @@ repositories {
     mavenCentral()
 }
 
-val ansiReset = "\u001B[0m"
-val ansiGreen = "\u001B[32m"
-val ansiYellow = "\u001B[33m"
-val ansiCyan = "\u001B[36m"
-val ansiBold = "\u001B[1m"
-val ansiRed = "\u001B[31m"
-
 // 1. Isolated configuration for Flyway Plugin Classpath
 val flywayMigration by configurations.creating
 
@@ -124,43 +117,50 @@ fun loadDotEnv(projectDir: File): Map<String, String> {
 val localEnv = loadDotEnv(projectDir)
 localEnv.forEach { (k, v) -> System.setProperty(k, v) }
 
-// FIX: Use serviceOf for ExecOperations (requires imports)
-val execOperations = serviceOf<ExecOperations>()
-
 tasks.register("dbStart") {
     group = "database"
     description = "Checks and starts local PostgreSQL if needed (Windows only auto-start)."
+
+    val dbPortValue = (System.getProperty("DB_PORT") ?: "5432").toInt()
+    val isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows
+    val userProfile = System.getenv("USERPROFILE")
+    val pgDataVal = System.getProperty("PGDATA") ?: System.getenv("PGDATA") ?: "$userProfile\\scoop\\persist\\postgresql\\data"
+    val pgDataFile = file(pgDataVal)
+
+    // Captured services
+    val execOps = serviceOf<ExecOperations>()
+
     doLast {
-        val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        val ansiCyanLocal = "\u001B[36m"
+        val ansiYellowLocal = "\u001B[33m"
+
         val isUp =
             try {
-                Socket("localhost", dbPort).use { true }
+                Socket("localhost", dbPortValue).use { true }
             } catch (e: Exception) {
                 false
             }
 
         if (isUp) {
-            println("[$ansiGreen\u2705$ansiReset] PostgreSQL is already running on port $dbPort.")
+            println("[$ansiGreenLocal\u2705$ansiResetLocal] PostgreSQL is already running on port $dbPortValue.")
         } else {
-            if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
-                println("$ansiYellow[SKIP]$ansiReset PostgreSQL auto-start only on Windows.")
+            if (!isWindows) {
+                println("$ansiYellowLocal[SKIP]$ansiResetLocal PostgreSQL auto-start only on Windows.")
                 return@doLast
             }
-            println("[$ansiCyan\uD83D\uDE80$ansiReset] Attempting to start PostgreSQL via pg_ctl...")
-            val userProfile = System.getenv("USERPROFILE")
-            val pgData =
-                System.getProperty("PGDATA") ?: System.getenv("PGDATA")
-                    ?: "$userProfile\\scoop\\persist\\postgresql\\data"
+            println("[$ansiCyanLocal\uD83D\uDE80$ansiResetLocal] Attempting to start PostgreSQL via pg_ctl...")
 
-            if (File(pgData).exists()) {
-                execOperations.exec {
-                    commandLine("cmd", "/c", "start", "/b", "pg_ctl", "-D", pgData, "start")
+            if (pgDataFile.exists()) {
+                execOps.exec {
+                    commandLine("cmd", "/c", "start", "/b", "pg_ctl", "-D", pgDataVal, "start")
                     isIgnoreExitValue = true
                 }
-                println("$ansiCyan[WAIT]$ansiReset Giving PostgreSQL 3 seconds to warm up...")
+                println("$ansiCyanLocal[WAIT]$ansiResetLocal Giving PostgreSQL 3 seconds to warm up...")
                 Thread.sleep(3000)
             } else {
-                println("$ansiYellow[WARN]$ansiReset PGDATA not found ($pgData). Skipping.")
+                println("$ansiYellowLocal[WARN]$ansiResetLocal PGDATA not found ($pgDataVal). Skipping.")
             }
         }
     }
@@ -172,18 +172,22 @@ tasks.register("devHelp") {
     group = "help"
     description = "Displays the local development workflow guide."
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        val ansiCyanLocal = "\u001B[36m"
+        val ansiBoldLocal = "\u001B[1m"
         println(
             """
-            $ansiBold$ansiCyan
-              GAYAKINI BACKEND - DEVELOPER WORKFLOW$ansiReset
+            $ansiBoldLocal$ansiCyanLocal
+              GAYAKINI BACKEND - DEVELOPER WORKFLOW$ansiResetLocal
               --------------------------------------
-              1. $ansiGreen./gradlew localSetup$ansiReset      - Initial .env setup
-              2. $ansiGreen./gradlew dbDoctor$ansiReset        - Database & env diagnostic check
-              3. $ansiGreen./gradlew bootRun$ansiReset         - Run app with pre-flight checks
-              4. $ansiGreen./gradlew qualityCheck$ansiReset    - Linting + Detekt + Unit Tests
-              5. $ansiGreen./gradlew validateMcp$ansiReset     - Validate all MCP launchers
-              6. $ansiGreen./gradlew releaseCheck$ansiReset    - Full quality gate (CI equivalent)
-              7. $ansiGreen./gradlew releaseCheckLocal$ansiReset - Full gate + DB + MCP validation
+              1. $ansiGreenLocal./gradlew localSetup$ansiResetLocal      - Initial .env setup
+              2. $ansiGreenLocal./gradlew dbDoctor$ansiResetLocal        - Database & env diagnostic check
+              3. $ansiGreenLocal./gradlew bootRun$ansiResetLocal         - Run app with pre-flight checks
+              4. $ansiGreenLocal./gradlew qualityCheck$ansiResetLocal    - Linting + Detekt + Unit Tests
+              5. $ansiGreenLocal./gradlew validateMcp$ansiResetLocal     - Validate all MCP launchers
+              6. $ansiGreenLocal./gradlew releaseCheck$ansiResetLocal    - Full quality gate (CI equivalent)
+              7. $ansiGreenLocal./gradlew releaseCheckLocal$ansiResetLocal - Full gate + DB + MCP validation
             """.trimIndent(),
         )
     }
@@ -195,11 +199,14 @@ tasks.register("localSetup") {
     val exampleFile = file(".env.example")
     val targetFile = file(".env")
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        val ansiCyanLocal = "\u001B[36m"
         if (exampleFile.exists() && !targetFile.exists()) {
             exampleFile.copyTo(targetFile)
-            println("[$ansiGreen\u2705$ansiReset] .env file created.")
+            println("[$ansiGreenLocal\u2705$ansiResetLocal] .env file created.")
         } else if (targetFile.exists()) {
-            println("[$ansiCyan\u2139$ansiReset] .env already exists.")
+            println("[$ansiCyanLocal\u2139$ansiResetLocal] .env already exists.")
         }
     }
 }
@@ -209,22 +216,29 @@ tasks.register("dbDoctor") {
     description = "Detailed database connectivity and environment check."
     dependsOn("dbStart")
     val envFileExists = file(".env").exists()
-    doLast {
-        println("\n$ansiBold[DATABASE DIAGNOSTICS]$ansiReset")
-        val dbHost = System.getProperty("DB_HOST") ?: "localhost"
-        val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
-        val dbName = System.getProperty("DB_NAME") ?: "gayakini"
+    val dbHostVal = System.getProperty("DB_HOST") ?: "localhost"
+    val dbPortVal = (System.getProperty("DB_PORT") ?: "5432").toInt()
+    val dbNameVal = System.getProperty("DB_NAME") ?: "gayakini"
+    val javaVersion = System.getProperty("java.version")
 
-        print("Connectivity ($dbHost:$dbPort): ")
+    doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        val ansiRedLocal = "\u001B[31m"
+        val ansiBoldLocal = "\u001B[1m"
+
+        println("\n$ansiBoldLocal[DATABASE DIAGNOSTICS]$ansiResetLocal")
+
+        print("Connectivity ($dbHostVal:$dbPortVal): ")
         try {
-            Socket(dbHost, dbPort).use { println("$ansiGreen UP$ansiReset") }
+            Socket(dbHostVal, dbPortVal).use { println("$ansiGreenLocal UP$ansiResetLocal") }
         } catch (e: Exception) {
-            println("$ansiRed DOWN$ansiReset (${e.message})")
+            println("$ansiRedLocal DOWN$ansiResetLocal (${e.message})")
         }
 
-        println("Database Name: $dbName")
-        println("Java Version: ${System.getProperty("java.version")}")
-        val envFound = if (envFileExists) "$ansiGreen FOUND$ansiReset" else "$ansiRed MISSING$ansiReset"
+        println("Database Name: $dbNameVal")
+        println("Java Version: $javaVersion")
+        val envFound = if (envFileExists) "$ansiGreenLocal FOUND$ansiResetLocal" else "$ansiRedLocal MISSING$ansiResetLocal"
         println(".env file: $envFound")
     }
 }
@@ -261,52 +275,63 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 
 // --- TEST SUITES (Helpers) ---
 
-fun checkEndpoint(
-    path: String,
-    expectedStatus: Int = 200,
-    name: String = "",
-) {
-    val url = URI("http://localhost:8080$path").toURL()
-    print("Testing $path ${if (name.isNotEmpty()) "($name) " else ""}... ")
-    try {
-        val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connect()
-        val status = connection.responseCode
-        if (status == expectedStatus) {
-            println("$ansiGreen PASSED ($status)$ansiReset")
-        } else {
-            println("$ansiRed FAILED (Expected $expectedStatus, got $status)$ansiReset")
-        }
-    } catch (e: Exception) {
-        println("$ansiRed ERROR (${e.message})$ansiReset")
-    }
-}
-
 tasks.register("smokeTest") {
     group = "verification"
     description = "Quick API health verification (requires running app)."
     doLast {
-        println("\n$ansiBold[SMOKE TEST]$ansiReset")
-        checkEndpoint("/actuator/health", 200, "Health")
-        checkEndpoint("/v1/hello", 200, "Hello")
-        checkEndpoint("/swagger-ui.html", 200, "Swagger UI")
-        checkEndpoint("/api-docs", 200, "OpenAPI Docs")
-        checkEndpoint("/v1/products", 200, "Public Catalog")
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        val ansiRedLocal = "\u001B[31m"
+        val ansiBoldLocal = "\u001B[1m"
+
+        fun checkEndpointLocal(
+            path: String,
+            expectedStatus: Int = 200,
+            name: String = "",
+        ) {
+            val url = URI("http://localhost:8080$path").toURL()
+            print("Testing $path ${if (name.isNotEmpty()) "($name) " else ""}... ")
+            try {
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connect()
+                val status = connection.responseCode
+                if (status == expectedStatus) {
+                    println("$ansiGreenLocal PASSED ($status)$ansiResetLocal")
+                } else {
+                    println("$ansiRedLocal FAILED (Expected $expectedStatus, got $status)$ansiResetLocal")
+                }
+            } catch (e: Exception) {
+                println("$ansiRedLocal ERROR (${e.message})$ansiResetLocal")
+            }
+        }
+
+        println("\n$ansiBoldLocal[SMOKE TEST]$ansiResetLocal")
+        checkEndpointLocal("/actuator/health", 200, "Health")
+        checkEndpointLocal("/v1/hello", 200, "Hello")
+        checkEndpointLocal("/swagger-ui.html", 200, "Swagger UI")
+        checkEndpointLocal("/api-docs", 200, "OpenAPI Docs")
+        checkEndpointLocal("/v1/products", 200, "Public Catalog")
     }
 }
 
 tasks.register("validateMcp") {
     group = "verification"
     description = "Validates all MCP launchers in -ValidateOnly mode."
-    // Configuration cache compatibility: capture projectDir as String
     val projectDirStr = projectDir.absolutePath
+    val execOps = serviceOf<ExecOperations>()
+
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiCyanLocal = "\u001B[36m"
+        val ansiYellowLocal = "\u001B[33m"
+        val ansiBoldLocal = "\u001B[1m"
+
         if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
-            println("$ansiYellow[SKIP]$ansiReset MCP validation only on Windows.")
+            println("$ansiYellowLocal[SKIP]$ansiResetLocal MCP validation only on Windows.")
             return@doLast
         }
-        println("\n$ansiBold[MCP LAUNCHER VALIDATION]$ansiReset")
+        println("\n$ansiBoldLocal[MCP LAUNCHER VALIDATION]$ansiResetLocal")
 
         val mcpCommand =
             "\$env:PROJECT_ROOT='$projectDirStr'; " +
@@ -317,7 +342,7 @@ tasks.register("validateMcp") {
                 "Write-Host \"`n--- Validating \$(\$_.Name) ---\" -ForegroundColor Cyan; " +
                 "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File \$_.FullName -ValidateOnly }"
 
-        execOperations.exec {
+        execOps.exec {
             commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", mcpCommand)
         }
     }
@@ -325,7 +350,7 @@ tasks.register("validateMcp") {
 
 // --- FLYWAY ---
 
-fun createLocalFlyway(projectDir: File): Flyway {
+fun createLocalFlyway(pDir: File): Flyway {
     val host = System.getProperty("DB_HOST") ?: "localhost"
     val port = System.getProperty("DB_PORT") ?: "5432"
     val name = System.getProperty("DB_NAME") ?: "gayakini"
@@ -339,7 +364,7 @@ fun createLocalFlyway(projectDir: File): Flyway {
         .schemas("commerce", "public")
         .defaultSchema("commerce")
         .baselineOnMigrate(true)
-        .locations("filesystem:$projectDir/src/main/resources/db/migration")
+        .locations("filesystem:$pDir/src/main/resources/db/migration")
         .load()
 }
 
@@ -349,9 +374,11 @@ tasks.register("flywayInfoLocal") {
     dependsOn("dbStart")
     val pDir = projectDir
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiBoldLocal = "\u001B[1m"
         val flyway = createLocalFlyway(pDir)
         val info = flyway.info()
-        println("\n$ansiBold[FLYWAY INFO LOCAL]$ansiReset")
+        println("\n$ansiBoldLocal[FLYWAY INFO LOCAL]$ansiResetLocal")
         info.all().forEach { migration ->
             println("${migration.state} | ${migration.version ?: "<<repeatable>>"} | ${migration.description}")
         }
@@ -364,9 +391,11 @@ tasks.register("flywayMigrateLocal") {
     dependsOn("dbStart")
     val pDir = projectDir
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
         val result = createLocalFlyway(pDir).migrate()
         val count = result.migrationsExecuted
-        println("[$ansiGreen\u2705$ansiReset] Flyway migrate local complete. Migrations executed: $count")
+        println("[$ansiGreenLocal\u2705$ansiResetLocal] Flyway migrate local complete. Migrations executed: $count")
     }
 }
 
@@ -376,13 +405,15 @@ tasks.register("flywayValidateLocal") {
     dependsOn("dbStart")
     val pDir = projectDir
     doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
         val result = createLocalFlyway(pDir).validateWithResult()
         if (!result.validationSuccessful) {
             val invalid = result.invalidMigrations.firstOrNull()
             val message = invalid?.errorDetails?.errorMessage ?: "Flyway validation gagal."
             throw GradleException(message)
         }
-        println("[$ansiGreen\u2705$ansiReset] Flyway validation local passed.")
+        println("[$ansiGreenLocal\u2705$ansiResetLocal] Flyway validation local passed.")
     }
 }
 
