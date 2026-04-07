@@ -94,9 +94,12 @@ class CartItem(
     @Column(name = "primary_image_url", columnDefinition = "TEXT")
     var primaryImageUrl: String? = null,
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    val lineTotalAmount: Long = 0,
+    private var _lineTotalAmount: Long? = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
-)
+) {
+    val lineTotalAmount: Long
+        get() = _lineTotalAmount ?: (quantity * unitPriceAmount)
+}

@@ -44,7 +44,7 @@ class ProductVariant(
     @Column(name = "stock_reserved", nullable = false)
     var stockReserved: Int = 0,
     @Column(name = "stock_available", insertable = false, updatable = false)
-    private val _stockAvailable: Int = 0,
+    private var _stockAvailable: Int? = 0,
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")
@@ -54,7 +54,7 @@ class ProductVariant(
     private var isNewRecord = true
 
     val stockAvailable: Int
-        get() = (stockOnHand - stockReserved).coerceAtLeast(0)
+        get() = _stockAvailable ?: (stockOnHand - stockReserved).coerceAtLeast(0)
 
     override fun getId(): UUID = id
 

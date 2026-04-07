@@ -9,6 +9,7 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 abstract class BaseE2ETest {
+
     @Autowired
     protected lateinit var restTemplate: TestRestTemplate
 
@@ -16,24 +17,31 @@ abstract class BaseE2ETest {
     protected lateinit var jdbcTemplate: JdbcTemplate
 
     protected fun cleanupDatabase() {
-        // H2 doesn't support TRUNCATE CASCADE in the same way as Postgres.
-        // We'll use a manual order and SET REFERENTIAL_INTEGRITY FALSE if needed,
-        // but manual order of dependent tables is safer.
-        val tables =
-            listOf(
-                "commerce.order_items",
-                "commerce.payments",
-                "commerce.orders",
-                "commerce.checkouts",
-                "commerce.cart_items",
-                "commerce.carts",
-                "commerce.customer_addresses",
-                "commerce.customers",
-            )
+        // Full order of truncation to avoid foreign key issues even with integrity off
+        val tables = listOf(
+            "commerce.order_items",
+            "commerce.payments",
+            "commerce.orders",
+            "commerce.checkouts",
+            "commerce.cart_items",
+            "commerce.carts",
+            "commerce.customer_addresses",
+            "commerce.customers",
+            "commerce.product_media",
+            "commerce.product_variants",
+            "commerce.product_collections",
+            "commerce.products",
+            "commerce.categories",
+            "commerce.collections"
+        )
 
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE")
         tables.forEach { table ->
-            jdbcTemplate.execute("TRUNCATE TABLE $table")
+            try {
+                jdbcTemplate.execute("TRUNCATE TABLE $table")
+            } catch (e: Exception) {
+                // Ignore if table doesn't exist in the current test environment (e.g. H2 vs Postgres differences)
+            }
         }
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY TRUE")
     }

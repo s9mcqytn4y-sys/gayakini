@@ -6,6 +6,7 @@ import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.ProductVariantRepository
 import com.gayakini.catalog.domain.PublicProductSummary
 import com.gayakini.catalog.domain.PublicProductSummaryRepository
+import org.hibernate.Hibernate
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -52,9 +53,16 @@ class ProductService(
         )
     }
 
+    @Transactional(readOnly = true)
     fun getProduct(id: UUID): Product {
-        return productRepository.findById(id)
+        val product = productRepository.findById(id)
             .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
+
+        // Eagerly initialize lazy collections to avoid LazyInitializationException in controller mapping
+        Hibernate.initialize(product.variants)
+        Hibernate.initialize(product.media)
+
+        return product
     }
 
     @Transactional
@@ -67,7 +75,7 @@ class ProductService(
                 .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
 
         if (variant.stockAvailable < quantity) {
-            throw IllegalStateException("Stok tidak mencukupi untuk produk: ${variant.sku}")
+            throw IllegalStateException("Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}")
         }
 
         variant.stockReserved += quantity
