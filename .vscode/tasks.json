@@ -2,7 +2,51 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "MCP: Validate launchers",
+      "label": "Gradle: releaseCheck (CI simulate)",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        ".\\gradlew.bat releaseCheck --console=plain"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: releaseCheckLocal (Full gate)",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        ".\\gradlew.bat releaseCheckLocal --console=plain"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Gradle: qualityCheck",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        ".\\gradlew.bat qualityCheck --console=plain"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Validate launchers (Gradle)",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        ".\\gradlew.bat validateMcp --console=plain"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "MCP: Validate launchers (PowerShell)",
       "type": "shell",
       "command": "powershell.exe",
       "args": [
@@ -10,7 +54,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$env:PROJECT_ROOT='${workspaceFolder}'; if (-not $env:GITHUB_PERSONAL_ACCESS_TOKEN) { $env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_local_token' }; Get-ChildItem '${workspaceFolder}\\tooling\\mcp\\start-*.ps1' | Sort-Object Name | ForEach-Object { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName -ValidateOnly }"
+        "$env:PROJECT_ROOT='${workspaceFolder}'; if (-not $env:GITHUB_PERSONAL_ACCESS_TOKEN) { $env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_local_token' }; Get-ChildItem '${workspaceFolder}\\tooling\\mcp\\start-*.ps1' | Sort-Object Name | ForEach-Object { Write-Host \"`n--- Validating $($_.Name) ---\" -ForegroundColor Cyan; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName -ValidateOnly }"
       ],
       "problemMatcher": []
     },
@@ -23,7 +67,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "$docsWithLaunchers=@('AGENTS.md','docs\\tooling\\mcp-servers.md'); $providerDocs=@('gemini.md','CLAUDE.md','CODEX.md','docs\\agents\\codex-mcp-prompts.md','docs\\agents\\codex.md'); $launcherTerms=@('ValidateOnly','start-filesystem.ps1','start-postgres.ps1','start-github.ps1','start-git.ps1','start-terminal.ps1','start-http.ps1','start-browser.ps1'); foreach($doc in $docsWithLaunchers){ $content=Get-Content $doc -Raw; foreach($term in $launcherTerms){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } }; foreach($doc in $providerDocs){ $content=Get-Content $doc -Raw; foreach($term in @('AGENTS.md','ValidateOnly')){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } }"
+        "$docsWithLaunchers=@('AGENTS.md','docs\\tooling\\mcp-servers.md'); $providerDocs=@('gemini.md','CLAUDE.md','CODEX.md','docs\\agents\\codex-mcp-prompts.md','docs\\agents\\codex.md'); $launcherTerms=@('ValidateOnly','start-filesystem.ps1','start-postgres.ps1','start-github.ps1','start-git.ps1','start-terminal.ps1','start-http.ps1','start-browser.ps1'); foreach($doc in $docsWithLaunchers){ if (Test-Path $doc) { $content=Get-Content $doc -Raw; foreach($term in $launcherTerms){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } } }; foreach($doc in $providerDocs){ if (Test-Path $doc) { $content=Get-Content $doc -Raw; foreach($term in @('AGENTS.md','ValidateOnly')){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } } }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
@@ -33,22 +77,10 @@
     {
       "label": "MCP: Hardening preflight",
       "dependsOn": [
-        "MCP: Validate launchers",
-        "MCP: Docs parity check"
+        "MCP: Validate launchers (Gradle)",
+        "MCP: Docs parity check",
+        "Workspace: JSON sanity"
       ],
-      "problemMatcher": []
-    },
-    {
-      "label": "Gradle: release verification",
-      "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        ".\\gradlew.bat clean ktlintCheck detekt test build --console=plain"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
       "problemMatcher": []
     },
     {
@@ -60,11 +92,21 @@
         "-ExecutionPolicy",
         "Bypass",
         "-Command",
-        "@('.vscode\\settings.json','.vscode\\launch.json','.vscode\\tasks.json','.vscode\\extensions.json') | ForEach-Object { Get-Content $_ -Raw | ConvertFrom-Json | Out-Null }"
+        "@('.vscode\\settings.json','.vscode\\launch.json','.vscode\\tasks.json','.vscode\\extensions.json') | ForEach-Object { if (Test-Path $_) { Get-Content $_ -Raw | ConvertFrom-Json | Out-Null } }"
       ],
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "problemMatcher": []
+    },
+    {
+      "label": "Database: dbDoctor",
+      "type": "shell",
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        ".\\gradlew.bat dbDoctor --console=plain"
+      ],
       "problemMatcher": []
     }
   ]

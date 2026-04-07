@@ -98,24 +98,26 @@ if ($AllowDangerous) {
 }
 
 if ($ValidateOnly) {
-    Write-Output "Browser target base URL: $ResolvedBaseUrl"
-    Write-Output "Browser preference: $ResolvedBrowserPreference"
+    Write-Host "Browser launcher preflight:" -ForegroundColor Cyan
+    Write-Host "  Target base URL: $ResolvedBaseUrl"
+    Write-Host "  Browser preference: $ResolvedBrowserPreference"
+
     if ($HasLaunchOverrides) {
-        Write-Output 'Browser launch options: generated from parameters/env overrides'
+        Write-Host '  Launch options: generated from parameters/env overrides'
     } elseif (-not [string]::IsNullOrWhiteSpace((Get-EnvironmentValue -Names @('PUPPETEER_LAUNCH_OPTIONS')))) {
-        Write-Output 'Browser launch options: using existing PUPPETEER_LAUNCH_OPTIONS'
+        Write-Host '  Launch options: using existing PUPPETEER_LAUNCH_OPTIONS'
     } else {
-        Write-Output 'Browser launch options: package defaults'
+        Write-Host '  Launch options: package defaults'
     }
 
     if (-not [string]::IsNullOrWhiteSpace($ResolvedExecutablePath)) {
-        Write-Output "Browser executable: $ResolvedExecutablePath"
+        Write-Host "  Browser executable: $ResolvedExecutablePath"
     } else {
-        Write-Output 'Browser executable: package-managed Chromium/installed default'
+        Write-Host '  Browser executable: package-managed Chromium/installed default'
     }
 
     if ($AllowDangerous -or ((Get-EnvironmentValue -Names @('ALLOW_DANGEROUS')) -eq 'true')) {
-        Write-Output 'Browser dangerous launch options: enabled'
+        Write-Host '  Dangerous launch options: ENABLED' -ForegroundColor Yellow
     }
 }
 

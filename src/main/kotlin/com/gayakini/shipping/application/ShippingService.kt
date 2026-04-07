@@ -85,10 +85,12 @@ class ShippingService(
                 throw IllegalStateException("Order belum siap dibuatkan pengiriman.")
             }
 
-            val selection = order.shippingSelection
-                ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
-            val address = order.shippingAddress
-                ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
+            val selection =
+                order.shippingSelection
+                    ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
+            val address =
+                order.shippingAddress
+                    ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
             val origin =
                 merchantOriginRepository.findDefaultActive()
                     .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }

@@ -103,6 +103,12 @@ Catatan Edge:
 
 ## Validate Commands
 
+Gunakan Gradle untuk validasi kolektif:
+```bash
+./gradlew validateMcp
+```
+
+Atau manual per server:
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-filesystem.ps1 -ValidateOnly
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-postgres.ps1 -ValidateOnly
@@ -111,7 +117,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-git.ps
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-terminal.ps1 -ValidateOnly
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-http.ps1 -ValidateOnly
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browser.ps1 -ValidateOnly
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browser.ps1 -BrowserPreference edge -ValidateOnly
 ```
 
 ## Antigravity IDE Workflows
@@ -120,10 +125,10 @@ Equivalent workflows untuk VSCode tasks tersedia di `.agents/workflows/`:
 
 | Workflow | Equivalent VSCode Task |
 |---|---|
-| `/validate-mcp-launchers` | MCP: Validate launchers |
+| `/validate-mcp-launchers` | MCP: Validate launchers (via Gradle) |
 | `/docs-parity-check` | MCP: Docs parity check |
 | `/mcp-hardening-preflight` | MCP: Hardening preflight |
-| `/gradle-release-verification` | Gradle: release verification |
+| `/gradle-release-verification` | Gradle: release verification (via releaseCheck) |
 | `/run-application` | GayakiniApplication (launch config) |
 
 ## Safety Rules
@@ -142,15 +147,15 @@ Equivalent workflows untuk VSCode tasks tersedia di `.agents/workflows/`:
 
 ## Troubleshooting Workflow
 
-1. Jalankan `-ValidateOnly` dulu.
+1. Jalankan `./gradlew validateMcp`.
 2. Jika gagal di `npx`, cek PATH atau `MCP_NPX`.
 3. Jika `http` gagal, cek `APP_BASE_URL` dan `OPENAPI_SPEC_PATH`.
-4. Jika `browser` gagal untuk Edge, cek `msedge.exe` path; fallback documented adalah package default browser behavior.
+4. Jika `browser` gagal untuk Edge, cek `msedge.exe` path.
 5. Jika `github` gagal, cek sumber token tanpa pernah mencetak atau menyimpan token ke repo.
 
 ## Release / Hardening Workflow
 
-1. Review diff untuk launcher, docs, `.vscode`, dan workflow sebagai satu paket kecil.
-2. Jalankan preflight tujuh launcher.
+1. Review diff untuk launcher, docs, `.vscode`, dan workflow sebagai satu paket.
+2. Jalankan `./gradlew releaseCheck`.
 3. Jalankan validasi task/workflow/docs parity yang relevan.
 4. Commit hanya file yang memang masuk scope hardening MCP/workspace/docs.

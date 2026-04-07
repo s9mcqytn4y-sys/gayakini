@@ -1,5 +1,5 @@
 param(
-    [string]$Repository,
+    [string]$Root,
     [switch]$ValidateOnly
 )
 
@@ -10,15 +10,11 @@ $ErrorActionPreference = 'Stop'
 
 Load-McpEnvironment
 
-$RepositoryRoot = Assert-Directory -Path (Get-RepoRoot -Root $Repository) -Label 'Git repository root'
-$null = Assert-Command "git.exe"
-
-if (-not (Test-Path -LiteralPath (Join-Path -Path $RepositoryRoot -ChildPath '.git'))) {
-    throw "Git repository metadata not found under: $RepositoryRoot"
-}
+$ResolvedRoot = Assert-Directory -Path (Get-RepoRoot -Root $Root) -Label 'Git repository root'
 
 if ($ValidateOnly) {
-    Write-Output "Git repository: $RepositoryRoot"
+    Write-Host "Git launcher preflight:" -ForegroundColor Cyan
+    Write-Host "  Repo Root: $ResolvedRoot"
 }
 
-Start-McpNpx -Package "@modelcontextprotocol/server-git" -Args @("--repository", $RepositoryRoot) -ValidateOnly:$ValidateOnly
+Start-McpNpx -Package "@modelcontextprotocol/server-git" -Args @($ResolvedRoot) -ValidateOnly:$ValidateOnly

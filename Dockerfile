@@ -13,7 +13,8 @@ COPY settings.gradle.kts .
 COPY gradle.properties .
 
 # Build executable jar using gradle directly
-RUN gradle clean build -x test -x detekt -x ktlintCheck --no-daemon
+# We use app.jar as defined in build.gradle.kts bootJar task
+RUN gradle clean bootJar -x test -x detekt -x ktlintCheck --no-daemon
 
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jre-alpine
@@ -26,7 +27,7 @@ RUN chown -R spring:spring /app
 USER spring:spring
 
 # Copy built artifact - carefully select the bootable jar
-COPY --from=builder /app/build/libs/gayakini-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/build/libs/app.jar app.jar
 
 # Expose port
 EXPOSE 8080

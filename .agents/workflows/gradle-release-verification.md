@@ -1,39 +1,27 @@
 ---
-description: Full Gradle release verification — clean + ktlint + detekt + test + build
+description: Full Gradle release verification — doctor + lint + detekt + test + flyway + mcp
 ---
 
 # Gradle Release Verification
 
-Runs the full quality gate chain for the gayakini backend.
-Equivalent of the VSCode task "Gradle: release verification".
+Runs the full quality gate chain for the gayakini backend using the `releaseCheck` task.
+Equivalent of the VSCode task "Gradle: releaseCheck".
 
 ## Steps
 
 // turbo-all
 
-1. Clean build outputs:
+1. Run the full release gate:
 ```shell
-.\gradlew.bat clean --console=plain
+.\gradlew.bat releaseCheck --console=plain
 ```
 
-2. Run ktlint (advisory — `ignoreFailures=true` in build config):
-```shell
-.\gradlew.bat ktlintCheck --console=plain
-```
+This task includes:
+- `doctor`: Environment and DB diagnostics.
+- `ktlintCheck`: Code style enforcement (**Blocking**).
+- `detekt`: Static analysis (**Blocking**).
+- `test`: Unit and Integration tests (**Blocking**).
+- `flywayValidateLocal`: Migration integrity check.
+- `validateMcp`: MCP launcher preflight.
 
-3. Run detekt static analysis (advisory — `ignoreFailures=true` in build config):
-```shell
-.\gradlew.bat detekt --console=plain
-```
-
-4. Run tests:
-```shell
-.\gradlew.bat test --console=plain
-```
-
-5. Build the application:
-```shell
-.\gradlew.bat build --console=plain
-```
-
-Note: Steps 2-3 are currently advisory quality gates (repo has historical debt being ratcheted). Steps 4-5 are hard gates.
+Note: All gates are now **blocking**. Failure in any step will prevent the release from being considered compliant.

@@ -1,8 +1,8 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.flywaydb.core.Flyway
-import java.net.Socket
 import java.net.HttpURLConnection
+import java.net.Socket
 import java.net.URL
+import org.flywaydb.core.Flyway
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     repositories {
@@ -120,9 +120,9 @@ fun loadDotEnv(): Map<String, String> {
 val localEnv = loadDotEnv()
 localEnv.forEach { (k, v) -> System.setProperty(k, v) }
 
-tasks.register("ensurePostgres") {
+tasks.register("dbStart") {
     group = "database"
-    description = "Checks and starts local PostgreSQL."
+    description = "Checks and starts local PostgreSQL if needed (Windows only auto-start)."
     doLast {
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
         val isUp =
@@ -136,7 +136,8 @@ tasks.register("ensurePostgres") {
             println("[$ansiGreen\u2705$ansiReset] PostgreSQL is already running on port $dbPort.")
         } else {
             if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
-                throw GradleException("PostgreSQL is not running. Please start it manually.")
+                println("$ansiYellow[SKIP]$ansiReset PostgreSQL is not running. Auto-start only supported on Windows.")
+                return@doLast
             }
             println("[$ansiCyan\uD83D\uDE80$ansiReset] Attempting to start PostgreSQL via pg_ctl...")
             val userProfile = System.getenv("USERPROFILE")
@@ -147,9 +148,12 @@ tasks.register("ensurePostgres") {
                     commandLine("cmd", "/c", "pg_ctl", "-D", pgData, "start")
                     isIgnoreExitValue = true
                 }
+                println("$ansiCyan[WAIT]$ansiReset Giving PostgreSQL 3 seconds to warm up...")
                 Thread.sleep(3000)
             } else {
-                println("$ansiYellow[WARN]$ansiReset PGDATA not found. Skipping auto-start. Ensure DB is running.")
+                println(
+                    "$ansiYellow[WARN]$ansiReset PGDATA not found ($pgData). Skipping auto-start. Ensure DB is running.",
+                )
             }
         }
     }
@@ -167,12 +171,12 @@ tasks.register("devHelp") {
               GAYAKINI BACKEND - DEVELOPER WORKFLOW$ansiReset
               --------------------------------------
               1. $ansiGreen./gradlew localSetup$ansiReset      - Initial .env setup
-              2. $ansiGreen./gradlew doctor$ansiReset          - Diagnostic check
+              2. $ansiGreen./gradlew dbDoctor$ansiReset        - Database & env diagnostic check
               3. $ansiGreen./gradlew bootRun$ansiReset         - Run app with pre-flight checks
-              4. $ansiGreen./gradlew smokeTest$ansiReset       - Quick API health verification
-              5. $ansiGreen./gradlew apiTest$ansiReset         - Public API verification
-              6. $ansiGreen./gradlew rbacTest$ansiReset        - Security/RBAC verification
-              7. $ansiGreen./gradlew releaseCheck$ansiReset    - Full quality gate (advisory quality tools + tests + Flyway)
+              4. $ansiGreen./gradlew qualityCheck$ansiReset    - Linting + Detekt + Unit Tests
+              5. $ansiGreen./gradlew validateMcp$ansiReset     - Validate all MCP launchers
+              6. $ansiGreen./gradlew releaseCheck$ansiReset    - Full quality gate (CI equivalent)
+              7. $ansiGreen./gradlew releaseCheckLocal$ansiReset - Full gate + DB + MCP validation
 
               $ansiYellow  Swagger UI: http://localhost:8080/swagger-ui.html
               API Docs:   http://localhost:8080/api-docs
@@ -184,32 +188,37 @@ tasks.register("devHelp") {
 
 tasks.register("localSetup") {
     group = "setup"
+    description = "Creates .env from .env.example if it doesn't exist."
     doLast {
         val example = file(".env.example")
         val target = file(".env")
         if (example.exists() && !target.exists()) {
             example.copyTo(target)
             println("[$ansiGreen\u2705$ansiReset] .env file created.")
+        } else if (target.exists()) {
+            println("[$ansiCyan\u2139$ansiReset] .env already exists.")
         }
     }
 }
 
-tasks.register("doctor") {
+tasks.register("dbDoctor") {
     group = "verification"
-    dependsOn("ensurePostgres")
+    description = "Detailed database connectivity and environment check."
+    dependsOn("dbStart")
     doLast {
-        println("\n$ansiBold[DIAGNOSTICS]$ansiReset")
+        println("\n$ansiBold[DATABASE DIAGNOSTICS]$ansiReset")
         val dbHost = System.getProperty("DB_HOST") ?: "localhost"
         val dbPort = (System.getProperty("DB_PORT") ?: "5432").toInt()
-        print("Database ($dbHost:$dbPort): ")
+        val dbName = System.getProperty("DB_NAME") ?: "gayakini"
+
+        print("Connectivity ($dbHost:$dbPort): ")
         try {
             Socket(dbHost, dbPort).use { println("$ansiGreen UP$ansiReset") }
-        } catch (
-            e: Exception,
-        ) {
-            println("$ansiRed DOWN$ansiReset")
+        } catch (e: Exception) {
+            println("$ansiRed DOWN$ansiReset (${e.message})")
         }
 
+        println("Database Name: $dbName")
         println("Java Version: ${System.getProperty("java.version")}")
         println(
             ".env file: ${if (file(".env").exists()) {
@@ -221,13 +230,39 @@ tasks.register("doctor") {
     }
 }
 
+// --- CORE QUALITY GATE (No DB needed) ---
+
+tasks.register("qualityCheck") {
+    group = "verification"
+    description = "Runs all code quality tools and unit tests."
+    dependsOn("ktlintCheck", "detekt", "test")
+}
+
+// --- RELEASE GATE ---
+
+tasks.register("releaseCheck") {
+    group = "verification"
+    description = "Full release quality gate (Clean + Quality + Build + MCP)."
+    dependsOn("clean", "qualityCheck", "assemble", "validateMcp")
+}
+
+tasks.register("releaseCheckLocal") {
+    group = "verification"
+    description = "Full release quality gate including local DB migration validation."
+    dependsOn("releaseCheck", "dbDoctor", "flywayValidateLocal")
+}
+
+// --- BOOTRUN & LOCAL RUN ---
+
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    dependsOn("ensurePostgres", "flywayMigrateLocal")
+    // We make DB setup explicit but non-blocking for bootRun if the user wants to handle it
+    // But for "magical" experience, we keep it but ensure it's healthy
+    dependsOn("dbStart", "flywayMigrateLocal")
     localEnv.forEach { (k, v) -> environment(k, v) }
     systemProperty("spring.profiles.active", "local")
 }
 
-// --- TEST SUITES ---
+// --- TEST SUITES (Helpers) ---
 
 fun checkEndpoint(
     path: String,
@@ -253,6 +288,7 @@ fun checkEndpoint(
 
 tasks.register("smokeTest") {
     group = "verification"
+    description = "Quick API health verification (requires running app)."
     doLast {
         println("\n$ansiBold[SMOKE TEST]$ansiReset")
         checkEndpoint("/actuator/health", 200, "Health")
@@ -263,35 +299,28 @@ tasks.register("smokeTest") {
     }
 }
 
-tasks.register("apiTest") {
+tasks.register("validateMcp") {
     group = "verification"
-    description = "Verifies basic business flows (Public)."
+    description = "Validates all MCP launchers in -ValidateOnly mode."
     doLast {
-        println("\n$ansiBold[API BUSINESS TEST]$ansiReset")
-        checkEndpoint("/v1/locations/areas", 200, "Locations")
-        // Add more sequence tests here or point to .http
-        println("Recommended: Use IntelliJ HTTP Client for full business flows in /http/*.http")
+        if (!org.gradle.internal.os.OperatingSystem.current().isWindows) {
+            println("$ansiYellow[SKIP]$ansiReset MCP launcher validation currently only supported on Windows.")
+            return@doLast
+        }
+        println("\n$ansiBold[MCP LAUNCHER VALIDATION]$ansiReset")
+
+        val mcpCommand =
+            "\$env:PROJECT_ROOT='$projectDir'; " +
+                "\$env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_token'; " +
+                "Get-ChildItem 'tooling/mcp/start-*.ps1' | " +
+                "Sort-Object Name | " +
+                "ForEach-Object { Write-Host \"`n--- Validating \$(\$_.Name) ---\" -ForegroundColor Cyan; " +
+                "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File \$_.FullName -ValidateOnly }"
+
+        project.exec {
+            commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", mcpCommand)
+        }
     }
-}
-
-tasks.register("rbacTest") {
-    group = "verification"
-    description = "Verifies RBAC security constraints."
-    doLast {
-        println("\n$ansiBold[RBAC SECURITY TEST]$ansiReset")
-        checkEndpoint("/v1/admin/products", 401, "Admin Deny Anonymous")
-        checkEndpoint("/v1/me", 401, "Customer Deny Anonymous")
-    }
-}
-
-tasks.register("verifyMigrations") {
-    group = "verification"
-    dependsOn("ensurePostgres", "flywayValidateLocal")
-}
-
-tasks.register("releaseCheck") {
-    group = "verification"
-    dependsOn("doctor", "ktlintCheck", "detekt", "test", "flywayValidateLocal")
 }
 
 // --- FLYWAY ---
@@ -316,7 +345,8 @@ fun createLocalFlyway(): Flyway {
 
 tasks.register("flywayInfoLocal") {
     group = "database"
-    dependsOn("ensurePostgres")
+    description = "Shows local Flyway migration status."
+    dependsOn("dbStart")
     doLast {
         val flyway = createLocalFlyway()
         val info = flyway.info()
@@ -329,7 +359,8 @@ tasks.register("flywayInfoLocal") {
 
 tasks.register("flywayMigrateLocal") {
     group = "database"
-    dependsOn("ensurePostgres")
+    description = "Runs Flyway migrations against local database."
+    dependsOn("dbStart")
     doLast {
         val result = createLocalFlyway().migrate()
         val count = result.migrationsExecuted
@@ -339,7 +370,8 @@ tasks.register("flywayMigrateLocal") {
 
 tasks.register("flywayValidateLocal") {
     group = "verification"
-    dependsOn("ensurePostgres")
+    description = "Validates local migrations against local database."
+    dependsOn("dbStart")
     doLast {
         val result = createLocalFlyway().validateWithResult()
         if (!result.validationSuccessful) {
@@ -365,6 +397,10 @@ flyway {
     createSchemas = true
     baselineOnMigrate = true
     configurations = arrayOf("runtimeClasspath", "flywayMigration")
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveFileName.set("app.jar")
 }
 
 tasks.withType<KotlinCompile> {

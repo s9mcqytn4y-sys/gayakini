@@ -3,9 +3,9 @@ package com.gayakini.checkout.application
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
 import com.gayakini.checkout.api.CheckoutShippingAddressRequest
+import com.gayakini.checkout.domain.*
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.UnauthorizedException
-import com.gayakini.checkout.domain.*
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.customer.domain.CustomerAddressRepository
@@ -123,8 +123,9 @@ class CheckoutService(
         val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
 
         if (request.addressId != null) {
-            val customerId = checkout.customerId
-                ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
+            val customerId =
+                checkout.customerId
+                    ?: throw IllegalStateException("Harus login untuk menggunakan alamat tersimpan.")
             val customerAddress =
                 customerAddressRepository.findById(request.addressId)
                     .filter { it.customer.id == customerId }

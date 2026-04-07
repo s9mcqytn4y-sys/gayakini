@@ -10,11 +10,11 @@ import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.infrastructure.security.SecurityUtils
+import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.domain.*
 import org.springframework.security.core.context.SecurityContextHolder
-import com.gayakini.infrastructure.security.UserPrincipal
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -87,8 +87,9 @@ class OrderService(
                 )
 
             // Snapshot Address
-            val checkoutAddress = checkout.shippingAddress
-                ?: throw IllegalStateException("Alamat pengiriman belum diset.")
+            val checkoutAddress =
+                checkout.shippingAddress
+                    ?: throw IllegalStateException("Alamat pengiriman belum diset.")
             order.shippingAddress =
                 OrderShippingAddress(
                     orderId = order.id,

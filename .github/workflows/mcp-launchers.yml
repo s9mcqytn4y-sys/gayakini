@@ -14,6 +14,7 @@ on:
       - 'CODEX.md'
       - 'docs/tooling/**'
       - 'docs/agents/**'
+      - 'docs/RELEASE_CHECKLIST.md'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -27,6 +28,7 @@ on:
       - 'CODEX.md'
       - 'docs/tooling/**'
       - 'docs/agents/**'
+      - 'docs/RELEASE_CHECKLIST.md'
 
 jobs:
   validate-launchers:
@@ -80,6 +82,7 @@ jobs:
             'docs/tooling/mcp-servers.md',
             'docs/agents/codex-mcp-prompts.md',
             'docs/agents/codex.md',
+            'docs/RELEASE_CHECKLIST.md',
             '.vscode/settings.json',
             '.vscode/launch.json',
             '.vscode/tasks.json',

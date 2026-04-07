@@ -11,7 +11,7 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 - **`read_file`:** Cukup `{"path": "..."}`.
 - **`create_or_update_file`:** Gunakan hanya `owner`, `repo`, `path`, `content`, `message`.
 - **Windows-first MCP:** Untuk launcher lokal, gunakan `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-*.ps1`.
-- **Preflight launcher:** Gunakan `-ValidateOnly` dulu sebelum wiring ke Codex atau VS Code task.
+- **Preflight launcher:** Gunakan `-ValidateOnly` atau `./gradlew validateMcp` sebelum wiring ke Codex atau VS Code task.
 - **GitHub MCP:** Gunakan read/query oriented workflow. Hindari write/publish kecuali user minta eksplisit dan sudah diverifikasi.
 - **HTTP MCP:** Default ke OpenAPI lokal repo + base URL aplikasi lokal. Jangan arahkan ke production API.
 - **Browser MCP:** Untuk automation lokal saja. Jangan pakai launch options berisiko kecuali perlu dan user paham dampaknya.
@@ -21,7 +21,7 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 - `AGENTS.md` adalah operational source of truth untuk perilaku agent lokal di repo ini.
 - `gemini.md`, `CLAUDE.md`, dan `CODEX.md` adalah provider-specific overlays. Overlay boleh menambah penekanan provider, tapi tidak boleh bertentangan dengan `AGENTS.md`.
 - Dokumen rinci MCP lokal ada di `docs/tooling/mcp-servers.md`.
-- Prompt pola operasi Codex ada di `docs/agents/codex-mcp-prompts.md`.
+- Checklist rilis ada di `docs/RELEASE_CHECKLIST.md`.
 
 ## Source of Truth Hierarchy
 1. **Code Implementation** (Kotlin/Java)
@@ -38,19 +38,12 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 ## Development Verification Flow
 Gunakan `gayakini-terminal` untuk verifikasi:
 1. `./gradlew clean`
-2. `./gradlew ktlintCheck`
-3. `./gradlew detekt`
-4. `./gradlew test`
-5. `./gradlew build`
-6. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-filesystem.ps1 -ValidateOnly`
-7. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-postgres.ps1 -ValidateOnly`
-8. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-github.ps1 -ValidateOnly`
-9. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-git.ps1 -ValidateOnly`
-10. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-terminal.ps1 -ValidateOnly`
-11. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-http.ps1 -ValidateOnly`
-12. `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browser.ps1 -ValidateOnly`
-13. `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Get-Content .vscode\tasks.json | ConvertFrom-Json | Out-Null"`
-14. `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Get-Content .github\workflows\mcp-launchers.yml | Out-Null"`
+2. `./gradlew qualityCheck` (Linting + Detekt + Unit Tests)
+3. `./gradlew build`
+4. `./gradlew validateMcp` (Windows-only preflight)
+5. `./gradlew releaseCheck` (Core quality gate: Clean + Quality + Assemble + MCP)
+6. `./gradlew releaseCheckLocal` (Full gate: releaseCheck + Local DB validation)
+7. `./gradlew dbDoctor` (Database & Environment diagnostics)
 
 ## Local MCP Defaults
 - `PROJECT_ROOT` / `REPO_ROOT`: default ke `C:\Software\gayakini`
@@ -65,9 +58,6 @@ Gunakan `gayakini-terminal` untuk verifikasi:
 - `TOOLS_MODE=dynamic` untuk launcher HTTP kecuali ada kebutuhan eksplisit
 - `BROWSER_BASE_URL=http://localhost:8080`
 - `BROWSER_PREFERENCE=default`
-- `BROWSER_EXECUTABLE_PATH`, `CHROME_PATH`, `CHROME_BIN` opsional untuk override browser executable
-- `EDGE_PATH` / `MS_EDGE_PATH` bisa dipakai jika browser target adalah Edge
-- `PUPPETEER_LAUNCH_OPTIONS` dan `ALLOW_DANGEROUS` hanya untuk kasus browser automation yang memang butuh override
 
 ## MCP Server Set
 Tujuh server MCP lokal yang didukung:
@@ -81,15 +71,15 @@ Tujuh server MCP lokal yang didukung:
 
 ## Antigravity IDE Workflows
 Equivalent `.agents/workflows/` untuk task VSCode di `.vscode/tasks.json`:
-- `/validate-mcp-launchers` — Validate semua launcher `-ValidateOnly`
+- `/validate-mcp-launchers` — Validate semua launcher `-ValidateOnly` via Gradle
 - `/docs-parity-check` — Cek doc parity launcher terms
 - `/mcp-hardening-preflight` — Combine validate + docs-parity + workspace JSON
-- `/gradle-release-verification` — Full quality gate: clean + ktlint + detekt + test + build
-- `/run-application` — Jalankan aplikasi lokal dengan Spring profile `local`
+- `/gradle-release-verification` — Full quality gate via `releaseCheck`
+- `/run-application` — Jalankan aplikasi lokal via `bootRun`
 
 ## Maintenance Workflow
 1. Ubah helper bersama di `tooling\mcp\common.ps1` hanya bila ada manfaat lintas launcher yang jelas.
-2. Setelah mengubah launcher, jalankan `-ValidateOnly` untuk launcher terkait, lalu seluruh set jika perubahan menyentuh helper/doc/workflow.
+2. Setelah mengubah launcher, jalankan `./gradlew validateMcp`.
 3. Sinkronkan `AGENTS.md`, overlay provider, dan dokumen MCP jika ada perubahan nama launcher, env vars, assumptions, atau flow verifikasi.
 4. Jika `.vscode`, `.agents`, atau workflow berubah, pastikan task/CI tetap cocok dengan launcher pattern Windows-first.
 
@@ -97,11 +87,12 @@ Equivalent `.agents/workflows/` untuk task VSCode di `.vscode/tasks.json`:
 1. Jika launcher gagal, cek `npx.cmd` resolution dan env vars yang dipakai launcher.
 2. Untuk `github`, validasi token source tanpa pernah menulis token ke repo.
 3. Untuk `postgres`, cek dulu resolved target dan konektivitas lokal sebelum asumsi schema/credential salah.
-4. Untuk `http`, cek `APP_BASE_URL` dan `OPENAPI_SPEC_PATH`; gunakan spec lokal sebelum mencoba spec runtime.
-5. Untuk `browser`, tidak ada native browser-type flag. Edge didukung lewat `executablePath` ke `msedge.exe`; jika tidak tersedia, fallback adalah package default Chromium/Puppeteer behavior.
+4. Untuk `http`, cek `APP_BASE_URL` and `OPENAPI_SPEC_PATH`.
+5. Untuk `browser`, cek `msedge.exe` path jika menggunakan Edge.
+6. Untuk Gradle stuck, gunakan `dbDoctor` untuk memastikan PostgreSQL tidak dalam state recovery yang menghalangi build.
 
 ## Release / Hardening Workflow
 1. Audit diff launcher/helper/doc/workflow/workspace sebagai satu paket kecil dan reviewable.
-2. Jalankan preflight 7 launcher.
+2. Jalankan `releaseCheck`.
 3. Jalankan verifikasi workspace/doc parity yang relevan.
 4. Jangan commit/push sebelum hasil verifikasi aktual tersedia.

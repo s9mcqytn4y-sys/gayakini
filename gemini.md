@@ -15,7 +15,7 @@ Repository Root: `C:\Software\gayakini`
 1. **gayakini-filesystem:**
    - Always restrict reads/writes to `C:\Software\gayakini`.
    - **AIDA CRITICAL:** Use ONLY `{"path": "..."}` for `read_file`. No extra keys.
-   - Validate launcher first: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-filesystem.ps1 -ValidateOnly`
+   - Validate launcher: `./gradlew validateMcp` or `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-filesystem.ps1 -ValidateOnly`
 2. **gayakini-http:**
    - Default ke `APP_BASE_URL=http://localhost:8080`.
    - Default spec adalah `docs\brand-fashion-ecommerce-api-final.yaml`.
@@ -23,23 +23,24 @@ Repository Root: `C:\Software\gayakini`
 3. **gayakini-browser:**
    - Package target adalah Puppeteer MCP server.
    - Tidak ada native browser-type flag; Edge hanya via executable path ke `msedge.exe`.
-   - Validate launcher first: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-browser.ps1 -ValidateOnly`
+   - Validate launcher: `./gradlew validateMcp`
 4. **gayakini-github:**
    - **AIDA CRITICAL:** Use ONLY minimal keys for `create_or_update_file`: `owner`, `repo`, `path`, `content`, `message`.
    - Token precedence: `GITHUB_PERSONAL_ACCESS_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`.
    - Prefer read/query oriented workflows.
 5. **gayakini-terminal:**
    - Use for `./gradlew` commands.
-   - Prefer `./gradlew clean ktlintCheck detekt test build` for evidence.
+   - Prefer `./gradlew releaseCheck` for core evidence (Clean + Quality + Build + MCP).
+   - Use `./gradlew releaseCheckLocal` if DB validation is needed.
 6. **gayakini-postgres:**
-   - Use to verify schema in `public` or `history` schemas.
+   - Use to verify schema in `commerce` or `public` schemas.
    - Do not perform destructive `DROP` or `TRUNCATE` without confirmation.
    - Local defaults: `localhost:5432`, database `gayakini`, user `postgres`, password `password`.
 7. **Launcher behavior:**
    - All launcher scripts live under `tooling\mcp`.
    - For Codex local MCP, use Windows PowerShell directly, not WSL.
-   - Use `-ValidateOnly` for smoke checks because real MCP launchers must keep STDIO clean.
-   - After launcher changes, sync `AGENTS.md`, provider overlays, and docs under `docs/agents` / `docs/tooling`.
+   - Use `-ValidateOnly` or `./gradlew validateMcp` for smoke checks.
+   - After launcher changes, sync `AGENTS.md`, provider overlays, and docs under `docs/tooling`.
 
 ## Coding Standards
 - Use `UUIDv7` for primary keys (via `com.github.f4b6a3:uuid-creator`).
@@ -49,34 +50,27 @@ Repository Root: `C:\Software\gayakini`
 
 ## Antigravity IDE Workflows
 Equivalent workflows tersedia di `.agents/workflows/`:
-- `/validate-mcp-launchers` — MCP launcher preflight
+- `/validate-mcp-launchers` — MCP launcher preflight (via Gradle)
 - `/docs-parity-check` — Doc parity check
 - `/mcp-hardening-preflight` — Full MCP hardening
-- `/gradle-release-verification` — Full Gradle quality gate
-- `/run-application` — Jalankan server lokal
+- `/gradle-release-verification` — Full Gradle quality gate via `releaseCheck`
+- `/run-application` — Jalankan server lokal via `bootRun`
 
 ## Verification Workflow
 Before task completion:
 1. Run `./gradlew clean`
-2. Run `./gradlew ktlintCheck`
-3. Run `./gradlew detekt`
-4. Run `./gradlew test`
-5. Run `./gradlew build`
-6. Validate each launcher in `tooling\mcp\start-*.ps1` with `-ValidateOnly`
+2. Run `./gradlew releaseCheck` (Core quality gate: Lint + Detekt + Tests + MCP Validation)
+3. Run `./gradlew dbDoctor` to ensure local DB state is healthy if relevant.
 
 ## Maintenance Notes
 - Treat `AGENTS.md` as authoritative.
 - Keep Gemini-specific guidance additive, not divergent.
 - Jika `.agents/workflows/` berubah, sinkronkan ke `AGENTS.md` dan overlay provider.
-- If HTTP or browser assumptions change, update this file together with `AGENTS.md` and `docs/tooling/mcp-servers.md`.
+- If Gradle tasks change (e.g., `doctor` -> `dbDoctor`), update this file immediately.
 
 ## Troubleshooting Workflow
-1. Start from `-ValidateOnly`.
-2. For HTTP issues, verify `APP_BASE_URL` and `OPENAPI_SPEC_PATH`.
-3. For browser issues, verify executable path assumptions first; Edge requires `msedge.exe` path, not a native browser-type flag.
-4. For GitHub issues, check token source only, never commit token values.
-
-## Release / Hardening Workflow
-1. Review launcher/helper/doc/workspace/workflow changes as one small package.
-2. Re-run all launcher preflight checks after shared helper changes.
-3. Keep this overlay aligned with `AGENTS.md`; do not leave divergent provider instructions behind.
+1. Start from `./gradlew validateMcp`.
+2. For Gradle stuck, use `./gradlew dbDoctor` to check PostgreSQL auto-start/state.
+3. For HTTP issues, verify `APP_BASE_URL` and `OPENAPI_SPEC_PATH`.
+4. For browser issues, verify executable path assumptions first.
+5. For GitHub issues, check token source only, never commit token values.

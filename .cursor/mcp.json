@@ -9,15 +9,6 @@
         "C:\\Software\\gayakini\\tooling\\mcp\\start-filesystem.ps1"
       ]
     },
-    "gayakini-git": {
-      "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-      "args": [
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "C:\\Software\\gayakini\\tooling\\mcp\\start-git.ps1"
-      ]
-    },
     "gayakini-postgres": {
       "command": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
       "args": [

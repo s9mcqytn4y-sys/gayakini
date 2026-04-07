@@ -7,7 +7,7 @@ Backend e-commerce berbasis Spring Boot 3.4 + Kotlin 2.0 dengan arsitektur modul
 ### 1. Prasyarat
 - JDK 17
 - PostgreSQL 18+ lokal
-- Node.js bila ingin memakai MCP launcher lokal
+- Node.js 18+ (untuk MCP launcher)
 
 ### 2. Setup environment
 ```bash
@@ -44,12 +44,13 @@ Endpoint utama:
 |---|---|
 | `./gradlew clean` | Bersihkan output build |
 | `./gradlew doctor` | Cek Java, `.env`, dan PostgreSQL lokal |
-| `./gradlew test` | Jalankan suite unit/integration saat ini |
+| `./gradlew test` | Jalankan suite unit/integration |
 | `./gradlew build` | Build aplikasi |
+| `./gradlew validateMcp` | Verifikasi 7 launcher MCP lokal |
 | `./gradlew smokeTest` | Quick HTTP smoke terhadap server yang sedang running |
-| `./gradlew releaseCheck` | Verifikasi sebelum push: doctor + ktlint + detekt + test + flywayValidateLocal |
+| `./gradlew releaseCheck` | **Release Gate**: doctor + ktlint + detekt + test + flywayValidateLocal + validateMcp |
 
-Catatan: `ktlintCheck` dan `detekt` saat ini masih advisory karena repo masih punya debt historis yang belum diratchet menjadi strict gate.
+**Catatan Quality Gate:** `ktlintCheck` dan `detekt` bersifat **blocking** dalam task `releaseCheck`. Pastikan semua issue diselesaikan atau dimasukkan ke baseline sebelum push.
 
 ## Struktur Repo
 
@@ -70,24 +71,37 @@ src/main/kotlin/com/gayakini/
 |- webhook          # webhook ingress
 ```
 
+## MCP Servers (Local Automation)
+
+Tersedia 7 server MCP untuk membantu pengembangan lokal:
+1. `filesystem`: Akses file repository.
+2. `postgres`: Query database lokal.
+3. `github`: Query repository/PR/metadata.
+4. `git`: Operasi git lokal.
+5. `terminal`: Eksekusi gradle/command.
+6. `http`: Interaksi API via OpenAPI spec.
+7. `browser`: Browser automation via Puppeteer.
+
+Launcher tersedia di `tooling/mcp/start-*.ps1`. Dokumentasi lengkap ada di [docs/tooling/mcp-servers.md](docs/tooling/mcp-servers.md).
+
 ## Testing dan HTTP Assets
 
 Asset manual test ada di `http/` dan sudah memakai prefix canonical `/v1`.
 
 File utama:
-- `http/smoke.http`
-- `http/auth.http`
-- `http/catalog.http`
-- `http/cart.http`
-- `http/checkout.http`
-- `http/order-flow.http`
-- `http/webhooks.http`
-- `http/80-admin-rbac.http`
+- `http/01-smoke.http`
+- `http/10-auth.http`
+- `http/20-catalog.http`
+- `http/30-cart.http`
+- `http/40-checkout.http`
+- `http/50-order.http`
+- `http/90-webhooks.http`
+- `http/80-admin.http`
 
 Dokumen pendukung:
 - [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
 - [docs/TESTING.md](docs/TESTING.md)
-- [docs/FRONTEND_SANDBOX_INTEGRATION.md](docs/FRONTEND_SANDBOX_INTEGRATION.md)
+- [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 
 ## Observability dan Security Notes
 

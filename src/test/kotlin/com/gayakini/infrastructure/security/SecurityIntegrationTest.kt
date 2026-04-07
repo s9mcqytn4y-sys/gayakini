@@ -1,8 +1,8 @@
 package com.gayakini.infrastructure.security
 
 import com.gayakini.customer.domain.Customer
-import com.gayakini.customer.domain.CustomerRole
 import com.gayakini.customer.domain.CustomerRepository
+import com.gayakini.customer.domain.CustomerRole
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc

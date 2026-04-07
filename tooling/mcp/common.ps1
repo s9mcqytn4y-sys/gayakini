@@ -51,7 +51,11 @@ function Get-RepoRoot {
         return (Resolve-Path -LiteralPath $PreferredRoot).Path
     }
 
-    return (Resolve-Path "$PSScriptRoot\..\..").Path
+    # Fallback to PSScriptRoot's parent's parent (assumes tooling/mcp/common.ps1)
+    $Resolved = Resolve-Path "$PSScriptRoot\..\.." -ErrorAction SilentlyContinue
+    if ($Resolved) { return $Resolved.Path }
+
+    return $PSScriptRoot
 }
 
 # Assert required commands exist
@@ -207,7 +211,7 @@ function Start-McpNpx {
     $InvocationArgs = @('-y', $Package) + $Args
 
     if ($ValidateOnly) {
-        Write-Output ("Launcher check OK: " + (Format-CommandPreview -Command $NpxPath -Arguments $InvocationArgs))
+        Write-Host ("Launcher check OK: " + (Format-CommandPreview -Command $NpxPath -Arguments $InvocationArgs)) -ForegroundColor Green
         return
     }
 

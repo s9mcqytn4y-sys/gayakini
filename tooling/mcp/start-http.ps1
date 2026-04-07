@@ -54,16 +54,19 @@ if (-not [string]::IsNullOrWhiteSpace($ResolvedHeaders)) {
 }
 
 if ($ValidateOnly) {
-    Write-Output "HTTP target: $ResolvedApiBaseUrl"
-    Write-Output "HTTP spec: $ResolvedSpecPath"
-    Write-Output "HTTP tools mode: $ResolvedToolsMode"
+    Write-Host "HTTP launcher preflight:" -ForegroundColor Cyan
+    Write-Host "  Target: $ResolvedApiBaseUrl"
+    Write-Host "  Spec: $ResolvedSpecPath"
+    Write-Host "  Tools mode: $ResolvedToolsMode"
+
     if ($ResolvedApiBaseUrl -match '^https?://(localhost|127\.0\.0\.1)(:\d+)?$') {
-        Write-Output 'HTTP scope: local app target'
+        Write-Host '  Scope: local app target'
     } else {
-        Write-Output 'HTTP scope: non-local target configured explicitly'
+        Write-Host '  Scope: non-local target configured' -ForegroundColor Yellow
     }
+
     if (-not [string]::IsNullOrWhiteSpace($ResolvedHeaders)) {
-        Write-Output 'HTTP headers: configured via API_HEADERS/parameter'
+        Write-Host '  Headers: configured'
     }
 }
 

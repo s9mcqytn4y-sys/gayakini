@@ -171,9 +171,10 @@ class PaymentService(
                 order.status = OrderStatus.PAID
                 order.paymentStatus = PaymentStatus.PAID
                 order.paidAt = Instant.now()
-            } else if (reconciledStatus == PaymentStatus.CANCELLED || 
-                reconciledStatus == PaymentStatus.EXPIRED || 
-                reconciledStatus == PaymentStatus.FAILED) {
+            } else if (reconciledStatus == PaymentStatus.CANCELLED ||
+                reconciledStatus == PaymentStatus.EXPIRED ||
+                reconciledStatus == PaymentStatus.FAILED
+            ) {
                 order.status = OrderStatus.CANCELLED
                 order.paymentStatus = reconciledStatus
                 order.cancelledAt = Instant.now()

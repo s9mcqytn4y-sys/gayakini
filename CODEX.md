@@ -5,7 +5,7 @@
 ## Codex Operating Notes
 - Gunakan launcher lokal dengan pola:
   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tooling\mcp\start-*.ps1`
-- Jalankan `-ValidateOnly` sebelum menganggap launcher siap dipasang ke workspace atau client MCP.
+- Jalankan `-ValidateOnly` atau `./gradlew validateMcp` sebelum menganggap launcher siap dipasang ke workspace atau client MCP.
 - Untuk launcher HTTP, default aman adalah spec lokal repo + base URL lokal.
 - Untuk launcher browser, treat as local automation helper; target URL lokal default adalah `http://localhost:8080`.
 
@@ -40,14 +40,14 @@ maka sinkronkan juga:
 
 ## Antigravity IDE Workflows
 Equivalent workflows tersedia di `.agents/workflows/`:
-- `/validate-mcp-launchers` — MCP launcher preflight
+- `/validate-mcp-launchers` — MCP launcher preflight (via Gradle)
 - `/docs-parity-check` — Doc parity check
 - `/mcp-hardening-preflight` — Full MCP hardening
-- `/gradle-release-verification` — Full Gradle quality gate
+- `/gradle-release-verification` — Full Gradle quality gate via `releaseCheck`
 - `/run-application` — Jalankan server lokal
 
 ## Verification Workflow
-1. Jalankan `-ValidateOnly` untuk semua launcher.
+1. Jalankan `./gradlew validateMcp`.
 2. Jalankan task/parity check workspace yang relevan.
 3. Pastikan overlay provider tetap konsisten dengan `AGENTS.md`.
 
@@ -57,11 +57,11 @@ Equivalent workflows tersedia di `.agents/workflows/`:
 3. Update `docs/agents/codex.md` dan `docs/agents/codex-mcp-prompts.md` bila flow operasi Codex berubah.
 
 ## Troubleshooting Workflow
-1. Cek helper/common assumptions dulu sebelum mengubah launcher individual.
+1. Mulai dari `./gradlew validateMcp`.
 2. Untuk browser, jangan asumsi Edge native mode ada; gunakan executable path atau fallback default.
 3. Untuk HTTP, pastikan masalah bukan sekadar spec/base URL mismatch.
 
 ## Release / Hardening Workflow
 1. Review intended files only.
-2. Re-run launcher preflight + doc parity.
+2. Jalankan `./gradlew releaseCheck`.
 3. Commit/push hanya setelah evidence verifikasi tersedia.
