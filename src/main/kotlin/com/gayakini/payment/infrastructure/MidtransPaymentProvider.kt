@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.infrastructure.config.GayakiniProperties
 import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
-import com.gayakini.payment.domain.PaymentItemDetail
-import com.gayakini.payment.domain.PaymentSession
 import com.gayakini.payment.domain.PaymentGatewayException
+import com.gayakini.payment.domain.PaymentItemDetail
 import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentSession
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestClientException
-import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
@@ -25,10 +24,11 @@ import java.util.UUID
 @Component
 class MidtransPaymentProvider(
     private val properties: GayakiniProperties,
-    private val restTemplate: RestTemplate,
+    restTemplateBuilder: org.springframework.boot.web.client.RestTemplateBuilder,
     private val objectMapper: ObjectMapper,
 ) : PaymentProvider {
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
+    private val restTemplate = restTemplateBuilder.build()
 
     override fun createPaymentSession(
         orderId: UUID,

@@ -1,11 +1,13 @@
 package com.gayakini.webhook.api
 
+import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
+import java.util.*
 
 @RestController
 @RequestMapping("/v1/webhooks")
@@ -18,12 +20,12 @@ class WebhookController(
     @PostMapping("/midtrans")
     fun handleMidtransWebhook(
         @Valid @RequestBody payload: MidtransWebhookPayload,
-        @RequestHeader("X-Callback-Signature", required = false) signature: String?,
+        @RequestHeader("X-Signature-Key", required = false) signature: String?,
     ): WebhookAckResponse {
         logger.info("Menerima webhook Midtrans untuk Order: {}", payload.orderId)
 
-        val signatureKey = payload.signatureKey
-
+        // Midtrans signature key validation is handled by PaymentService/Provider
+        // We pass the payload as a map to maintain consistency with PaymentService's expectation
         val payloadMap =
             mutableMapOf<String, Any>(
                 "order_id" to payload.orderId,
@@ -34,9 +36,13 @@ class WebhookController(
                 "transaction_id" to (payload.transactionId ?: ""),
             )
 
-        paymentService.processMidtransWebhook(payloadMap, signatureKey)
+        val effectiveSignature = signature ?: payload.signatureKey
 
-        return WebhookAckResponse()
+        paymentService.processMidtransWebhook(payloadMap, effectiveSignature)
+
+        return WebhookAckResponse(
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+        )
     }
 
     @PostMapping("/biteship")
@@ -55,6 +61,8 @@ class WebhookController(
 
         shippingService.processBiteshipWebhook(payloadMap)
 
-        return WebhookAckResponse()
+        return WebhookAckResponse(
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+        )
     }
 }

@@ -33,17 +33,29 @@ import java.util.*
     ],
 )
 class PaymentMethodIntegrationTest {
-    @Autowired
     private lateinit var server: MockRestServiceServer
+    private lateinit var provider: MidtransPaymentProvider
 
     @Autowired
-    private lateinit var provider: MidtransPaymentProvider
+    private lateinit var restTemplateBuilder: org.springframework.boot.web.client.RestTemplateBuilder
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
     @Autowired
     private lateinit var properties: GayakiniProperties
+
+    @org.junit.jupiter.api.BeforeEach
+    fun setUp() {
+        val restTemplate = restTemplateBuilder.build()
+        server = MockRestServiceServer.createServer(restTemplate)
+
+        // Custom builder that returns the one bound to server
+        val mockBuilder = org.mockito.Mockito.mock(org.springframework.boot.web.client.RestTemplateBuilder::class.java)
+        org.mockito.Mockito.`when`(mockBuilder.build()).thenReturn(restTemplate)
+
+        provider = MidtransPaymentProvider(properties, mockBuilder, objectMapper)
+    }
 
     private val orderId = UUID.randomUUID()
     private val providerOrderId = "TRX-12345678"
