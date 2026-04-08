@@ -103,9 +103,24 @@ Dokumen pendukung:
 - [docs/TESTING.md](docs/TESTING.md)
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
 
-## Observability dan Security Notes
+## Midtrans Sandbox Setup
 
-- `GET /actuator/health` dan `GET /actuator/info` public.
-- Endpoint actuator lain tidak dibuka untuk anonymous access.
-- Error envelope aplikasi dibentuk oleh `GlobalExceptionHandler`; server-level message leakage dimatikan di config utama.
-- Default Midtrans/Biteship tetap sandbox/local oriented. Jangan arahkan config default ke production.
+Untuk mengaktifkan integrasi Midtrans Sandbox secara lokal:
+
+1.  **Konfigurasi `.env`**: Salin `.env.example` ke `.env` dan isi variabel berikut dengan key dari [Midtrans Dashboard](https://dashboard.sandbox.midtrans.com/):
+    ```env
+    MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxxxxxxxx
+    MIDTRANS_CLIENT_KEY=SB-Mid-client-xxxxxxxxxxxx
+    ```
+2.  **Aktifkan Profile**: Jalankan aplikasi dengan profile `sandbox`. Profile ini akan menggabungkan konfigurasi `local` dan `sandbox`.
+    ```bash
+    java -jar build/libs/gayakini-0.0.1-SNAPSHOT.jar --spring.profiles.active=sandbox
+    # Atau via gradle
+    ./gradlew bootRun --args='--spring.profiles.active=sandbox'
+    ```
+3.  **Fail-Fast Security**: Aplikasi akan **gagal start** jika:
+    - `MIDTRANS_IS_PRODUCTION` diset ke `true` saat menggunakan profile `sandbox` atau `local`.
+    - URL Midtrans tidak mengandung kata `sandbox`.
+    - Key Midtrans masih menggunakan nilai dummy ("dummy-server-key").
+
+Lihat [docs/adr/0001-sandbox-first-midtrans-strategy.md](docs/adr/0001-sandbox-first-midtrans-strategy.md) untuk detail strategi arsitektur.

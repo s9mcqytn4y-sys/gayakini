@@ -2,7 +2,14 @@ openapi: 3.1.0
 info:
   title: Brand Fashion E-Commerce API
   version: 1.0.0
-  summary: MVP REST API for storefront, checkout, payment, and fulfillment
+  summary: MVP REST API for storefront, checkout, payment, and fulfillment.
+  description: |-
+    ### Sandbox-First Strategy
+    Currently, this API is in a **Sandbox-First** rollout phase.
+    - **Payments:** Midtrans Snap is the sole provider and must be used in Sandbox mode.
+    - **Logistics:** Biteship integration is prepared at the schema level; external API calls are deferred.
+
+    See `docs/adr/0001-sandbox-first-midtrans-strategy.md` for details.
   description: 'Finalized MVP contract for:
 
     - public storefront

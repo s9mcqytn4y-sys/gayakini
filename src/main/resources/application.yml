@@ -2,7 +2,11 @@ spring:
   application:
     name: gayakini
   profiles:
-    active: local
+    active: local # Default to local. Use 'sandbox' for Midtrans testing.
+    group:
+      sandbox:
+        - sandbox
+        - local
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gayakini}
     username: ${DB_USERNAME:postgres}
