@@ -15,6 +15,7 @@ import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.api.CreatePaymentRequest
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.Payment
+import com.gayakini.payment.domain.PaymentItemDetail
 import com.gayakini.payment.domain.PaymentProvider
 import com.gayakini.payment.domain.PaymentRepository
 import org.slf4j.LoggerFactory
@@ -38,6 +39,7 @@ class PaymentService(
 
     companion object {
         private const val PAYMENT_EXPIRY_SECONDS = 86400L
+        private const val MAX_TITLE_LENGTH = 50
     }
 
     @Transactional
@@ -72,7 +74,7 @@ class PaymentService(
                 return@handle existingPayment.get()
             }
 
-            val payment = createNewPaymentSession(order)
+            val payment = createNewPaymentSession(order, request)
 
             order.currentPaymentId = payment.id
             order.updatedAt = Instant.now()
@@ -82,14 +84,17 @@ class PaymentService(
         }
     }
 
-    private fun createNewPaymentSession(order: com.gayakini.order.domain.Order): Payment {
+    private fun createNewPaymentSession(
+        order: com.gayakini.order.domain.Order,
+        request: CreatePaymentRequest?,
+    ): Payment {
         // Get customer email from order or customer profile
         val customerEmail =
             order.customerId?.let { id ->
                 customerRepository.findById(id).map { it.email }.orElse("customer@example.com")
             } ?: "customer@example.com"
 
-        val providerOrderId = "${order.orderNumber}-${Instant.now().toEpochMilli()}"
+        val providerOrderId = "TRX-${Instant.now().epochSecond}-${UUID.randomUUID().toString().take(8)}"
 
         val customerDetails =
             CustomerPaymentDetails(
@@ -98,21 +103,67 @@ class PaymentService(
                 phone = order.shippingAddress?.phone,
             )
 
+        val itemDetails = mutableListOf<PaymentItemDetail>()
+
+        // Products
+        order.items.forEach { item ->
+            itemDetails.add(
+                PaymentItemDetail(
+                    id = item.variant.id.toString(),
+                    price = item.unitPriceAmount,
+                    quantity = item.quantity,
+                    name = item.titleSnapshot.take(MAX_TITLE_LENGTH),
+                ),
+            )
+        }
+
+        // Shipping
+        if (order.shippingCostAmount > 0) {
+            itemDetails.add(
+                PaymentItemDetail(
+                    id = "SHIPPING",
+                    price = order.shippingCostAmount,
+                    quantity = 1,
+                    name = "Biaya Pengiriman",
+                ),
+            )
+        }
+
+        // Discount (negative price for Midtrans)
+        if (order.discountAmount > 0) {
+            itemDetails.add(
+                PaymentItemDetail(
+                    id = "DISCOUNT",
+                    price = -order.discountAmount,
+                    quantity = 1,
+                    name = "Diskon: ${order.promoCode ?: "Promo"}",
+                ),
+            )
+        }
+
+        val enabledPayments = request?.enabledChannels?.map { it.midtransCode }
+        val preferredChannel = request?.preferredChannel?.midtransCode
+
         val session =
             paymentProvider.createPaymentSession(
                 orderId = order.id,
                 providerOrderId = providerOrderId,
                 amount = order.totalAmount,
                 customerDetails = customerDetails,
+                itemDetails = itemDetails,
             )
 
         val payment =
             Payment(
-                orderId = order.id,
                 transactionNumber = BusinessIdGenerator.generateTransactionNumber(),
+                orderId = order.id,
+                provider = "MIDTRANS",
+                flow = "SNAP",
+                status = PaymentStatus.PENDING,
+                preferredChannel = preferredChannel,
+                enabledChannels = enabledPayments?.let { objectMapper.writeValueAsString(it) },
                 providerOrderId = providerOrderId,
                 grossAmount = order.totalAmount,
-                status = PaymentStatus.PENDING,
                 snapToken = session.token,
                 snapRedirectUrl = session.redirectUrl,
                 expiresAt = Instant.now().plusSeconds(PAYMENT_EXPIRY_SECONDS),

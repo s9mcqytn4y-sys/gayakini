@@ -271,14 +271,15 @@ class OrderFlowIntegrationTest {
         val request = PlaceOrderRequest(customerNotes = "Test notes")
 
         // When & Then
-        val exception = assertThrows(IllegalStateException::class.java) {
-            orderService.placeOrderFromCheckout(
-                checkoutId = testCheckout.id,
-                idempotencyKey = "insufficient-stock-key",
-                checkoutToken = guestToken,
-                request = request,
-            )
-        }
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                orderService.placeOrderFromCheckout(
+                    checkoutId = testCheckout.id,
+                    idempotencyKey = "insufficient-stock-key",
+                    checkoutToken = guestToken,
+                    request = request,
+                )
+            }
         assertTrue(exception.message!!.contains("Stok tidak mencukupi"))
     }
 
@@ -291,14 +292,15 @@ class OrderFlowIntegrationTest {
         val request = PlaceOrderRequest(customerNotes = "Test notes")
 
         // When & Then
-        val exception = assertThrows(IllegalStateException::class.java) {
-            orderService.placeOrderFromCheckout(
-                checkoutId = testCheckout.id,
-                idempotencyKey = "unpublished-product-key",
-                checkoutToken = guestToken,
-                request = request,
-            )
-        }
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                orderService.placeOrderFromCheckout(
+                    checkoutId = testCheckout.id,
+                    idempotencyKey = "unpublished-product-key",
+                    checkoutToken = guestToken,
+                    request = request,
+                )
+            }
         assertTrue(exception.message!!.contains("tidak tersedia"))
     }
 
@@ -311,14 +313,15 @@ class OrderFlowIntegrationTest {
         val request = PlaceOrderRequest(customerNotes = "Test notes")
 
         // When & Then
-        val exception = assertThrows(IllegalStateException::class.java) {
-            orderService.placeOrderFromCheckout(
-                checkoutId = testCheckout.id,
-                idempotencyKey = "inactive-variant-key",
-                checkoutToken = guestToken,
-                request = request,
-            )
-        }
+        val exception =
+            assertThrows(IllegalStateException::class.java) {
+                orderService.placeOrderFromCheckout(
+                    checkoutId = testCheckout.id,
+                    idempotencyKey = "inactive-variant-key",
+                    checkoutToken = guestToken,
+                    request = request,
+                )
+            }
         assertTrue(exception.message!!.contains("tidak tersedia"))
     }
 }

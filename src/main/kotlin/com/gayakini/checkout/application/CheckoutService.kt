@@ -33,6 +33,7 @@ class CheckoutService(
     private val shippingQuoteRepository: CheckoutShippingQuoteRepository,
     private val customerAddressRepository: CustomerAddressRepository,
     private val merchantOriginRepository: MerchantShippingOriginRepository,
+    private val promoService: com.gayakini.promo.application.PromoService,
 ) {
     companion object {
         private const val CHECKOUT_EXPIRY_SECONDS = 3600L
@@ -58,7 +59,9 @@ class CheckoutService(
         cart.items.forEach { item ->
             val variant = item.variant
             check(variant.status == VariantStatus.ACTIVE) { "Produk ${item.productTitleSnapshot} tidak tersedia." }
-            check(variant.product.status == ProductStatus.PUBLISHED) { "Produk ${item.productTitleSnapshot} tidak tersedia." }
+            check(variant.product.status == ProductStatus.PUBLISHED) {
+                "Produk ${item.productTitleSnapshot} tidak tersedia."
+            }
             check(variant.stockAvailable >= item.quantity) {
                 "Stok tidak mencukupi untuk ${item.productTitleSnapshot}. Tersedia: ${variant.stockAvailable}"
             }
@@ -381,6 +384,39 @@ class CheckoutService(
         checkout.selectedShippingQuoteId = quote.id
         checkout.shippingCostAmount = quote.costAmount
         checkout.status = CheckoutStatus.READY_FOR_ORDER
+        checkout.updatedAt = Instant.now()
+
+        return checkoutRepository.save(checkout)
+    }
+
+    @Transactional
+    fun applyPromo(
+        checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
+        promoCode: String,
+    ): Checkout {
+        val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
+
+        val (promo, discount) = promoService.validateAndCalculateDiscount(promoCode, checkout.subtotalAmount)
+
+        checkout.promoCode = promo.code
+        checkout.discountAmount = discount
+        checkout.updatedAt = Instant.now()
+
+        return checkoutRepository.save(checkout)
+    }
+
+    @Transactional
+    fun removePromo(
+        checkoutId: UUID,
+        customerId: UUID?,
+        checkoutToken: String?,
+    ): Checkout {
+        val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
+
+        checkout.promoCode = null
+        checkout.discountAmount = 0
         checkout.updatedAt = Instant.now()
 
         return checkoutRepository.save(checkout)

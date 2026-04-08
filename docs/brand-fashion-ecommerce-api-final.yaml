@@ -641,6 +641,59 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/checkouts/{checkoutId}/promo:
+    put:
+      tags:
+      - Checkout
+      summary: Apply promo code
+      operationId: applyPromo
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - promoCode
+              properties:
+                promoCode:
+                  type: string
+                  example: GAYAKINI10
+      responses:
+        '200':
+          description: Kode promo berhasil diterapkan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags:
+      - Checkout
+      summary: Remove applied promo code
+      operationId: removePromo
+      security:
+      - customerBearerAuth: []
+      - checkoutTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '200':
+          description: Kode promo berhasil dihapus.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckoutResponse'
+        default:
+          $ref: '#/components/responses/Problem'
   /v1/checkouts/{checkoutId}/orders:
     post:
       tags:
@@ -1092,6 +1145,109 @@ paths:
                 $ref: '#/components/schemas/OrderResponse'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/admin/promos:
+    get:
+      tags:
+      - Admin Promos
+      summary: List all promos
+      operationId: adminListPromos
+      security:
+      - Admin: []
+      responses:
+        '200':
+          description: Daftar promo berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromoResponse'
+    post:
+      tags:
+      - Admin Promos
+      summary: Create new promo
+      operationId: adminCreatePromo
+      security:
+      - Admin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePromoRequest'
+      responses:
+        '201':
+          description: Promo berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoResponse'
+  /v1/admin/promos/{promoId}:
+    get:
+      tags:
+      - Admin Promos
+      summary: Get promo detail
+      operationId: adminGetPromo
+      security:
+      - Admin: []
+      parameters:
+      - name: promoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Detail promo berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoResponse'
+    put:
+      tags:
+      - Admin Promos
+      summary: Update promo
+      operationId: adminUpdatePromo
+      security:
+      - Admin: []
+      parameters:
+      - name: promoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePromoRequest'
+      responses:
+        '200':
+          description: Promo berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromoResponse'
+    delete:
+      tags:
+      - Admin Promos
+      summary: Delete promo
+      operationId: adminDeletePromo
+      security:
+      - Admin: []
+      parameters:
+      - name: promoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Promo berhasil dihapus.
 components:
   securitySchemes:
     customerBearerAuth:
@@ -2238,6 +2394,12 @@ components:
           $ref: '#/components/schemas/Money'
         shippingCost:
           $ref: '#/components/schemas/Money'
+        promoCode:
+          type: string
+          nullable: true
+          example: GAYAKINI10
+        discountAmount:
+          $ref: '#/components/schemas/Money'
         total:
           $ref: '#/components/schemas/Money'
         expiresAt:
@@ -2530,6 +2692,12 @@ components:
         subtotal:
           $ref: '#/components/schemas/Money'
         shippingCost:
+          $ref: '#/components/schemas/Money'
+        promoCode:
+          type: string
+          nullable: true
+          example: GAYAKINI10
+        discountAmount:
           $ref: '#/components/schemas/Money'
         total:
           $ref: '#/components/schemas/Money'
@@ -2938,3 +3106,119 @@ components:
         reason:
           type: string
           maxLength: 300
+    PromoType:
+      type: string
+      enum:
+      - FIXED_AMOUNT
+      - PERCENTAGE
+    PromoResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - code
+      - type
+      - value
+      - minOrderValue
+      - currentUsage
+      - startDate
+      - endDate
+      - isActive
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        type:
+          $ref: '#/components/schemas/PromoType'
+        value:
+          type: number
+        maxDiscountAmount:
+          type: number
+          nullable: true
+        minOrderValue:
+          type: number
+        usageLimit:
+          type: integer
+          nullable: true
+        currentUsage:
+          type: integer
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+    CreatePromoRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - type
+      - value
+      - startDate
+      - endDate
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        type:
+          $ref: '#/components/schemas/PromoType'
+        value:
+          type: number
+          minimum: 0
+        maxDiscountAmount:
+          type: number
+          minimum: 0
+          nullable: true
+        minOrderValue:
+          type: number
+          minimum: 0
+          default: 0
+        usageLimit:
+          type: integer
+          minimum: 1
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+          default: true
+    UpdatePromoRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          maxLength: 50
+        type:
+          $ref: '#/components/schemas/PromoType'
+        value:
+          type: number
+          minimum: 0
+        maxDiscountAmount:
+          type: number
+          minimum: 0
+          nullable: true
+        minOrderValue:
+          type: number
+          minimum: 0
+        usageLimit:
+          type: integer
+          minimum: 1
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean

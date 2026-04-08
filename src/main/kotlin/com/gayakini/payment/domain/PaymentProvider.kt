@@ -9,6 +9,7 @@ interface PaymentProvider {
         providerOrderId: String,
         amount: Long,
         customerDetails: CustomerPaymentDetails,
+        itemDetails: List<PaymentItemDetail> = emptyList(),
     ): PaymentSession
 
     fun verifyWebhook(
@@ -23,6 +24,13 @@ data class CustomerPaymentDetails(
     val email: String,
     val fullName: String,
     val phone: String?,
+)
+
+data class PaymentItemDetail(
+    val id: String,
+    val price: Long,
+    val quantity: Int,
+    val name: String,
 )
 
 data class PaymentSession(

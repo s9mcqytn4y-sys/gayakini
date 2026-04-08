@@ -67,6 +67,7 @@ src/main/kotlin/com/gayakini/
 |- location         # shipping area lookup
 |- order            # order lifecycle + admin order ops
 |- payment          # payment session + Midtrans processing
+|- promo            # promotion engine (fixed/percentage)
 |- shipping         # shipping quote, shipment booking, tracking state
 |- webhook          # webhook ingress
 ```

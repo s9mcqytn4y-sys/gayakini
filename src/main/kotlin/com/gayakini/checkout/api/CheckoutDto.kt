@@ -29,8 +29,15 @@ data class CheckoutDto(
     val items: List<CartItemDto>,
     val subtotal: MoneyDto,
     val shippingCost: MoneyDto,
+    val discount: MoneyDto,
     val total: MoneyDto,
+    val promoCode: String? = null,
     val expiresAt: Instant?,
+)
+
+data class ApplyPromoRequest(
+    @field:NotBlank
+    val promoCode: String,
 )
 
 data class CheckoutAddressDto(

@@ -71,8 +71,12 @@ class OrderService(
 
             checkout.items.forEach { checkoutItem ->
                 val variant = checkoutItem.variant
-                check(variant.status == VariantStatus.ACTIVE) { "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia." }
-                check(variant.product.status == ProductStatus.PUBLISHED) { "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia." }
+                check(variant.status == VariantStatus.ACTIVE) {
+                    "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia."
+                }
+                check(variant.product.status == ProductStatus.PUBLISHED) {
+                    "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia."
+                }
 
                 // Update checkout snapshots if cart was refreshed
                 val cartItem = cart.items.find { it.variant.id == variant.id }
@@ -157,6 +161,8 @@ class OrderService(
                 status = OrderStatus.PENDING_PAYMENT,
                 subtotalAmount = checkout.subtotalAmount,
                 shippingCostAmount = checkout.shippingCostAmount,
+                discountAmount = checkout.discountAmount,
+                promoCode = checkout.promoCode,
                 customerNotes = request.customerNotes,
             )
 

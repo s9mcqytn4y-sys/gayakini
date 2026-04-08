@@ -64,6 +64,10 @@ class Order(
     val subtotalAmount: Long,
     @Column(name = "shipping_cost_amount", nullable = false)
     val shippingCostAmount: Long,
+    @Column(name = "discount_amount", nullable = false)
+    val discountAmount: Long = 0,
+    @Column(name = "promo_code", length = 50)
+    val promoCode: String? = null,
     @Column(name = "current_payment_id")
     var currentPaymentId: UUID? = null,
     @Column(name = "customer_notes", length = 500)
@@ -111,7 +115,7 @@ class Order(
     private var isNewRecord = true
 
     val totalAmount: Long
-        get() = subtotalAmount + shippingCostAmount
+        get() = subtotalAmount + shippingCostAmount - discountAmount
 
     override fun getId(): UUID = id
 

@@ -4,14 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.infrastructure.config.GayakiniProperties
 import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
-import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentItemDetail
 import com.gayakini.payment.domain.PaymentSession
+import com.gayakini.payment.domain.PaymentGatewayException
+import com.gayakini.payment.domain.PaymentProvider
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
@@ -31,14 +35,31 @@ class MidtransPaymentProvider(
         providerOrderId: String,
         amount: Long,
         customerDetails: CustomerPaymentDetails,
+        itemDetails: List<PaymentItemDetail>,
     ): PaymentSession {
+        // Validation: sum of (price * quantity) must match amount
+        val calculatedAmount = itemDetails.sumOf { it.price * it.quantity }
+        if (calculatedAmount != amount) {
+            logger.error("Ketidaksesuaian jumlah pembayaran: total={}, item_sum={}", amount, calculatedAmount)
+            throw PaymentGatewayException("Ketidaksesuaian jumlah pembayaran dalam sistem.")
+        }
+
         val requestMap =
-            mapOf(
+            mutableMapOf<String, Any>(
                 "transaction_details" to
                     mapOf(
                         "order_id" to providerOrderId,
                         "gross_amount" to amount,
                     ),
+                "item_details" to
+                    itemDetails.map {
+                        mapOf(
+                            "id" to it.id,
+                            "price" to it.price,
+                            "quantity" to it.quantity,
+                            "name" to it.name,
+                        )
+                    },
                 "customer_details" to
                     mapOf(
                         "first_name" to customerDetails.fullName,
@@ -51,27 +72,47 @@ class MidtransPaymentProvider(
         val requestPayload = objectMapper.writeValueAsString(requestMap)
         val headers = createHeaders()
 
-        val response =
-            restTemplate.postForEntity(
-                properties.midtrans.snapUrl,
-                HttpEntity(requestMap, headers),
-                Map::class.java,
-            )
+        return try {
+            val response =
+                restTemplate.postForEntity(
+                    properties.midtrans.snapUrl,
+                    HttpEntity(requestMap, headers),
+                    Map::class.java,
+                )
 
-        val responsePayload = objectMapper.writeValueAsString(response.body)
+            val responsePayload = objectMapper.writeValueAsString(response.body)
 
-        if (response.statusCode.is2xxSuccessful) {
-            val body = response.body as Map<*, *>
-            return PaymentSession(
-                token = body["token"] as String,
-                redirectUrl = body["redirect_url"] as String,
-                providerOrderId = providerOrderId,
-                requestPayload = requestPayload,
-                responsePayload = responsePayload,
-            )
-        } else {
-            logger.error("Gagal membuat sesi pembayaran Midtrans: {} - {}", response.statusCode, responsePayload)
-            error("Gagal membuat sesi pembayaran. Silakan coba lagi.")
+            if (response.statusCode.is2xxSuccessful) {
+                val body = response.body as Map<*, *>
+                val token = body["token"] as String
+                val redirectUrl = body["redirect_url"] as String
+                PaymentSession(
+                    token = token,
+                    redirectUrl = redirectUrl,
+                    providerOrderId = providerOrderId,
+                    requestPayload = requestPayload,
+                    responsePayload = responsePayload,
+                )
+            } else {
+                logger.error(
+                    "Gagal membuat sesi pembayaran Midtrans: {} - {}",
+                    response.statusCode,
+                    responsePayload,
+                )
+                throw PaymentGatewayException(
+                    "Gagal membuat sesi pembayaran. Provider merespon dengan status ${response.statusCode}.",
+                )
+            }
+        } catch (e: HttpClientErrorException) {
+            val errorBody = e.responseBodyAsString
+            logger.error("Midtrans Client Error (4xx): {} - {}", e.statusCode, errorBody)
+            throw PaymentGatewayException("Permintaan pembayaran ditolak oleh provider: $errorBody")
+        } catch (e: HttpServerErrorException) {
+            logger.error("Midtrans Server Error (5xx): {} - {}", e.statusCode, e.responseBodyAsString)
+            throw PaymentGatewayException("Provider pembayaran sedang mengalami gangguan teknis.")
+        } catch (e: RestClientException) {
+            logger.error("Midtrans Connection Error: {}", e.message)
+            throw PaymentGatewayException("Tidak dapat terhubung ke provider pembayaran.")
         }
     }
 
@@ -93,7 +134,13 @@ class MidtransPaymentProvider(
 
         val headers = createHeaders()
         return try {
-            val response = restTemplate.exchange(statusUrl, HttpMethod.GET, HttpEntity<Any>(headers), Map::class.java)
+            val response =
+                restTemplate.exchange(
+                    statusUrl,
+                    HttpMethod.GET,
+                    HttpEntity<Any>(headers),
+                    Map::class.java,
+                )
             if (response.statusCode.is2xxSuccessful) {
                 val body = response.body as Map<*, *>
                 mapStatus(body["transaction_status"] as String)

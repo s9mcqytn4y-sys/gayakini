@@ -93,6 +93,7 @@ object E2EDataFactory {
         CheckoutShippingAddressRequest(
             guestAddress =
                 GuestAddressRequest(
+                    email = "budi@example.com",
                     recipientName = "Budi Santoso",
                     phone = "081234567890",
                     line1 = "Jl. Merdeka No. 10",

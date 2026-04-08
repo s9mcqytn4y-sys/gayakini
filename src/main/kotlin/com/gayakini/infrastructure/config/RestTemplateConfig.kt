@@ -7,16 +7,17 @@ import org.springframework.web.client.RestTemplate
 import java.time.Duration
 
 @Configuration
-class AppConfig {
+class RestTemplateConfig {
     companion object {
-        private const val DEFAULT_TIMEOUT_SECONDS = 10L
+        private const val CONNECT_TIMEOUT_SECONDS = 5L
+        private const val READ_TIMEOUT_SECONDS = 10L
     }
 
     @Bean
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
         return builder
-            .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
-            .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
+            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
+            .readTimeout(Duration.ofSeconds(READ_TIMEOUT_SECONDS))
             .build()
     }
 }

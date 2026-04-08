@@ -45,9 +45,8 @@ class SecurityConfig(
                     // Cart & Checkout (Allow guest usage)
                     .requestMatchers("/v1/carts/**").permitAll()
                     .requestMatchers("/v1/checkouts/**").permitAll()
-                    .requestMatchers("/v1/orders/*").permitAll()
-                    .requestMatchers("/v1/orders/*/payments").permitAll()
-                    .requestMatchers("/v1/orders/*/cancellations").permitAll()
+                    .requestMatchers("/v1/orders/**").permitAll()
+                    .requestMatchers("/v1/payments/**").permitAll()
                     // Customer Profile & Personal Orders
                     .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
                     // Admin (Strictly guarded, ONE role to rule them all)

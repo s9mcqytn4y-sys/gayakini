@@ -9,9 +9,12 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/v1/orders")
-class PaymentController(private val paymentService: PaymentService) {
-    @PostMapping("/{orderId}/payments")
+@RequestMapping("/v1/payments")
+class PaymentController(
+    private val paymentService: PaymentService,
+    private val properties: com.gayakini.infrastructure.config.GayakiniProperties,
+) {
+    @PostMapping("/orders/{orderId}")
     @ResponseStatus(HttpStatus.CREATED)
     fun createOrderPayment(
         @PathVariable orderId: UUID,
@@ -26,6 +29,7 @@ class PaymentController(private val paymentService: PaymentService) {
             data =
                 PaymentSessionDto(
                     paymentId = payment.id,
+                    transactionNumber = payment.transactionNumber,
                     provider = payment.provider,
                     flow = payment.flow,
                     status = payment.status,
@@ -37,6 +41,18 @@ class PaymentController(private val paymentService: PaymentService) {
                     expiresAt = payment.expiresAt,
                 ),
             meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+        )
+    }
+
+    @GetMapping("/config")
+    fun getPaymentConfig(): StandardResponse<PaymentConfigResponse> {
+        return StandardResponse(
+            message = "Konfigurasi pembayaran berhasil diambil.",
+            data =
+                PaymentConfigResponse(
+                    clientKey = properties.midtrans.clientKey,
+                    isProduction = properties.midtrans.isProduction,
+                ),
         )
     }
 }

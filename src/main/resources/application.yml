@@ -39,15 +39,26 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, prometheus, metrics
+        include: health, info, prometheus, metrics, loggers
   endpoint:
     health:
-      show-details: when_authorized
+      show-details: always
       probes:
         enabled: true
       group:
         readiness:
           include: db
+    info:
+      enabled: true
+
+logging:
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"
+  level:
+    root: INFO
+    com.gayakini: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
 
 springdoc:
   api-docs:

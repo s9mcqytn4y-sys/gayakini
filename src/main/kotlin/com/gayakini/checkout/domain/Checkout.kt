@@ -32,6 +32,10 @@ class Checkout(
     var subtotalAmount: Long = 0,
     @Column(name = "shipping_cost_amount", nullable = false)
     var shippingCostAmount: Long = 0,
+    @Column(name = "discount_amount", nullable = false)
+    var discountAmount: Long = 0,
+    @Column(name = "promo_code", length = 50)
+    var promoCode: String? = null,
     @Column(name = "selected_shipping_quote_id")
     var selectedShippingQuoteId: UUID? = null,
     @JsonManagedReference
@@ -56,7 +60,7 @@ class Checkout(
     private var isNewRecord = true
 
     val totalAmount: Long
-        get() = subtotalAmount + shippingCostAmount
+        get() = subtotalAmount + shippingCostAmount - discountAmount
 
     override fun getId(): UUID = id
 

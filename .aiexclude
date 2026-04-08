@@ -1,0 +1,24 @@
+# AI Context Exclusion for Gayakini
+
+# Infrastructure & Build
+.git/
+.gradle/
+.idea/
+.vscode/
+.kotlin/
+build/
+bin/
+
+*.jks
+*.p12
+*.key
+*.pem
+
+# Logs & Temporary
+*.log
+build_log.txt
+ktlint-report.txt
+
+# OS Files
+.DS_Store
+Thumbs.db

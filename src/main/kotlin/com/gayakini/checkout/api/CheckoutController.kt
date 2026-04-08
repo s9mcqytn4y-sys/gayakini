@@ -64,6 +64,36 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         return mapToResponse(checkout, "Pilihan pengiriman berhasil dihitung.", checkoutToken)
     }
 
+    @PostMapping("/{checkoutId}/promo")
+    fun applyPromo(
+        @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
+        @Valid @RequestBody request: ApplyPromoRequest,
+    ): CheckoutResponse {
+        val checkout =
+            checkoutService.applyPromo(
+                checkoutId,
+                SecurityUtils.getCurrentUserId(),
+                checkoutToken,
+                request.promoCode,
+            )
+        return mapToResponse(checkout, "Promo berhasil digunakan.", checkoutToken)
+    }
+
+    @DeleteMapping("/{checkoutId}/promo")
+    fun removePromo(
+        @PathVariable checkoutId: UUID,
+        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
+    ): CheckoutResponse {
+        val checkout =
+            checkoutService.removePromo(
+                checkoutId,
+                SecurityUtils.getCurrentUserId(),
+                checkoutToken,
+            )
+        return mapToResponse(checkout, "Promo berhasil dihapus.", checkoutToken)
+    }
+
     @PutMapping("/{checkoutId}/shipping-selection")
     fun setShippingSelection(
         @PathVariable checkoutId: UUID,
@@ -117,7 +147,9 @@ class CheckoutController(private val checkoutService: CheckoutService) {
                         },
                     subtotal = MoneyDto(amount = checkout.subtotalAmount),
                     shippingCost = MoneyDto(amount = checkout.shippingCostAmount),
+                    discount = MoneyDto(amount = checkout.discountAmount),
                     total = MoneyDto(amount = checkout.totalAmount),
+                    promoCode = checkout.promoCode,
                     expiresAt = checkout.expiresAt,
                     shippingAddress =
                         checkout.shippingAddress?.let { addr ->

@@ -1,0 +1,79 @@
+### Promo Management & Usage
+
+@api_url = http://localhost:8080/v1
+@admin_token = {{admin_token}}
+@customer_token = {{customer_token}}
+@checkout_id = {{checkout_id}}
+
+### 1. [Admin] Create Fixed Amount Promo
+POST {{api_url}}/admin/promos
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "code": "GAYAKINI50K",
+  "type": "FIXED_AMOUNT",
+  "value": 50000,
+  "minOrderValue": 200000,
+  "usageLimit": 100,
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2025-12-31T23:59:59Z",
+  "isActive": true
+}
+
+> {% client.global.set("promo_id_fixed", response.body.data.id); %}
+
+### 2. [Admin] Create Percentage Promo
+POST {{api_url}}/admin/promos
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "code": "DISKON10",
+  "type": "PERCENTAGE",
+  "value": 10,
+  "maxDiscountAmount": 30000,
+  "minOrderValue": 100000,
+  "usageLimit": 50,
+  "startDate": "2024-01-01T00:00:00Z",
+  "endDate": "2025-12-31T23:59:59Z",
+  "isActive": true
+}
+
+> {% client.global.set("promo_id_perc", response.body.data.id); %}
+
+### 3. [Admin] List All Promos
+GET {{api_url}}/admin/promos
+Authorization: Bearer {{admin_token}}
+
+### 4. [Admin] Get Promo Detail
+GET {{api_url}}/admin/promos/{{promo_id_fixed}}
+Authorization: Bearer {{admin_token}}
+
+### 5. [Admin] Update Promo
+PUT {{api_url}}/admin/promos/{{promo_id_fixed}}
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+
+{
+  "value": 55000,
+  "isActive": true
+}
+
+### 6. [Customer] Apply Promo to Checkout
+# Ensure you have a valid checkout_id in your environment (from 40-checkout.http)
+PUT {{api_url}}/checkouts/{{checkout_id}}/promo
+Authorization: Bearer {{customer_token}}
+Content-Type: application/json
+
+{
+  "promoCode": "GAYAKINI50K"
+}
+
+### 7. [Customer] Remove Promo from Checkout
+DELETE {{api_url}}/checkouts/{{checkout_id}}/promo
+Authorization: Bearer {{customer_token}}
+
+### 8. [Admin] Delete Promo
+DELETE {{api_url}}/admin/promos/{{promo_id_perc}}
+Authorization: Bearer {{admin_token}}
