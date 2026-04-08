@@ -5,6 +5,9 @@ import com.gayakini.promo.api.PromoResponse
 import com.gayakini.promo.api.UpdatePromoRequest
 import com.gayakini.promo.domain.Promo
 import com.gayakini.promo.domain.PromoRepository
+import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -14,6 +17,8 @@ import java.util.UUID
 @Service
 class PromoService(
     private val promoRepository: PromoRepository,
+    private val eventPublisher: ApplicationEventPublisher,
+    private val auditContext: AuditContext,
 ) {
     @Transactional(readOnly = true)
     fun getAllPromos(): List<PromoResponse> {
@@ -42,7 +47,27 @@ class PromoService(
                 endDate = request.endDate,
                 isActive = request.isActive,
             )
-        return PromoResponse.fromEntity(promoRepository.save(promo))
+        val savedPromo = promoRepository.save(promo)
+        val (actorId, actorRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = actorId,
+                actorRole = actorRole,
+                entityType = "PROMO",
+                entityId = savedPromo.code,
+                eventType = "PROMO_CREATED",
+                newState =
+                    mapOf(
+                        "id" to savedPromo.id,
+                        "code" to savedPromo.code,
+                        "type" to savedPromo.type,
+                        "value" to savedPromo.value,
+                        "isActive" to savedPromo.isActive,
+                    ),
+                reason = "Admin created new promo",
+            ),
+        )
+        return PromoResponse.fromEntity(savedPromo)
     }
 
     @Transactional
@@ -54,6 +79,14 @@ class PromoService(
             promoRepository.findById(id)
                 .orElseThrow { NoSuchElementException("Promo tidak ditemukan.") }
 
+        val previousState =
+            mapOf(
+                "code" to promo.code,
+                "type" to promo.type,
+                "value" to promo.value,
+                "isActive" to promo.isActive,
+            )
+
         request.code?.let { promo.code = it.uppercase() }
         request.type?.let { promo.type = it }
         request.value?.let { promo.value = it }
@@ -64,7 +97,28 @@ class PromoService(
         request.endDate?.let { promo.endDate = it }
         request.isActive?.let { promo.isActive = it }
 
-        return PromoResponse.fromEntity(promoRepository.save(promo))
+        val savedPromo = promoRepository.save(promo)
+        val (actorId, actorRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = actorId,
+                actorRole = actorRole,
+                entityType = "PROMO",
+                entityId = savedPromo.code,
+                eventType = "PROMO_UPDATED",
+                previousState = previousState,
+                newState =
+                    mapOf(
+                        "id" to savedPromo.id,
+                        "code" to savedPromo.code,
+                        "type" to savedPromo.type,
+                        "value" to savedPromo.value,
+                        "isActive" to savedPromo.isActive,
+                    ),
+                reason = "Admin updated promo",
+            ),
+        )
+        return PromoResponse.fromEntity(savedPromo)
     }
 
     @Transactional

@@ -60,6 +60,8 @@ tags:
 - name: Admin Catalog
 - name: Admin Orders
 - name: Admin Inventory
+- name: Admin Promos
+- name: Admin Audits
 - name: Webhooks
 security: []
 paths:
@@ -1269,6 +1271,40 @@ paths:
       responses:
         '204':
           description: Promo berhasil dihapus.
+  /v1/admin/audits:
+    get:
+      tags:
+      - Admin Audits
+      summary: Get audit logs with filtering and pagination
+      operationId: getAudits
+      security:
+      - Admin: []
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Size'
+      - name: entityType
+        in: query
+        schema:
+          type: string
+          maxLength: 50
+      - name: entityId
+        in: query
+        schema:
+          type: string
+          maxLength: 50
+      responses:
+        '200':
+          description: Daftar audit log berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditLogPageResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     customerBearerAuth:
@@ -1777,30 +1813,7 @@ components:
           items:
             $ref: '#/components/schemas/ProductSummary'
         meta:
-          type: object
-          additionalProperties: false
-          required:
-          - page
-          - size
-          - totalElements
-          - totalPages
-          properties:
-            page:
-              type: integer
-              minimum: 1
-            size:
-              type: integer
-              minimum: 1
-            totalElements:
-              type: integer
-              format: int64
-              minimum: 0
-            totalPages:
-              type: integer
-              minimum: 0
-            requestId:
-              type: string
-              maxLength: 100
+          $ref: '#/components/schemas/PageMeta'
     ProductDetailResponse:
       type: object
       additionalProperties: false
@@ -2772,30 +2785,63 @@ components:
           items:
             $ref: '#/components/schemas/Order'
         meta:
+          $ref: '#/components/schemas/PageMeta'
+    AuditLog:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - actorId
+      - actorRole
+      - entityType
+      - entityId
+      - eventType
+      - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        actorId:
+          type: string
+        actorRole:
+          type: string
+        entityType:
+          type: string
+        entityId:
+          type: string
+        eventType:
+          type: string
+        previousState:
           type: object
-          additionalProperties: false
-          required:
-          - page
-          - size
-          - totalElements
-          - totalPages
-          properties:
-            page:
-              type: integer
-              minimum: 1
-            size:
-              type: integer
-              minimum: 1
-            totalElements:
-              type: integer
-              format: int64
-              minimum: 0
-            totalPages:
-              type: integer
-              minimum: 0
-            requestId:
-              type: string
-              maxLength: 100
+          nullable: true
+          additionalProperties: true
+        newState:
+          type: object
+          nullable: true
+          additionalProperties: true
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    AuditLogPageResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - message
+      - data
+      - meta
+      properties:
+        message:
+          type: string
+          example: Daftar audit log berhasil diambil.
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        meta:
+          $ref: '#/components/schemas/PageMeta'
     CancelOrderRequest:
       type: object
       additionalProperties: false

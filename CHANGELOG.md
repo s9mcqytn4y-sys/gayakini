@@ -13,6 +13,10 @@ Format changelog ini mengikuti [Keep a Changelog](https://keepachangelog.com/en/
 - Launcher MCP (Model Context Protocol) untuk otomatisasi lokal (filesystem, postgres, http, terminal, git, github, browser).
 - Hardening webhook Midtrans dengan validasi signature SHA512, rekonsiliasi status otoritatif, audit logging, dan idempotensi.
 - Redirect endpoints untuk frontend (`/v1/payments/redirect/**`) guna pemisahan mutasi state dan navigasi UI.
+- Audit Trail terpusat menggunakan Spring `ApplicationEventPublisher` dan `@TransactionalEventListener`.
+- Penyimpanan audit log di `commerce.audit_logs` dengan dukungan JSONB untuk snapshot `previous_state` dan `new_state`.
+- Redaction engine otomatis untuk data sensitif (password, token, dll.) pada audit trail.
+- API Query Audit untuk admin (`/api/v1/admin/audits`) dengan filtering `entityType` dan `entityId`.
 
 ### Changed
 - Migrasi dari Spring Boot 3.3 ke Spring Boot 3.4.

@@ -19,6 +19,10 @@ import com.gayakini.inventory.application.InventoryService
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.domain.*
 import org.springframework.security.core.context.SecurityContextHolder
+import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
+import com.gayakini.audit.domain.OrderAuditMapper
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -33,6 +37,8 @@ class OrderService(
     private val cartService: CartService,
     private val inventoryService: InventoryService,
     private val idempotencyService: IdempotencyService,
+    private val eventPublisher: ApplicationEventPublisher,
+    private val auditContext: AuditContext,
 ) {
     companion object {
         private const val ORDER_NUMBER_RANDOM_BOUND = 9999
@@ -92,6 +98,18 @@ class OrderService(
             checkoutRepository.save(checkout)
 
             val order = createOrderFromCheckout(checkout, request)
+            val (actorId, actorRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = actorId,
+                    actorRole = actorRole,
+                    entityType = "ORDER",
+                    entityId = order.orderNumber,
+                    eventType = "ORDER_PLACED",
+                    newState = OrderAuditMapper.toMap(order),
+                    reason = "Order placed from checkout ${checkout.id}",
+                ),
+            )
 
             // Items & Reservations
             checkout.items.forEach { checkoutItem ->

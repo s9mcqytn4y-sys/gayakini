@@ -104,7 +104,12 @@ File utama:
 Gayakini menggunakan strategi **Authoritative Reconciliation** untuk semua webhook:
 1. **Strict Signature Validation**: Setiap payload divalidasi menggunakan SHA512 HMAC (Midtrans) atau Secret Header (Biteship).
 2. **Anti-Spoofing Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
-3. **Audit Trail & Idempotency**: Setiap webhook dicatat di tabel `payment_receipts`. Jika status yang sama dikirim ulang, sistem akan mengenalinya dan tidak memproses side-effect (seperti pengurangan stok atau email) dua kali.
+3. **Audit Trail & Event-Driven Logging**: Setiap perubahan status bisnis (Order, Payment, Promo) dicatat secara terpusat di tabel `audit_logs` menggunakan Spring `ApplicationEventPublisher`. 
+    - **Non-blocking**: Pencatatan audit dilakukan via `@TransactionalEventListener` sebelum commit.
+    - **Traceability**: Mencatat `actor_id`, `actor_role`, `previous_state`, dan `new_state` (JSONB).
+    - **Security**: Data sensitif (password, token, signature) disensor secara otomatis.
+    - **Admin Access**: Audit trail dapat diakses oleh Admin melalui `GET /api/v1/admin/audits`.
+4. **Anti-Spoofing Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
 
 ### Testing Webhook Lokal
 Untuk mengetes webhook dari provider luar (Midtrans/Biteship) ke mesin lokal Anda:
