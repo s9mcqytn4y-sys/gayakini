@@ -22,6 +22,9 @@ import com.gayakini.payment.domain.PaymentReceipt
 import com.gayakini.payment.domain.PaymentReceiptRepository
 import com.gayakini.payment.domain.PaymentRepository
 import com.gayakini.payment.domain.ReceiptProcessingStatus
+import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -39,6 +42,8 @@ class PaymentService(
     private val paymentProvider: PaymentProvider,
     private val idempotencyService: IdempotencyService,
     private val objectMapper: ObjectMapper,
+    private val eventPublisher: ApplicationEventPublisher,
+    private val auditContext: AuditContext,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -84,6 +89,24 @@ class PaymentService(
             order.currentPaymentId = payment.id
             order.updatedAt = Instant.now()
             orderRepository.save(order)
+
+            val (actorId, actorRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = actorId,
+                    actorRole = actorRole,
+                    entityType = "PAYMENT",
+                    entityId = payment.transactionNumber,
+                    eventType = "PAYMENT_SESSION_CREATED",
+                    newState = mapOf(
+                        "orderId" to order.id,
+                        "paymentId" to payment.id,
+                        "amount" to payment.grossAmount,
+                        "provider" to payment.provider
+                    ),
+                    reason = "Payment session created for order ${order.orderNumber}"
+                )
+            )
 
             payment
         }
@@ -297,12 +320,34 @@ class PaymentService(
 
         // 5. Update states if status changed or it's the first authoritative update
         if (payment.status != reconciledStatus || payment.rawProviderStatus != transactionStatus) {
+            val previousState = mapOf(
+                "status" to payment.status,
+                "rawStatus" to payment.rawProviderStatus
+            )
+
             updatePaymentAndOrderStates(
                 payment = payment,
                 order = order,
                 reconciledStatus = reconciledStatus,
                 payload = payload,
                 transactionStatus = transactionStatus,
+            )
+
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = "SYSTEM",
+                    actorRole = "SYSTEM",
+                    entityType = "PAYMENT",
+                    entityId = payment.transactionNumber,
+                    eventType = "PAYMENT_STATUS_UPDATED",
+                    previousState = previousState,
+                    newState = mapOf(
+                        "status" to payment.status,
+                        "rawStatus" to payment.rawProviderStatus,
+                        "orderStatus" to order.status
+                    ),
+                    reason = "Webhook reconciliation: $transactionStatus -> $reconciledStatus"
+                )
             )
         }
 
