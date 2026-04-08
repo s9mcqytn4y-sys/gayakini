@@ -9,6 +9,7 @@ import com.gayakini.common.util.HashUtils
 import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.inventory.application.InventoryService
+import com.gayakini.order.domain.Order
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
 import com.gayakini.order.domain.PaymentStatus
@@ -17,7 +18,10 @@ import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.Payment
 import com.gayakini.payment.domain.PaymentItemDetail
 import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentReceipt
+import com.gayakini.payment.domain.PaymentReceiptRepository
 import com.gayakini.payment.domain.PaymentRepository
+import com.gayakini.payment.domain.ReceiptProcessingStatus
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -28,6 +32,7 @@ import java.util.UUID
 @Service
 class PaymentService(
     private val paymentRepository: PaymentRepository,
+    private val paymentReceiptRepository: PaymentReceiptRepository,
     private val orderRepository: OrderRepository,
     private val customerRepository: CustomerRepository,
     private val inventoryService: InventoryService,
@@ -85,7 +90,7 @@ class PaymentService(
     }
 
     private fun createNewPaymentSession(
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         request: CreatePaymentRequest?,
     ): Payment {
         // Get customer email from order or customer profile
@@ -175,7 +180,7 @@ class PaymentService(
     }
 
     fun validateOrderAccess(
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         orderToken: String?,
         currentUserId: UUID?,
     ) {
@@ -190,7 +195,7 @@ class PaymentService(
     }
 
     private fun validateCustomerOrderAccess(
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         currentUserId: UUID?,
     ) {
         if (order.customerId != currentUserId) {
@@ -202,7 +207,7 @@ class PaymentService(
     }
 
     private fun validateGuestOrderAccess(
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         orderToken: String?,
     ) {
         val token = orderToken ?: throw UnauthorizedException("Token pesanan diperlukan.")
@@ -212,37 +217,148 @@ class PaymentService(
     }
 
     @Transactional
+    @Suppress("TooGenericExceptionCaught")
     fun processMidtransWebhook(
         payload: Map<String, Any>,
         signature: String,
     ) {
-        if (!paymentProvider.verifyWebhook(payload, signature)) {
-            logger.error("Signature Midtrans tidak valid untuk payload: {}", payload)
-            throw IllegalArgumentException("Signature tidak valid")
-        }
-
         val providerOrderId = payload["order_id"] as String
         val transactionStatus = payload["transaction_status"] as String
 
+        // 1. Audit Trail: Log the incoming webhook immediately
+        val receipt =
+            PaymentReceipt(
+                provider = "MIDTRANS",
+                providerOrderId = providerOrderId,
+                transactionId = payload["transaction_id"] as? String,
+                transactionStatus = transactionStatus,
+                fraudStatus = payload["fraud_status"] as? String,
+                signatureKeyHash = signature,
+                rawPayload = objectMapper.writeValueAsString(payload),
+                processingStatus = ReceiptProcessingStatus.PENDING,
+            )
+        paymentReceiptRepository.save(receipt)
+
+        try {
+            validateAndProcessWebhook(
+                receipt = receipt,
+                payload = payload,
+                signature = signature,
+                providerOrderId = providerOrderId,
+                transactionStatus = transactionStatus,
+            )
+        } catch (e: ForbiddenException) {
+            // Re-throw ForbiddenException as-is for the controller/advice to handle correctly (403)
+            throw e
+        } catch (e: Exception) {
+            handleWebhookFailure(receipt, providerOrderId, e)
+            throw e
+        }
+    }
+
+    private fun validateAndProcessWebhook(
+        receipt: PaymentReceipt,
+        payload: Map<String, Any>,
+        signature: String,
+        providerOrderId: String,
+        transactionStatus: String,
+    ) {
+        // 2. Strict Signature Validation
+        if (!paymentProvider.verifyWebhook(payload, signature)) {
+            handleInvalidSignature(receipt, providerOrderId)
+        }
+
+        // 3. Idempotency Check
+        if (isAlreadyProcessed(providerOrderId, transactionStatus)) {
+            handleIdempotentSkip(receipt, providerOrderId, transactionStatus)
+            return
+        }
+
+        // 4. Anti-Spoofing Reconciliation (Authoritative Source of Truth)
+        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
+        logger.info(
+            "Reconciled status untuk {}: {} (Payload: {})",
+            providerOrderId,
+            reconciledStatus,
+            transactionStatus,
+        )
+
         val payment =
             paymentRepository.findByProviderOrderId(providerOrderId)
-                .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
+                .orElseThrow {
+                    NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId")
+                }
 
         val order =
             orderRepository.findById(payment.orderId)
-                .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
+                .orElseThrow {
+                    NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId")
+                }
 
-        // Fetch official status from Midtrans API to be sure (reconciliation)
-        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
-
-        if (payment.status != reconciledStatus) {
-            updatePaymentAndOrderStates(payment, order, reconciledStatus, payload, transactionStatus)
+        // 5. Update states if status changed or it's the first authoritative update
+        if (payment.status != reconciledStatus || payment.rawProviderStatus != transactionStatus) {
+            updatePaymentAndOrderStates(
+                payment = payment,
+                order = order,
+                reconciledStatus = reconciledStatus,
+                payload = payload,
+                transactionStatus = transactionStatus,
+            )
         }
+
+        // 6. Mark receipt as processed
+        receipt.processingStatus = ReceiptProcessingStatus.PROCESSED
+        receipt.processedAt = Instant.now()
+        paymentReceiptRepository.save(receipt)
+    }
+
+    private fun handleInvalidSignature(
+        receipt: PaymentReceipt,
+        providerOrderId: String,
+    ) {
+        logger.error("Signature Midtrans tidak valid untuk order: {}", providerOrderId)
+        receipt.processingStatus = ReceiptProcessingStatus.FAILED
+        receipt.errorMessage = "Signature tidak valid"
+        paymentReceiptRepository.save(receipt)
+        throw ForbiddenException("Signature tidak valid")
+    }
+
+    private fun isAlreadyProcessed(
+        providerOrderId: String,
+        transactionStatus: String,
+    ): Boolean {
+        return paymentReceiptRepository
+            .findByProviderOrderIdAndTransactionStatusAndProcessingStatus(
+                providerOrderId,
+                transactionStatus,
+                ReceiptProcessingStatus.PROCESSED,
+            ).isNotEmpty()
+    }
+
+    private fun handleIdempotentSkip(
+        receipt: PaymentReceipt,
+        providerOrderId: String,
+        status: String,
+    ) {
+        logger.info("Webhook untuk order {} dengan status {} sudah diproses sebelumnya. Skip.", providerOrderId, status)
+        receipt.processingStatus = ReceiptProcessingStatus.SKIPPED
+        paymentReceiptRepository.save(receipt)
+    }
+
+    private fun handleWebhookFailure(
+        receipt: PaymentReceipt,
+        providerOrderId: String,
+        e: Exception,
+    ) {
+        logger.error("Gagal memproses webhook Midtrans untuk order: {}", providerOrderId, e)
+        receipt.processingStatus = ReceiptProcessingStatus.FAILED
+        receipt.errorMessage = e.message
+        paymentReceiptRepository.save(receipt)
     }
 
     private fun updatePaymentAndOrderStates(
         payment: Payment,
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         reconciledStatus: PaymentStatus,
         payload: Map<String, Any>,
         transactionStatus: String,
@@ -266,7 +382,7 @@ class PaymentService(
 
     private fun handlePaidOrder(
         payment: Payment,
-        order: com.gayakini.order.domain.Order,
+        order: Order,
     ) {
         payment.paidAt = Instant.now()
         order.status = OrderStatus.PAID
@@ -275,7 +391,7 @@ class PaymentService(
     }
 
     private fun handleFailedOrder(
-        order: com.gayakini.order.domain.Order,
+        order: Order,
         reconciledStatus: PaymentStatus,
     ) {
         order.status = OrderStatus.CANCELLED

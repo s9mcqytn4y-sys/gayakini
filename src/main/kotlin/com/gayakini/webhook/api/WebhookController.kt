@@ -33,8 +33,10 @@ class WebhookController(
                 "transaction_status" to payload.transactionStatus,
                 "gross_amount" to payload.grossAmount,
                 "signature_key" to payload.signatureKey,
-                "transaction_id" to (payload.transactionId ?: ""),
             )
+
+        payload.transactionId?.let { payloadMap["transaction_id"] = it }
+        payload.fraudStatus?.let { payloadMap["fraud_status"] = it }
 
         val effectiveSignature = signature ?: payload.signatureKey
 

@@ -11,6 +11,7 @@ import com.gayakini.payment.domain.PaymentProvider
 import com.gayakini.payment.domain.PaymentRepository
 import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -39,6 +40,9 @@ class WebhookIntegrationTest {
 
     @MockkBean
     private lateinit var orderRepository: OrderRepository
+
+    @MockkBean
+    private lateinit var paymentReceiptRepository: com.gayakini.payment.domain.PaymentReceiptRepository
 
     @MockkBean
     private lateinit var paymentProvider: PaymentProvider
@@ -97,6 +101,14 @@ class WebhookIntegrationTest {
         val order = createDummyOrder()
 
         every { paymentProvider.verifyWebhook(any(), any()) } returns true
+        every { paymentReceiptRepository.save(any()) } returns mockk()
+        every {
+            paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(
+                any(),
+                any(),
+                any(),
+            )
+        } returns emptyList()
         every { paymentRepository.findByProviderOrderId(providerOrderId) } returns Optional.of(payment)
         every { orderRepository.findById(orderId) } returns Optional.of(order)
         every { paymentProvider.getPaymentStatus(providerOrderId) } returns PaymentStatus.PAID
@@ -128,13 +140,14 @@ class WebhookIntegrationTest {
             )
 
         every { paymentProvider.verifyWebhook(any(), any()) } returns false
+        every { paymentReceiptRepository.save(any()) } returns mockk()
 
         mockMvc
             .post("/v1/webhooks/midtrans") {
                 contentType = MediaType.APPLICATION_JSON
                 content = objectMapper.writeValueAsString(payload)
             }.andExpect {
-                status { isBadRequest() }
+                status { isForbidden() }
             }
     }
 
@@ -153,6 +166,14 @@ class WebhookIntegrationTest {
         val order = createDummyOrder()
 
         every { paymentProvider.verifyWebhook(any(), any()) } returns true
+        every { paymentReceiptRepository.save(any()) } returns mockk()
+        every {
+            paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(
+                any(),
+                any(),
+                any(),
+            )
+        } returns emptyList()
         every { paymentRepository.findByProviderOrderId(providerOrderId) } returns Optional.of(payment)
         every { orderRepository.findById(orderId) } returns Optional.of(order)
         every { paymentProvider.getPaymentStatus(providerOrderId) } returns PaymentStatus.CANCELLED
@@ -170,5 +191,50 @@ class WebhookIntegrationTest {
 
         verify { inventoryService.releaseReservations(orderId, any()) }
         verify { orderRepository.save(match { it.status == OrderStatus.CANCELLED }) }
+    }
+
+    @Test
+    fun `receiveMidtransWebhook - Idempotency Skip`() {
+        val payload =
+            mapOf(
+                "order_id" to providerOrderId,
+                "status_code" to "200",
+                "transaction_status" to "settlement",
+                "gross_amount" to "10000.00",
+                "signature_key" to "valid-signature",
+            )
+
+        val existingReceipt =
+            com.gayakini.payment.domain.PaymentReceipt(
+                provider = "MIDTRANS",
+                providerOrderId = providerOrderId,
+                transactionStatus = "settlement",
+                signatureKeyHash = "valid-signature",
+                rawPayload = "{}",
+                processingStatus = com.gayakini.payment.domain.ReceiptProcessingStatus.PROCESSED,
+            )
+
+        every { paymentProvider.verifyWebhook(any(), any()) } returns true
+        every { paymentReceiptRepository.save(any()) } returns mockk()
+        every {
+            paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(
+                providerOrderId,
+                "settlement",
+                com.gayakini.payment.domain.ReceiptProcessingStatus.PROCESSED,
+            )
+        } returns listOf(existingReceipt)
+
+        mockMvc
+            .post("/v1/webhooks/midtrans") {
+                contentType = MediaType.APPLICATION_JSON
+                content = objectMapper.writeValueAsString(payload)
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.data.accepted") { value(true) }
+            }
+
+        // Verify that no further processing happened
+        verify(exactly = 0) { paymentProvider.getPaymentStatus(any()) }
+        verify(exactly = 0) { paymentRepository.findByProviderOrderId(any()) }
     }
 }

@@ -11,6 +11,8 @@ Format changelog ini mengikuti [Keep a Changelog](https://keepachangelog.com/en/
 - Integrasi Midtrans Sandbox dengan `fail-fast security` checks.
 - Task `./gradlew localSetup` untuk mempermudah setup awal lingkungan lokal.
 - Launcher MCP (Model Context Protocol) untuk otomatisasi lokal (filesystem, postgres, http, terminal, git, github, browser).
+- Hardening webhook Midtrans dengan validasi signature SHA512, rekonsiliasi status otoritatif, audit logging, dan idempotensi.
+- Redirect endpoints untuk frontend (`/v1/payments/redirect/**`) guna pemisahan mutasi state dan navigasi UI.
 
 ### Changed
 - Migrasi dari Spring Boot 3.3 ke Spring Boot 3.4.

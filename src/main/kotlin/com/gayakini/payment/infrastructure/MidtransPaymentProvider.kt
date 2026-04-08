@@ -123,10 +123,19 @@ class MidtransPaymentProvider(
         val orderId = payload["order_id"] as? String ?: return false
         val statusCode = payload["status_code"] as? String ?: return false
         val grossAmount = payload["gross_amount"] as? String ?: return false
-        val rawData = orderId + statusCode + grossAmount + properties.midtrans.serverKey
+        val serverKey = properties.midtrans.serverKey
+
+        // Midtrans SHA512 signature: SHA512(order_id + status_code + gross_amount + server_key)
+        val rawData = orderId + statusCode + grossAmount + serverKey
 
         val calculatedSignature = sha512(rawData)
-        return calculatedSignature.equals(signature, ignoreCase = true)
+        val isValid = calculatedSignature.equals(signature, ignoreCase = true)
+
+        if (!isValid) {
+            logger.warn("Midtrans signature mismatch! Calculated: {}, Received: {}", calculatedSignature, signature)
+        }
+
+        return isValid
     }
 
     override fun getPaymentStatus(providerOrderId: String): PaymentStatus {

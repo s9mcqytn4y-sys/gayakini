@@ -96,8 +96,21 @@ File utama:
 - `http/30-cart.http`
 - `http/40-checkout.http`
 - `http/50-order.http`
-- `http/90-webhooks.http`
+- `http/90-webhooks.http` (Midtrans & Biteship)
 - `http/80-admin.http`
+
+## Webhook Security & Testing
+
+Gayakini menggunakan strategi **Authoritative Reconciliation** untuk semua webhook:
+1. **Strict Signature Validation**: Setiap payload divalidasi menggunakan SHA512 HMAC (Midtrans) atau Secret Header (Biteship).
+2. **Anti-Spoofing Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
+3. **Audit Trail & Idempotency**: Setiap webhook dicatat di tabel `payment_receipts`. Jika status yang sama dikirim ulang, sistem akan mengenalinya dan tidak memproses side-effect (seperti pengurangan stok atau email) dua kali.
+
+### Testing Webhook Lokal
+Untuk mengetes webhook dari provider luar (Midtrans/Biteship) ke mesin lokal Anda:
+1. Gunakan **ngrok** atau **localtunnel**: `ngrok http 8080`.
+2. Update URL webhook di Dashboard Provider ke URL ngrok Anda (Misal: `https://abcd-123.ngrok-free.app/v1/webhooks/midtrans`).
+3. Gunakan file `http/90-webhooks.http` untuk simulasi payload tanpa ngrok.
 
 Dokumen pendukung:
 - [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)

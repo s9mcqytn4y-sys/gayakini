@@ -837,24 +837,45 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /payment/finish:
+    get:
+      tags:
+      - Payments
+      summary: Midtrans finish redirect
+      description: Purely for frontend routing. Does not mutate business state.
+      responses:
+        '302':
+          description: Redirect to success/pending page.
+  /payment/unfinish:
+    get:
+      tags:
+      - Payments
+      summary: Midtrans unfinish redirect
+      description: Purely for frontend routing.
+      responses:
+        '302':
+          description: Redirect to pending page.
+  /payment/error:
+    get:
+      tags:
+      - Payments
+      summary: Midtrans error redirect
+      description: Purely for frontend routing.
+      responses:
+        '302':
+          description: Redirect to failure page.
   /v1/webhooks/midtrans:
     post:
       tags:
       - Webhooks
       summary: Receive Midtrans payment webhook
-      description: 'Verify Midtrans signature before accepting the payload.
-
-        Recommended handling:
-
-        1. validate signature_key
-
-        2. fetch transaction status from Midtrans using order_id
-
-        3. apply idempotent payment state transition
-
-        4. return 200 once the event is accepted
-
-        '
+      description: |-
+        Hardened webhook handling following the Single Source of Truth strategy:
+        1. **Strict Signature Validation**: SHA512 signature (`order_id + status_code + gross_amount + server_key`) is verified. Mismatches result in 403 Forbidden.
+        2. **Authoritative Reconciliation**: Every webhook triggers a direct "Get Status" API call to Midtrans to verify the actual state, preventing reliance on potentially spoofed payload data.
+        3. **Audit Logging**: Incoming webhooks are persisted in the `payment_receipts` table for audit trails.
+        4. **Idempotency**: Processing is idempotent based on `provider_order_id` and `transaction_status` to prevent duplicate side effects.
+        5. **Inventory Release**: Failed/Cancelled/Expired statuses trigger automatic inventory reservation release.
       operationId: receiveMidtransWebhook
       security: []
       requestBody:
