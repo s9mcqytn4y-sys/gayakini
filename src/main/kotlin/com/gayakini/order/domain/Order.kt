@@ -20,6 +20,13 @@ import jakarta.persistence.PostLoad
 import jakarta.persistence.PostPersist
 import jakarta.persistence.Table
 import jakarta.persistence.Transient
+import jakarta.persistence.EntityListeners
+import jakarta.persistence.Version
+import org.springframework.data.annotation.CreatedBy
+import org.springframework.data.annotation.CreatedDate
+import org.springframework.data.annotation.LastModifiedBy
+import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
@@ -27,6 +34,7 @@ import java.util.UUID
 @Suppress("LongParameterList")
 @Entity
 @Table(name = "orders", schema = "commerce")
+@EntityListeners(AuditingEntityListener::class)
 class Order(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -79,11 +87,25 @@ class Order(
     @Column(name = "total_amount", insertable = false, updatable = false)
     private var totalAmountGenerated: Long? = 0
 
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now()
+    @Version
+    @Column(name = "version", nullable = false)
+    var version: Int = 0
 
-    @Column(name = "updated_at")
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    var createdAt: Instant = Instant.now()
+
+    @LastModifiedDate
+    @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now()
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    var createdBy: UUID? = null
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    var updatedBy: UUID? = null
 
     @Transient
     private var isNewRecord = true
@@ -111,6 +133,7 @@ enum class FulfillmentStatus { UNFULFILLED, BOOKED, IN_TRANSIT, DELIVERED, RETUR
 @Suppress("LongParameterList")
 @Entity
 @Table(name = "order_items", schema = "commerce")
+@EntityListeners(AuditingEntityListener::class)
 class OrderItem(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
@@ -141,8 +164,17 @@ class OrderItem(
     @Column(name = "line_total_amount", insertable = false, updatable = false)
     private var lineTotalAmountGenerated: Long? = 0
 
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now()
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    var createdAt: Instant = Instant.now()
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    var createdBy: UUID? = null
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    var updatedBy: UUID? = null
 
     @Transient
     private var isNewRecord = true
@@ -164,6 +196,7 @@ class OrderItem(
 @Suppress("LongParameterList")
 @Entity
 @Table(name = "order_shipping_addresses", schema = "commerce")
+@EntityListeners(AuditingEntityListener::class)
 class OrderShippingAddress(
     @Id
     @Column(name = "order_id")
@@ -176,6 +209,8 @@ class OrderShippingAddress(
     val recipientName: String,
     @Column(nullable = false, length = 30)
     val phone: String,
+    @Column(length = 254)
+    val email: String? = null,
     @Column(nullable = false, length = 200)
     val line1: String,
     @Column(length = 200)
@@ -194,9 +229,22 @@ class OrderShippingAddress(
     val postalCode: String,
     @Column(name = "country_code", nullable = false, length = 2)
     val countryCode: String = "ID",
+    @Column(nullable = true)
+    val latitude: Double? = null,
+    @Column(nullable = true)
+    val longitude: Double? = null,
 ) : Persistable<UUID> {
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now()
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    var createdAt: Instant = Instant.now()
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    var createdBy: UUID? = null
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    var updatedBy: UUID? = null
 
     @Transient
     private var isNewRecord = true
@@ -215,6 +263,7 @@ class OrderShippingAddress(
 @Suppress("LongParameterList")
 @Entity
 @Table(name = "order_shipping_selections", schema = "commerce")
+@EntityListeners(AuditingEntityListener::class)
 class OrderShippingSelection(
     @Id
     @Column(name = "order_id")
@@ -246,8 +295,17 @@ class OrderShippingSelection(
     @Column(name = "raw_quote_payload", columnDefinition = "JSONB")
     val rawQuotePayload: String?,
 ) : Persistable<UUID> {
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now()
+    @CreatedDate
+    @Column(name = "created_at", updatable = false, nullable = false)
+    var createdAt: Instant = Instant.now()
+
+    @CreatedBy
+    @Column(name = "created_by", updatable = false)
+    var createdBy: UUID? = null
+
+    @LastModifiedBy
+    @Column(name = "updated_by")
+    var updatedBy: UUID? = null
 
     @Transient
     private var isNewRecord = true

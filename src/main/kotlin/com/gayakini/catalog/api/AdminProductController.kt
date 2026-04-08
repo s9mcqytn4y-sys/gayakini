@@ -17,7 +17,7 @@ class AdminProductController(
 ) {
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun createProduct(
         @Valid @RequestBody request: AdminCreateProductRequest,
     ): AdminProductResponse {
@@ -41,7 +41,7 @@ class AdminProductController(
     }
 
     @PatchMapping("/products/{productId}")
-    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun updateProduct(
         @PathVariable productId: UUID,
         @Valid @RequestBody request: AdminUpdateProductRequest,
@@ -65,7 +65,7 @@ class AdminProductController(
     }
 
     @PostMapping("/variants/{variantId}/stock-adjustments")
-    @PreAuthorize("hasAuthority('CATALOG_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun adjustStock(
         @PathVariable variantId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,

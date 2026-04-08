@@ -29,4 +29,6 @@ data class PaymentSession(
     val token: String,
     val redirectUrl: String,
     val providerOrderId: String,
+    val requestPayload: String? = null,
+    val responsePayload: String? = null,
 )

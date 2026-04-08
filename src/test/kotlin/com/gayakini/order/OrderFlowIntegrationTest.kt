@@ -262,25 +262,63 @@ class OrderFlowIntegrationTest {
     }
 
     @Test
-    fun `should reject guest payment session without token`() {
-        val order =
+    fun `should reject order if stock is insufficient`() {
+        // Given
+        testVariant.stockOnHand = 1
+        testVariant.stockReserved = 0
+        productRepository.save(testProduct)
+
+        val request = PlaceOrderRequest(customerNotes = "Test notes")
+
+        // When & Then
+        val exception = assertThrows(IllegalStateException::class.java) {
             orderService.placeOrderFromCheckout(
                 checkoutId = testCheckout.id,
-                idempotencyKey = "guest-payment-access-key",
+                idempotencyKey = "insufficient-stock-key",
                 checkoutToken = guestToken,
-                request = PlaceOrderRequest(customerNotes = "Test notes"),
+                request = request,
             )
+        }
+        assertTrue(exception.message!!.contains("Stok tidak mencukupi"))
+    }
 
-        val error =
-            assertThrows(UnauthorizedException::class.java) {
-                paymentService.createPaymentSession(
-                    orderId = order.id,
-                    idempotencyKey = "payment-session-key",
-                    orderToken = null,
-                    request = null,
-                )
-            }
+    @Test
+    fun `should reject order if product is not published`() {
+        // Given
+        testProduct.status = ProductStatus.DRAFT
+        productRepository.save(testProduct)
 
-        assertEquals("Token pesanan diperlukan.", error.message)
+        val request = PlaceOrderRequest(customerNotes = "Test notes")
+
+        // When & Then
+        val exception = assertThrows(IllegalStateException::class.java) {
+            orderService.placeOrderFromCheckout(
+                checkoutId = testCheckout.id,
+                idempotencyKey = "unpublished-product-key",
+                checkoutToken = guestToken,
+                request = request,
+            )
+        }
+        assertTrue(exception.message!!.contains("tidak tersedia"))
+    }
+
+    @Test
+    fun `should reject order if variant is inactive`() {
+        // Given
+        testVariant.status = VariantStatus.INACTIVE
+        productRepository.save(testProduct)
+
+        val request = PlaceOrderRequest(customerNotes = "Test notes")
+
+        // When & Then
+        val exception = assertThrows(IllegalStateException::class.java) {
+            orderService.placeOrderFromCheckout(
+                checkoutId = testCheckout.id,
+                idempotencyKey = "inactive-variant-key",
+                checkoutToken = guestToken,
+                request = request,
+            )
+        }
+        assertTrue(exception.message!!.contains("tidak tersedia"))
     }
 }

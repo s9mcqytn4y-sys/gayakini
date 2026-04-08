@@ -1,8 +1,11 @@
 package com.gayakini.checkout.application
 
+import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.Cart
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
+import com.gayakini.catalog.domain.ProductStatus
+import com.gayakini.catalog.domain.VariantStatus
 import com.gayakini.checkout.api.CheckoutShippingAddressRequest
 import com.gayakini.checkout.api.GuestAddressRequest
 import com.gayakini.checkout.domain.*
@@ -25,6 +28,7 @@ import java.util.UUID
 class CheckoutService(
     private val checkoutRepository: CheckoutRepository,
     private val cartRepository: CartRepository,
+    private val cartService: CartService,
     private val shippingProvider: ShippingProvider,
     private val shippingQuoteRepository: CheckoutShippingQuoteRepository,
     private val customerAddressRepository: CustomerAddressRepository,
@@ -46,6 +50,19 @@ class CheckoutService(
                 .orElseThrow { NoSuchElementException("Keranjang tidak ditemukan.") }
 
         validateCartForCheckout(cart, customerId, cartToken)
+
+        // Refresh prices and snapshots from DB to ensure integrity
+        cartService.refreshCartPrices(cart)
+
+        // Validate stock and status for all items
+        cart.items.forEach { item ->
+            val variant = item.variant
+            check(variant.status == VariantStatus.ACTIVE) { "Produk ${item.productTitleSnapshot} tidak tersedia." }
+            check(variant.product.status == ProductStatus.PUBLISHED) { "Produk ${item.productTitleSnapshot} tidak tersedia." }
+            check(variant.stockAvailable >= item.quantity) {
+                "Stok tidak mencukupi untuk ${item.productTitleSnapshot}. Tersedia: ${variant.stockAvailable}"
+            }
+        }
 
         expireExistingCheckouts(cartId)
 
@@ -237,6 +254,7 @@ class CheckoutService(
         val addr = checkout.shippingAddress ?: createGuestShippingAddress(checkout, guest)
 
         mapGuestAddressFields(addr, guest)
+        addr.email = guest.email
         addr.updatedAt = Instant.now()
         checkout.shippingAddress = addr
     }
@@ -250,6 +268,7 @@ class CheckoutService(
             checkout = checkout,
             recipientName = guest.recipientName,
             phone = guest.phone,
+            email = guest.email,
             line1 = guest.line1,
             line2 = guest.line2,
             notes = guest.notes,

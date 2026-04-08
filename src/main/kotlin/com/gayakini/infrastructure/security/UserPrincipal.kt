@@ -8,12 +8,8 @@ data class UserPrincipal(
     val id: UUID,
     val email: String,
     val role: String,
-    val permissions: Set<String> = emptySet(),
 ) {
     fun toAuthorities(): Collection<GrantedAuthority> {
-        val authorities = mutableListOf<GrantedAuthority>()
-        authorities.add(SimpleGrantedAuthority("ROLE_$role"))
-        permissions.forEach { authorities.add(SimpleGrantedAuthority(it)) }
-        return authorities
+        return listOf(SimpleGrantedAuthority("ROLE_$role"))
     }
 }

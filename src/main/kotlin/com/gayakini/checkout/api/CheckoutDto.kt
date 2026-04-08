@@ -5,6 +5,7 @@ import com.gayakini.checkout.domain.CheckoutStatus
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
 import jakarta.validation.Valid
+import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
@@ -36,6 +37,7 @@ data class CheckoutAddressDto(
     val id: UUID?,
     val recipientName: String,
     val phone: String,
+    val email: String? = null,
     val line1: String,
     val line2: String? = null,
     val notes: String? = null,
@@ -76,10 +78,14 @@ data class CheckoutShippingAddressRequest(
 
 data class GuestAddressRequest(
     @field:NotBlank
+    @field:Email
+    @field:Size(max = 254)
+    val email: String,
+    @field:NotBlank
     @field:Size(max = 120)
     val recipientName: String,
     @field:NotBlank
-    @field:Pattern(regexp = "^[0-9+]{8,20}$")
+    @field:Pattern(regexp = "^\\+?[0-9]{10,14}$")
     val phone: String,
     @field:NotBlank
     @field:Size(max = 200)

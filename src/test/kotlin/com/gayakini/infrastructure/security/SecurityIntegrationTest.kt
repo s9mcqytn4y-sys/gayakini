@@ -130,7 +130,6 @@ class SecurityIntegrationTest {
                 id = customer.id,
                 email = customer.email,
                 role = customer.role.name,
-                permissions = customer.role.permissions.map { it.name }.toSet(),
             )
         val auth = UsernamePasswordAuthenticationToken(principal, null, principal.toAuthorities())
 
@@ -157,7 +156,6 @@ class SecurityIntegrationTest {
                 id = admin.id,
                 email = admin.email,
                 role = admin.role.name,
-                permissions = admin.role.permissions.map { it.name }.toSet(),
             )
         val auth = UsernamePasswordAuthenticationToken(principal, null, principal.toAuthorities())
 

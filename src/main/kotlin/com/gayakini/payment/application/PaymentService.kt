@@ -1,8 +1,10 @@
 package com.gayakini.payment.application
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.common.infrastructure.IdempotencyService
+import com.gayakini.common.util.BusinessIdGenerator
 import com.gayakini.common.util.HashUtils
 import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.infrastructure.security.SecurityUtils
@@ -30,6 +32,7 @@ class PaymentService(
     private val inventoryService: InventoryService,
     private val paymentProvider: PaymentProvider,
     private val idempotencyService: IdempotencyService,
+    private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -106,12 +109,15 @@ class PaymentService(
         val payment =
             Payment(
                 orderId = order.id,
+                transactionNumber = BusinessIdGenerator.generateTransactionNumber(),
                 providerOrderId = providerOrderId,
                 grossAmount = order.totalAmount,
                 status = PaymentStatus.PENDING,
                 snapToken = session.token,
                 snapRedirectUrl = session.redirectUrl,
                 expiresAt = Instant.now().plusSeconds(PAYMENT_EXPIRY_SECONDS),
+                providerRequestPayload = session.requestPayload,
+                providerResponsePayload = session.responsePayload,
             )
 
         return paymentRepository.save(payment)
@@ -167,8 +173,6 @@ class PaymentService(
         val providerOrderId = payload["order_id"] as String
         val transactionStatus = payload["transaction_status"] as String
 
-        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
-
         val payment =
             paymentRepository.findByProviderOrderId(providerOrderId)
                 .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId") }
@@ -176,6 +180,9 @@ class PaymentService(
         val order =
             orderRepository.findById(payment.orderId)
                 .orElseThrow { NoSuchElementException("Order tidak ditemukan untuk pembayaran: $providerOrderId") }
+
+        // Fetch official status from Midtrans API to be sure (reconciliation)
+        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
 
         if (payment.status != reconciledStatus) {
             updatePaymentAndOrderStates(payment, order, reconciledStatus, payload, transactionStatus)
@@ -192,6 +199,7 @@ class PaymentService(
         payment.status = reconciledStatus
         payment.providerTransactionId = payload["transaction_id"] as? String
         payment.rawProviderStatus = transactionStatus
+        payment.providerResponsePayload = objectMapper.writeValueAsString(payload)
         payment.updatedAt = Instant.now()
 
         if (reconciledStatus == PaymentStatus.PAID) {

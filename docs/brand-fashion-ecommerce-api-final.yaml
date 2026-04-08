@@ -858,8 +858,7 @@ paths:
       summary: Create product
       operationId: adminCreateProduct
       security:
-      - adminBearerAuth:
-        - catalog:write
+      - Admin: []
       requestBody:
         required: true
         content:
@@ -882,8 +881,7 @@ paths:
       summary: Update product
       operationId: adminUpdateProduct
       security:
-      - adminBearerAuth:
-        - catalog:write
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/ProductId'
       requestBody:
@@ -908,8 +906,7 @@ paths:
       summary: Create variant
       operationId: adminCreateVariant
       security:
-      - adminBearerAuth:
-        - catalog:write
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/ProductId'
       requestBody:
@@ -934,8 +931,7 @@ paths:
       summary: Update variant
       operationId: adminUpdateVariant
       security:
-      - adminBearerAuth:
-        - catalog:write
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/VariantId'
       requestBody:
@@ -960,8 +956,7 @@ paths:
       summary: Adjust variant stock
       operationId: adminAdjustVariantStock
       security:
-      - adminBearerAuth:
-        - inventory:adjust
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/VariantId'
       - $ref: '#/components/parameters/IdempotencyKeyRequired'
@@ -987,8 +982,7 @@ paths:
       summary: List orders for backoffice
       operationId: adminListOrders
       security:
-      - adminBearerAuth:
-        - orders:read
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/Page'
       - $ref: '#/components/parameters/Size'
@@ -1025,8 +1019,7 @@ paths:
       summary: Get admin order detail
       operationId: adminGetOrder
       security:
-      - adminBearerAuth:
-        - orders:read
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/OrderId'
       responses:
@@ -1043,7 +1036,7 @@ paths:
       tags:
       - Admin Orders
       summary: Create shipment booking for a paid order
-      description: 'Uses the chosen shipping quote stored on the order.
+      description: 'The selected shipping quote on the order is used by default.
 
         Backend may create a Biteship order and store the returned provider references.
 
@@ -1052,8 +1045,7 @@ paths:
         '
       operationId: adminCreateShipment
       security:
-      - adminBearerAuth:
-        - orders:fulfill
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/OrderId'
       - $ref: '#/components/parameters/IdempotencyKeyRequired'
@@ -1081,8 +1073,7 @@ paths:
       summary: Cancel order by admin
       operationId: adminCancelOrder
       security:
-      - adminBearerAuth:
-        - orders:cancel
+      - Admin: []
       parameters:
       - $ref: '#/components/parameters/OrderId'
       - $ref: '#/components/parameters/IdempotencyKeyRequired'
@@ -1107,10 +1098,11 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-    adminBearerAuth:
+    Admin:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: Strictly restricted to ROLE_ADMIN.
     cartTokenAuth:
       type: apiKey
       in: header
@@ -1385,6 +1377,7 @@ components:
       type: string
       enum:
       - CUSTOMER
+      - ADMIN
     ProductMedia:
       type: object
       additionalProperties: false
@@ -1891,6 +1884,14 @@ components:
           type: string
           enum:
           - ID
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
         isDefault:
           type: boolean
     AddressUpsertRequest:
@@ -1941,6 +1942,14 @@ components:
           type: string
           enum:
           - ID
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
         isDefault:
           type: boolean
           default: false
@@ -2311,6 +2320,7 @@ components:
       additionalProperties: false
       required:
       - paymentId
+      - transactionNumber
       - provider
       - flow
       - status
@@ -2319,6 +2329,10 @@ components:
         paymentId:
           type: string
           format: uuid
+        transactionNumber:
+          type: string
+          maxLength: 50
+          example: TRX-20260804-0001
         provider:
           $ref: '#/components/schemas/PaymentProvider'
         flow:
@@ -2484,6 +2498,7 @@ components:
         orderNumber:
           type: string
           maxLength: 50
+          example: ORD-20260804-0001
         accessToken:
           type: string
           description: Returned only for guest order access.

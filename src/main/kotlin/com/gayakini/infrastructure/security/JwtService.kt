@@ -26,7 +26,6 @@ class JwtService(private val properties: GayakiniProperties) {
         userId: UUID,
         email: String,
         role: String,
-        permissions: Set<String> = emptySet(),
     ): String {
         val now = Date()
         val expiry = Date(now.time + properties.jwt.accessTokenExpirationMinutes * 60 * 1000)
@@ -35,7 +34,6 @@ class JwtService(private val properties: GayakiniProperties) {
             .subject(userId.toString())
             .claim("email", email)
             .claim("role", role)
-            .claim("perms", permissions.toList())
             .issuedAt(now)
             .expiration(expiry)
             .signWith(signingKey)
@@ -82,7 +80,6 @@ class JwtService(private val properties: GayakiniProperties) {
                 id = UUID.fromString(claims.subject),
                 email = claims["email"] as String,
                 role = claims["role"] as String,
-                permissions = (claims["perms"] as? List<String>)?.toSet() ?: emptySet(),
             )
         } catch (e: Exception) {
             null

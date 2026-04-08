@@ -82,7 +82,6 @@ class CustomerService(
                 userId = customer.id,
                 email = customer.email,
                 role = customer.role.name,
-                permissions = customer.role.permissions.map { it.name }.toSet(),
             )
         val refreshToken = jwtService.generateRefreshToken(customer.id)
         return JwtTokenPair(
@@ -160,6 +159,28 @@ class CustomerService(
                 .filter { it.customer.id == customerId }
                 .orElseThrow { NoSuchElementException("Alamat tidak ditemukan.") }
         addressRepository.delete(address)
+    }
+
+    @Transactional
+    fun updateProfile(
+        customerId: UUID,
+        request: UpdateProfileRequest,
+    ): CustomerProfileResponse {
+        val customer = getCustomer(customerId)
+
+        request.email?.trim()?.lowercase()?.let { newEmail ->
+            if (newEmail != customer.email) {
+                check(customerRepository.findByEmail(newEmail).isEmpty) { "Email sudah terdaftar." }
+                customer.email = newEmail
+            }
+        }
+
+        request.phone?.trim()?.let { customer.phone = it }
+        request.fullName?.trim()?.let { customer.fullName = it }
+
+        customer.updatedAt = Instant.now()
+        val savedCustomer = customerRepository.save(customer)
+        return mapToProfileResponse(savedCustomer)
     }
 
     @Transactional

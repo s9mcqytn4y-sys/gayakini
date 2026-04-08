@@ -4,6 +4,7 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
+  "phone": "081234567890",
   "password": "Password123!",
   "fullName": "Gaya User"
 }

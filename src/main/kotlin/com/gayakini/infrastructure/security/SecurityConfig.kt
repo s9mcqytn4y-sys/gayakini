@@ -49,13 +49,13 @@ class SecurityConfig(
                     .requestMatchers("/v1/orders/*/payments").permitAll()
                     .requestMatchers("/v1/orders/*/cancellations").permitAll()
                     // Customer Profile & Personal Orders
-                    .requestMatchers("/v1/me/**").authenticated()
-                    // Admin (Strictly guarded, method security handles granular permissions)
-                    .requestMatchers("/v1/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                    .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
+                    // Admin (Strictly guarded, ONE role to rule them all)
+                    .requestMatchers("/v1/admin/**").hasRole("ADMIN")
                     // Documentation & Actuator
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                    .requestMatchers("/actuator/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                    .requestMatchers("/actuator/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             }
             .exceptionHandling {

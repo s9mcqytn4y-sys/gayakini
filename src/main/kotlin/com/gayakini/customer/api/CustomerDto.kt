@@ -13,14 +13,25 @@ data class RegisterRequest(
     @field:NotBlank
     @field:Size(max = 254)
     val email: String,
-    @field:Pattern(regexp = "^[0-9+]{8,20}$")
-    val phone: String?,
+    @field:NotBlank
+    @field:Pattern(regexp = "^\\+?[0-9]{10,14}$")
+    val phone: String,
     @field:NotBlank
     @field:Size(max = 120)
     val fullName: String,
     @field:NotBlank
     @field:Size(min = 8, max = 72)
     val password: String,
+)
+
+data class UpdateProfileRequest(
+    @field:Email
+    @field:Size(max = 254)
+    val email: String? = null,
+    @field:Pattern(regexp = "^\\+?[0-9]{10,14}$")
+    val phone: String? = null,
+    @field:Size(max = 120)
+    val fullName: String? = null,
 )
 
 data class LoginRequest(
@@ -86,7 +97,7 @@ data class AddressUpsertRequest(
     @field:Size(max = 120)
     val recipientName: String,
     @field:NotBlank
-    @field:Pattern(regexp = "^[0-9+]{8,20}$")
+    @field:Pattern(regexp = "^\\+?[0-9]{10,14}$")
     val phone: String,
     @field:NotBlank
     @field:Size(max = 200)

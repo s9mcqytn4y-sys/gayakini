@@ -88,19 +88,19 @@ class CheckoutItem(
     @JoinColumn(name = "variant_id", nullable = false)
     val variant: ProductVariant,
     @Column(name = "product_title_snapshot", nullable = false, length = 180)
-    val productTitleSnapshot: String,
+    var productTitleSnapshot: String,
     @Column(name = "sku_snapshot", nullable = false, length = 64)
-    val skuSnapshot: String,
+    var skuSnapshot: String,
     @Column(nullable = false, length = 50)
-    val color: String,
+    var color: String,
     @Column(name = "size_code", nullable = false, length = 20)
-    val sizeCode: String,
+    var sizeCode: String,
     @Column(nullable = false)
     val quantity: Int,
     @Column(name = "unit_price_amount", nullable = false)
-    val unitPriceAmount: Long,
+    var unitPriceAmount: Long,
     @Column(name = "compare_at_amount")
-    val compareAtAmount: Long? = null,
+    var compareAtAmount: Long? = null,
     @Column(name = "primary_image_url", columnDefinition = "TEXT")
     val primaryImageUrl: String? = null,
 ) {
@@ -132,6 +132,8 @@ class CheckoutShippingAddress(
     var recipientName: String,
     @Column(nullable = false, length = 30)
     var phone: String,
+    @Column(length = 254)
+    var email: String? = null,
     @Column(nullable = false, length = 200)
     var line1: String,
     @Column(length = 200)

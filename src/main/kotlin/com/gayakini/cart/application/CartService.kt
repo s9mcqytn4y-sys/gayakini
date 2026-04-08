@@ -191,6 +191,24 @@ class CartService(
         }
     }
 
+    @Transactional
+    fun refreshCartPrices(cart: Cart) {
+        val variantIds = cart.items.map { it.variant.id }
+        val variants = variantRepository.findAllByIdIn(variantIds).associateBy { it.id }
+
+        cart.items.forEach { item ->
+            val variant = variants[item.variant.id]
+            if (variant != null) {
+                item.unitPriceAmount = variant.priceAmount
+                item.compareAtAmount = variant.compareAtAmount
+                item.productTitleSnapshot = variant.product.title
+                item.skuSnapshot = variant.sku
+                item.updatedAt = Instant.now()
+            }
+        }
+        updateTotals(cart)
+    }
+
     private fun updateTotals(cart: Cart) {
         cart.itemCount = cart.items.sumOf { it.quantity }
         cart.subtotalAmount = cart.items.sumOf { it.unitPriceAmount * it.quantity }

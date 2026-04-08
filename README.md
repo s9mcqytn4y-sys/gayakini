@@ -102,6 +102,7 @@ Dokumen pendukung:
 - [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
 - [docs/TESTING.md](docs/TESTING.md)
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md)
+- [docs/security-rbac.md](docs/security-rbac.md)
 
 ## Midtrans Sandbox Setup
 

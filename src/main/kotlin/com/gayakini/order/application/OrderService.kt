@@ -1,7 +1,10 @@
 package com.gayakini.order.application
 
+import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
+import com.gayakini.catalog.domain.ProductStatus
+import com.gayakini.catalog.domain.VariantStatus
 import com.gayakini.checkout.domain.Checkout
 import com.gayakini.checkout.domain.CheckoutRepository
 import com.gayakini.checkout.domain.CheckoutStatus
@@ -27,6 +30,7 @@ class OrderService(
     private val orderRepository: OrderRepository,
     private val checkoutRepository: CheckoutRepository,
     private val cartRepository: CartRepository,
+    private val cartService: CartService,
     private val inventoryService: InventoryService,
     private val idempotencyService: IdempotencyService,
 ) {
@@ -60,6 +64,28 @@ class OrderService(
                     .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
 
             validateCheckoutState(checkout, currentUser, checkoutToken)
+
+            // Final re-validation of pricing and availability before order placement
+            val cart = checkout.cart
+            cartService.refreshCartPrices(cart)
+
+            checkout.items.forEach { checkoutItem ->
+                val variant = checkoutItem.variant
+                check(variant.status == VariantStatus.ACTIVE) { "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia." }
+                check(variant.product.status == ProductStatus.PUBLISHED) { "Produk ${checkoutItem.productTitleSnapshot} tidak tersedia." }
+
+                // Update checkout snapshots if cart was refreshed
+                val cartItem = cart.items.find { it.variant.id == variant.id }
+                if (cartItem != null) {
+                    checkoutItem.unitPriceAmount = cartItem.unitPriceAmount
+                    checkoutItem.compareAtAmount = cartItem.compareAtAmount
+                }
+            }
+
+            // Recalculate checkout subtotal
+            checkout.subtotalAmount = checkout.items.sumOf { it.unitPriceAmount * it.quantity }
+            checkout.updatedAt = Instant.now()
+            checkoutRepository.save(checkout)
 
             val order = createOrderFromCheckout(checkout, request)
 
@@ -144,6 +170,7 @@ class OrderService(
                 order = order,
                 recipientName = checkoutAddress.recipientName,
                 phone = checkoutAddress.phone,
+                email = checkoutAddress.email,
                 line1 = checkoutAddress.line1,
                 line2 = checkoutAddress.line2,
                 notes = checkoutAddress.notes,

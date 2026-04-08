@@ -1,5 +1,6 @@
 package com.gayakini.payment.infrastructure
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.infrastructure.config.GayakiniProperties
 import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
@@ -21,6 +22,7 @@ import java.util.UUID
 class MidtransPaymentProvider(
     private val properties: GayakiniProperties,
     private val restTemplate: RestTemplate,
+    private val objectMapper: ObjectMapper,
 ) : PaymentProvider {
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
 
@@ -30,7 +32,7 @@ class MidtransPaymentProvider(
         amount: Long,
         customerDetails: CustomerPaymentDetails,
     ): PaymentSession {
-        val requestBody =
+        val requestMap =
             mapOf(
                 "transaction_details" to
                     mapOf(
@@ -43,15 +45,20 @@ class MidtransPaymentProvider(
                         "email" to customerDetails.email,
                         "phone" to customerDetails.phone,
                     ),
+                "usage_limit" to 1,
             )
 
+        val requestPayload = objectMapper.writeValueAsString(requestMap)
         val headers = createHeaders()
+
         val response =
             restTemplate.postForEntity(
                 properties.midtrans.snapUrl,
-                HttpEntity(requestBody, headers),
+                HttpEntity(requestMap, headers),
                 Map::class.java,
             )
+
+        val responsePayload = objectMapper.writeValueAsString(response.body)
 
         if (response.statusCode.is2xxSuccessful) {
             val body = response.body as Map<*, *>
@@ -59,9 +66,11 @@ class MidtransPaymentProvider(
                 token = body["token"] as String,
                 redirectUrl = body["redirect_url"] as String,
                 providerOrderId = providerOrderId,
+                requestPayload = requestPayload,
+                responsePayload = responsePayload,
             )
         } else {
-            logger.error("Gagal membuat sesi pembayaran Midtrans: {} - {}", response.statusCode, response.body)
+            logger.error("Gagal membuat sesi pembayaran Midtrans: {} - {}", response.statusCode, responsePayload)
             error("Gagal membuat sesi pembayaran. Silakan coba lagi.")
         }
     }

@@ -25,7 +25,7 @@ class AdminOrderController(
     private val shippingService: ShippingService,
 ) {
     @GetMapping
-    @PreAuthorize("hasAuthority('ORDER_READ')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun listOrders(
         @RequestParam(defaultValue = "1") page: Int,
         @RequestParam(defaultValue = "20") size: Int,
@@ -55,7 +55,7 @@ class AdminOrderController(
     }
 
     @GetMapping("/{orderId}")
-    @PreAuthorize("hasAuthority('ORDER_READ')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun getOrder(
         @PathVariable orderId: UUID,
     ): OrderResponse {
@@ -68,7 +68,7 @@ class AdminOrderController(
     }
 
     @PostMapping("/{orderId}/shipments")
-    @PreAuthorize("hasAuthority('ORDER_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun createShipment(
         @PathVariable orderId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,
@@ -84,7 +84,7 @@ class AdminOrderController(
     }
 
     @PostMapping("/{orderId}/cancellations")
-    @PreAuthorize("hasAuthority('ORDER_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     fun cancelOrder(
         @PathVariable orderId: UUID,
         @RequestHeader("Idempotency-Key") idempotencyKey: String,

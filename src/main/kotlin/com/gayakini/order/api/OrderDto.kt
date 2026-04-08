@@ -53,6 +53,7 @@ data class OrderAddressDto(
     val id: UUID? = null,
     val recipientName: String,
     val phone: String,
+    val email: String? = null,
     val line1: String,
     val line2: String? = null,
     val notes: String? = null,
