@@ -399,6 +399,19 @@ tasks.register("flywayInfoLocal") {
     }
 }
 
+tasks.register("flywayRepairLocal") {
+    group = "database"
+    description = "Repairs Flyway schema history for local database."
+    dependsOn("dbStart")
+    val pDir = projectDir
+    doLast {
+        val ansiResetLocal = "\u001B[0m"
+        val ansiGreenLocal = "\u001B[32m"
+        createLocalFlyway(pDir).repair()
+        println("[$ansiGreenLocal\u2705$ansiResetLocal] Flyway repair local complete.")
+    }
+}
+
 tasks.register("flywayMigrateLocal") {
     group = "database"
     description = "Runs Flyway migrations against local database."
