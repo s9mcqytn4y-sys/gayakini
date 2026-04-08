@@ -124,7 +124,10 @@ tasks.register("dbStart") {
     val dbPortValue = (System.getProperty("DB_PORT") ?: "5432").toInt()
     val isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows
     val userProfile = System.getenv("USERPROFILE")
-    val pgDataVal = System.getProperty("PGDATA") ?: System.getenv("PGDATA") ?: "$userProfile\\scoop\\persist\\postgresql\\data"
+    val pgDataVal =
+        System.getProperty("PGDATA")
+            ?: System.getenv("PGDATA")
+            ?: "$userProfile\\scoop\\persist\\postgresql\\data"
     val pgDataFile = file(pgDataVal)
 
     // Captured services
@@ -238,7 +241,12 @@ tasks.register("dbDoctor") {
 
         println("Database Name: $dbNameVal")
         println("Java Version: $javaVersion")
-        val envFound = if (envFileExists) "$ansiGreenLocal FOUND$ansiResetLocal" else "$ansiRedLocal MISSING$ansiResetLocal"
+        val envFound =
+            if (envFileExists) {
+                "$ansiGreenLocal FOUND$ansiResetLocal"
+            } else {
+                "$ansiRedLocal MISSING$ansiResetLocal"
+            }
         println(".env file: $envFound")
     }
 }
@@ -323,7 +331,6 @@ tasks.register("validateMcp") {
 
     doLast {
         val ansiResetLocal = "\u001B[0m"
-        val ansiCyanLocal = "\u001B[36m"
         val ansiYellowLocal = "\u001B[33m"
         val ansiBoldLocal = "\u001B[1m"
 

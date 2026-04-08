@@ -19,12 +19,14 @@ class CustomerService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
 ) {
+    companion object {
+        private const val JWT_EXPIRY_SECONDS = 3600
+    }
+
     @Transactional
     fun register(request: RegisterRequest): AuthTokensData {
         val normalizedEmail = request.email.trim().lowercase()
-        if (customerRepository.findByEmail(normalizedEmail).isPresent) {
-            throw IllegalStateException("Email sudah terdaftar.")
-        }
+        check(customerRepository.findByEmail(normalizedEmail).isEmpty) { "Email sudah terdaftar." }
 
         val customer =
             Customer(
@@ -86,8 +88,7 @@ class CustomerService(
         return JwtTokenPair(
             accessToken = accessToken,
             refreshToken = refreshToken,
-            // This should ideally come from config or JwtService
-            expiresIn = 3600,
+            expiresIn = JWT_EXPIRY_SECONDS,
         )
     }
 

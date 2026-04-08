@@ -55,8 +55,9 @@ class ProductService(
 
     @Transactional(readOnly = true)
     fun getProduct(id: UUID): Product {
-        val product = productRepository.findById(id)
-            .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
+        val product =
+            productRepository.findById(id)
+                .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
 
         // Eagerly initialize lazy collections to avoid LazyInitializationException in controller mapping
         Hibernate.initialize(product.variants)
@@ -74,8 +75,8 @@ class ProductService(
             productVariantRepository.findWithLockById(variantId)
                 .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
 
-        if (variant.stockAvailable < quantity) {
-            throw IllegalStateException("Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}")
+        check(variant.stockAvailable >= quantity) {
+            "Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}"
         }
 
         variant.stockReserved += quantity

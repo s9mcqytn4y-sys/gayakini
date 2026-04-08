@@ -1,5 +1,7 @@
 package com.gayakini.cart.domain
 
+import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
 import jakarta.persistence.CascadeType
@@ -20,6 +22,7 @@ import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "carts", schema = "commerce")
 class Cart(
@@ -40,6 +43,7 @@ class Cart(
     var itemCount: Int = 0,
     @Column(name = "subtotal_amount", nullable = false, updatable = false)
     var subtotalAmount: Long = 0,
+    @JsonManagedReference
     @OneToMany(mappedBy = "cart", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<CartItem> = mutableListOf(),
     @Column(name = "created_at", updatable = false)
@@ -63,11 +67,13 @@ class Cart(
 
 enum class CartStatus { ACTIVE, CHECKOUT_IN_PROGRESS, CONVERTED, EXPIRED }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "cart_items", schema = "commerce")
 class CartItem(
     @Id
     val id: UUID = UUID.randomUUID(),
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cart_id", nullable = false)
     val cart: Cart,
@@ -93,13 +99,16 @@ class CartItem(
     var compareAtAmount: Long? = null,
     @Column(name = "primary_image_url", columnDefinition = "TEXT")
     var primaryImageUrl: String? = null,
-    @Column(name = "line_total_amount", insertable = false, updatable = false)
-    private var _lineTotalAmount: Long? = 0,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
-    @Column(name = "updated_at")
-    var updatedAt: Instant = Instant.now(),
 ) {
+    @Column(name = "line_total_amount", insertable = false, updatable = false)
+    private var lineTotalAmountGenerated: Long? = 0
+
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant = Instant.now()
+
     val lineTotalAmount: Long
-        get() = _lineTotalAmount ?: (quantity * unitPriceAmount)
+        get() = (quantity * unitPriceAmount).toLong()
 }

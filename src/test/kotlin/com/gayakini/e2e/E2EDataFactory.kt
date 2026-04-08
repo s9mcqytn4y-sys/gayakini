@@ -89,18 +89,20 @@ object E2EDataFactory {
     // CHECKOUT & ORDER REQUESTS
     fun createCheckoutRequest(cartId: UUID) = CreateCheckoutRequest(cartId = cartId)
 
-    fun createShippingAddressRequest() = CheckoutShippingAddressRequest(
-        guestAddress = GuestAddressRequest(
-            recipientName = "Budi Santoso",
-            phone = "081234567890",
-            line1 = "Jl. Merdeka No. 10",
-            district = "Coblong",
-            city = "Bandung",
-            province = "Jawa Barat",
-            postalCode = "40132",
-            areaId = "3273010",
-        ),
-    )
+    fun createShippingAddressRequest() =
+        CheckoutShippingAddressRequest(
+            guestAddress =
+                GuestAddressRequest(
+                    recipientName = "Budi Santoso",
+                    phone = "081234567890",
+                    line1 = "Jl. Merdeka No. 10",
+                    district = "Coblong",
+                    city = "Bandung",
+                    province = "Jawa Barat",
+                    postalCode = "40132",
+                    areaId = "3273010",
+                ),
+        )
 
     fun createSelectShippingQuoteRequest(quoteId: UUID) = SelectShippingQuoteRequest(quoteId = quoteId)
 

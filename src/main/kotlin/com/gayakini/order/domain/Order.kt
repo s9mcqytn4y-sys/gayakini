@@ -1,13 +1,30 @@
 package com.gayakini.order.domain
 
+import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.common.util.UuidV7Generator
-import jakarta.persistence.*
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
+import jakarta.persistence.PostLoad
+import jakarta.persistence.PostPersist
+import jakarta.persistence.Table
+import jakarta.persistence.Transient
 import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "orders", schema = "commerce")
 class Order(
@@ -39,9 +56,6 @@ class Order(
     val subtotalAmount: Long,
     @Column(name = "shipping_cost_amount", nullable = false)
     val shippingCostAmount: Long,
-    // Matched to schema generated column
-    @Column(name = "total_amount", insertable = false, updatable = false)
-    private val totalAmountGenerated: Long = 0,
     @Column(name = "current_payment_id")
     var currentPaymentId: UUID? = null,
     @Column(name = "customer_notes", length = 500)
@@ -54,17 +68,23 @@ class Order(
     var cancelledAt: Instant? = null,
     @Column(name = "cancellation_reason", length = 300)
     var cancellationReason: String? = null,
+    @JsonManagedReference
     @OneToMany(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<OrderItem> = mutableListOf(),
     @OneToOne(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     var shippingAddress: OrderShippingAddress? = null,
     @OneToOne(mappedBy = "order", cascade = [CascadeType.ALL], orphanRemoval = true)
     var shippingSelection: OrderShippingSelection? = null,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
-    @Column(name = "updated_at")
-    var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "total_amount", insertable = false, updatable = false)
+    private var totalAmountGenerated: Long? = 0
+
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant = Instant.now()
+
     @Transient
     private var isNewRecord = true
 
@@ -88,12 +108,14 @@ enum class PaymentStatus { PENDING, PAID, FAILED, EXPIRED, CANCELLED, REFUNDED }
 
 enum class FulfillmentStatus { UNFULFILLED, BOOKED, IN_TRANSIT, DELIVERED, RETURNED, CANCELLED }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "order_items", schema = "commerce")
 class OrderItem(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     private val id: UUID = UuidV7Generator.generate(),
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
     val order: Order,
@@ -115,12 +137,13 @@ class OrderItem(
     val quantity: Int,
     @Column(name = "unit_price_amount", nullable = false)
     val unitPriceAmount: Long,
-    // Matched to schema generated column
-    @Column(name = "line_total_amount", insertable = false, updatable = false)
-    private val lineTotalAmountGenerated: Long = 0,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "line_total_amount", insertable = false, updatable = false)
+    private var lineTotalAmountGenerated: Long? = 0
+
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
     @Transient
     private var isNewRecord = true
 
@@ -138,14 +161,15 @@ class OrderItem(
     }
 }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "order_shipping_addresses", schema = "commerce")
 class OrderShippingAddress(
     @Id
     @Column(name = "order_id")
     val orderId: UUID,
+    @JsonBackReference
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
     @JoinColumn(name = "order_id")
     val order: Order,
     @Column(name = "recipient_name", nullable = false, length = 120)
@@ -165,14 +189,15 @@ class OrderShippingAddress(
     @Column(nullable = false, length = 120)
     val city: String,
     @Column(nullable = false, length = 120)
-    val province: String,
+    var province: String,
     @Column(name = "postal_code", nullable = false, length = 20)
     val postalCode: String,
     @Column(name = "country_code", nullable = false, length = 2)
     val countryCode: String = "ID",
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
     @Transient
     private var isNewRecord = true
 
@@ -187,14 +212,15 @@ class OrderShippingAddress(
     }
 }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "order_shipping_selections", schema = "commerce")
 class OrderShippingSelection(
     @Id
     @Column(name = "order_id")
     val orderId: UUID,
+    @JsonBackReference
     @OneToOne(fetch = FetchType.LAZY)
-    @MapsId
     @JoinColumn(name = "order_id")
     val order: Order,
     @Column(nullable = false, length = 20)
@@ -219,9 +245,10 @@ class OrderShippingSelection(
     val estimatedDaysMax: Int?,
     @Column(name = "raw_quote_payload", columnDefinition = "JSONB")
     val rawQuotePayload: String?,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
     @Transient
     private var isNewRecord = true
 

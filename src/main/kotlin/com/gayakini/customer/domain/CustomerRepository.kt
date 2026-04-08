@@ -6,6 +6,8 @@ import java.util.UUID
 
 interface CustomerRepository : JpaRepository<Customer, UUID> {
     fun findByEmail(email: String): Optional<Customer>
+
+    fun existsByEmail(email: String): Boolean
 }
 
 interface CustomerAddressRepository : JpaRepository<CustomerAddress, UUID> {

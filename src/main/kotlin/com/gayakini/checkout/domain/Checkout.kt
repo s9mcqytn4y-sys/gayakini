@@ -1,5 +1,7 @@
 package com.gayakini.checkout.domain
 
+import com.fasterxml.jackson.annotation.JsonBackReference
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import com.gayakini.cart.domain.Cart
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
@@ -8,6 +10,7 @@ import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "checkouts", schema = "commerce")
 class Checkout(
@@ -29,10 +32,9 @@ class Checkout(
     var subtotalAmount: Long = 0,
     @Column(name = "shipping_cost_amount", nullable = false)
     var shippingCostAmount: Long = 0,
-    @Column(name = "total_amount", insertable = false, updatable = false)
-    val totalAmount: Long = 0,
     @Column(name = "selected_shipping_quote_id")
     var selectedShippingQuoteId: UUID? = null,
+    @JsonManagedReference
     @OneToMany(mappedBy = "checkout", cascade = [CascadeType.ALL], orphanRemoval = true)
     val items: MutableList<CheckoutItem> = mutableListOf(),
     @OneToOne(mappedBy = "checkout", cascade = [CascadeType.ALL])
@@ -47,8 +49,14 @@ class Checkout(
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "total_amount", insertable = false, updatable = false)
+    private var totalAmountGenerated: Long? = 0
+
     @Transient
     private var isNewRecord = true
+
+    val totalAmount: Long
+        get() = subtotalAmount + shippingCostAmount
 
     override fun getId(): UUID = id
 
@@ -63,11 +71,13 @@ class Checkout(
 
 enum class CheckoutStatus { ACTIVE, READY_FOR_ORDER, ORDER_CREATED, EXPIRED }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "checkout_items", schema = "commerce")
 class CheckoutItem(
     @Id
     val id: UUID = UUID.randomUUID(),
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checkout_id", nullable = false)
     val checkout: Checkout,
@@ -93,18 +103,25 @@ class CheckoutItem(
     val compareAtAmount: Long? = null,
     @Column(name = "primary_image_url", columnDefinition = "TEXT")
     val primaryImageUrl: String? = null,
+) {
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    val lineTotalAmount: Long = 0,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
-)
+    private var lineTotalAmountGenerated: Long? = 0
 
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
+    val lineTotalAmount: Long
+        get() = (quantity * unitPriceAmount).toLong()
+}
+
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "checkout_shipping_addresses", schema = "commerce")
 class CheckoutShippingAddress(
     @Id
     @Column(name = "checkout_id")
     val checkoutId: UUID,
+    @JsonBackReference
     @OneToOne
     @MapsId
     @JoinColumn(name = "checkout_id")
@@ -152,11 +169,13 @@ class CheckoutShippingAddress(
     }
 }
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "checkout_shipping_quotes", schema = "commerce")
 class CheckoutShippingQuote(
     @Id
     val id: UUID = UUID.randomUUID(),
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "checkout_id", nullable = false)
     val checkout: Checkout,

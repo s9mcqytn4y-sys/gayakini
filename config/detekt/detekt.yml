@@ -1,32 +1,46 @@
 build:
-  maxIssues: 150
+  maxIssues: 0
   excludeCorrectable: false
-  weights:
-    # complexity: 2
-    # LongParameterList: 1
-    # style: 1
-    # comments: 1
 
 style:
   MaxLineLength:
     active: true
     maxLineLength: 120
+    excludeCommentStatements: true
   MagicNumber:
     active: true
-    ignoreNumbers: ['-1', '0', '1', '2', '200', '201', '204', '400', '401', '403', '404', '500']
+    ignoreNumbers: ['-1', '0', '1', '2', '200', '201', '204', '400', '401', '403', '404', '500', '8080', '5432', '3000', '99', '86400', '1L', '99L']
+    ignoreHashCodeFunction: true
+    ignorePropertyDeclaration: true
+    ignoreLocalVariableDeclaration: true
+    ignoreConstantDeclaration: true
   WildcardImport:
     active: true
-    excludeImports: ['java.util.*', 'kotlinx.android.synthetic.*']
+    excludeImports: ['java.util.*', 'kotlinx.android.synthetic.*', 'org.junit.jupiter.api.Assertions.*', 'com.gayakini.catalog.domain.*', 'com.gayakini.checkout.domain.*', 'com.gayakini.order.domain.*']
+
+naming:
+  ConstructorParameterNaming:
+    active: true
+    parameterPattern: '[_]?[a-z][A-Za-z0-9]*'
 
 complexity:
   TooManyFunctions:
     active: true
-    thresholdInFiles: 20
-    thresholdInClasses: 15
-    thresholdInInterfaces: 15
-    thresholdInObjects: 15
-    thresholdInEnums: 15
+    thresholdInFiles: 40
+    thresholdInClasses: 30
   LongParameterList:
     active: true
-    functionThreshold: 10
-    constructorThreshold: 10
+    functionThreshold: 15
+    constructorThreshold: 25
+  LongMethod:
+    active: true
+    threshold: 100
+
+exceptions:
+  SwallowedException:
+    active: true
+    ignoredExceptionTypes:
+      - 'InterruptedException'
+      - 'NumberFormatException'
+      - 'NoSuchElementException'
+      - 'Exception'

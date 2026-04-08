@@ -4,21 +4,25 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.common.util.HashUtils
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
-import jakarta.persistence.EntityManager
 import jakarta.persistence.Id
-import jakarta.persistence.NoResultException
-import jakarta.persistence.PersistenceContext
 import jakarta.persistence.Table
+import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.stereotype.Repository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.util.Optional
 import java.util.UUID
 
 @Service
 class IdempotencyService(
-    @PersistenceContext private val entityManager: EntityManager,
+    private val repository: IdempotencyKeyRepository,
     private val objectMapper: ObjectMapper,
 ) {
+    /**
+     * Handles idempotency for a given scope and key.
+     * Note: Propagation is REQUIRED (default) to support integration tests that use @Transactional.
+     */
     @Transactional
     fun <T> handle(
         scope: String,
@@ -26,66 +30,50 @@ class IdempotencyService(
         requestPayload: Any,
         requesterType: String,
         requesterId: UUID?,
-        ttlSeconds: Long = 3600,
+        ttlSeconds: Long = 86400,
         action: () -> T,
     ): T {
         val requestHash = HashUtils.sha256(objectMapper.writeValueAsString(requestPayload))
+        val existing = repository.findByScopeAndIdempotencyKey(scope, key)
 
-        val existing = findKey(scope, key)
-        if (existing != null) {
-            if (existing.requestHash != requestHash) {
-                throw IllegalStateException("Idempotency key mismatch: same key used for different request content.")
+        if (existing.isPresent) {
+            val record = existing.get()
+            if (record.requestHash != requestHash) {
+                error("Idempotency key mismatch: same key used for different request content.")
             }
-            if (existing.responseStatus != null) {
-                // In a real implementation, we would deserialize and return the response body.
-                // For simplicity in this patch, we might re-execute or return the existing resource if found.
-                // But the action() block usually contains the full logic.
+            if (record.responseBody != null) {
+                @Suppress("UNCHECKED_CAST")
+                return objectMapper.readValue(record.responseBody, Any::class.java) as T
             }
         }
 
         val result = action()
 
-        // Record the success (Simplified)
-        saveKey(scope, key, requestHash, requesterType, requesterId, ttlSeconds)
+        val record =
+            existing.orElseGet {
+                IdempotencyKeyRecord(
+                    scope = scope,
+                    idempotencyKey = key,
+                    requesterType = requesterType,
+                    requesterId = requesterId,
+                    requestHash = requestHash,
+                    expiresAt = Instant.now().plusSeconds(ttlSeconds),
+                )
+            }
+
+        record.responseBody = objectMapper.writeValueAsString(result)
+        repository.save(record)
 
         return result
     }
+}
 
-    private fun findKey(
+@Repository
+interface IdempotencyKeyRepository : JpaRepository<IdempotencyKeyRecord, UUID> {
+    fun findByScopeAndIdempotencyKey(
         scope: String,
-        key: String,
-    ): IdempotencyKeyRecord? {
-        return try {
-            entityManager.createQuery(
-                "SELECT r FROM IdempotencyKeyRecord r WHERE r.scope = :scope AND r.idempotencyKey = :key",
-                IdempotencyKeyRecord::class.java,
-            ).setParameter("scope", scope)
-                .setParameter("key", key)
-                .singleResult
-        } catch (e: NoResultException) {
-            null
-        }
-    }
-
-    private fun saveKey(
-        scope: String,
-        key: String,
-        hash: String,
-        type: String,
-        id: UUID?,
-        ttl: Long,
-    ) {
-        val record =
-            IdempotencyKeyRecord(
-                scope = scope,
-                idempotencyKey = key,
-                requestHash = hash,
-                requesterType = type,
-                requesterId = id,
-                expiresAt = Instant.now().plusSeconds(ttl),
-            )
-        entityManager.persist(record)
-    }
+        idempotencyKey: String,
+    ): Optional<IdempotencyKeyRecord>
 }
 
 @Entity

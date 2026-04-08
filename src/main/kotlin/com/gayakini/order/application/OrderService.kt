@@ -2,6 +2,7 @@ package com.gayakini.order.application
 
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
+import com.gayakini.checkout.domain.Checkout
 import com.gayakini.checkout.domain.CheckoutRepository
 import com.gayakini.checkout.domain.CheckoutStatus
 import com.gayakini.common.api.ForbiddenException
@@ -29,6 +30,10 @@ class OrderService(
     private val inventoryService: InventoryService,
     private val idempotencyService: IdempotencyService,
 ) {
+    companion object {
+        private const val ORDER_NUMBER_RANDOM_BOUND = 9999
+    }
+
     @Transactional
     fun placeOrderFromCheckout(
         checkoutId: UUID,
@@ -54,80 +59,9 @@ class OrderService(
                 checkoutRepository.findById(checkoutId)
                     .orElseThrow { NoSuchElementException("Checkout tidak ditemukan.") }
 
-            if (checkout.status != CheckoutStatus.READY_FOR_ORDER) {
-                throw IllegalStateException("Checkout belum siap atau sudah diproses (status: ${checkout.status}).")
-            }
+            validateCheckoutState(checkout, currentUser, checkoutToken)
 
-            // Validate ownership
-            if (checkout.customerId != null && checkout.customerId != currentUser?.id) {
-                if (currentUser == null) {
-                    throw UnauthorizedException("Silakan login untuk mengakses checkout ini.")
-                }
-                throw ForbiddenException("Akses checkout ditolak.")
-            }
-            if (checkout.accessTokenHash != null) {
-                val token = checkoutToken ?: throw UnauthorizedException("Token checkout diperlukan.")
-                if (HashUtils.sha256(token) != checkout.accessTokenHash) {
-                    throw UnauthorizedException("Token checkout tidak valid.")
-                }
-            }
-
-            val order =
-                Order(
-                    id = UuidV7Generator.generate(),
-                    orderNumber = "ORD-${Instant.now().toEpochMilli()}-${Random().nextInt(9999)}",
-                    checkoutId = checkout.id,
-                    cartId = checkout.cart.id,
-                    customerId = checkout.customerId,
-                    accessTokenHash = checkout.accessTokenHash,
-                    status = OrderStatus.PENDING_PAYMENT,
-                    subtotalAmount = checkout.subtotalAmount,
-                    shippingCostAmount = checkout.shippingCostAmount,
-                    customerNotes = request.customerNotes,
-                )
-
-            // Snapshot Address
-            val checkoutAddress =
-                checkout.shippingAddress
-                    ?: throw IllegalStateException("Alamat pengiriman belum diset.")
-            order.shippingAddress =
-                OrderShippingAddress(
-                    orderId = order.id,
-                    order = order,
-                    recipientName = checkoutAddress.recipientName,
-                    phone = checkoutAddress.phone,
-                    line1 = checkoutAddress.line1,
-                    line2 = checkoutAddress.line2,
-                    notes = checkoutAddress.notes,
-                    areaId = checkoutAddress.areaId,
-                    district = checkoutAddress.district,
-                    city = checkoutAddress.city,
-                    province = checkoutAddress.province,
-                    postalCode = checkoutAddress.postalCode,
-                    countryCode = checkoutAddress.countryCode,
-                )
-
-            // Snapshot Shipping Selection
-            val selectedQuote =
-                checkout.availableShippingQuotes.find { it.id == checkout.selectedShippingQuoteId }
-                    ?: throw IllegalStateException("Pilihan pengiriman tidak valid.")
-
-            order.shippingSelection =
-                OrderShippingSelection(
-                    orderId = order.id,
-                    order = order,
-                    provider = selectedQuote.provider,
-                    providerReference = selectedQuote.providerReference,
-                    courierCode = selectedQuote.courierCode,
-                    courierName = selectedQuote.courierName,
-                    serviceCode = selectedQuote.serviceCode,
-                    serviceName = selectedQuote.serviceName,
-                    description = selectedQuote.description,
-                    costAmount = selectedQuote.costAmount,
-                    estimatedDaysMin = selectedQuote.estimatedDaysMin,
-                    estimatedDaysMax = selectedQuote.estimatedDaysMax,
-                    rawQuotePayload = selectedQuote.rawPayload,
-                )
+            val order = createOrderFromCheckout(checkout, request)
 
             // Items & Reservations
             checkout.items.forEach { checkoutItem ->
@@ -152,18 +86,108 @@ class OrderService(
 
             val savedOrder = orderRepository.save(order)
 
-            // Mark Checkout and Cart as converted
-            checkout.status = CheckoutStatus.ORDER_CREATED
-            checkout.updatedAt = Instant.now()
-            checkoutRepository.save(checkout)
-
-            val cart = checkout.cart
-            cart.status = CartStatus.CONVERTED
-            cart.updatedAt = Instant.now()
-            cartRepository.save(cart)
+            finalizeCheckout(checkout)
 
             savedOrder
         }
+    }
+
+    private fun validateCheckoutState(
+        checkout: Checkout,
+        currentUser: UserPrincipal?,
+        checkoutToken: String?,
+    ) {
+        check(checkout.status == CheckoutStatus.READY_FOR_ORDER) {
+            "Checkout belum siap atau sudah diproses (status: ${checkout.status})."
+        }
+
+        // Validate ownership
+        if (checkout.customerId != null && checkout.customerId != currentUser?.id) {
+            if (currentUser == null) {
+                throw UnauthorizedException("Silakan login untuk mengakses checkout ini.")
+            }
+            throw ForbiddenException("Akses checkout ditolak.")
+        }
+        if (checkout.accessTokenHash != null) {
+            val token = checkoutToken ?: throw UnauthorizedException("Token checkout diperlukan.")
+            if (HashUtils.sha256(token) != checkout.accessTokenHash) {
+                throw UnauthorizedException("Token checkout tidak valid.")
+            }
+        }
+    }
+
+    private fun createOrderFromCheckout(
+        checkout: Checkout,
+        request: PlaceOrderRequest,
+    ): Order {
+        val order =
+            Order(
+                id = UuidV7Generator.generate(),
+                orderNumber = "ORD-${Instant.now().toEpochMilli()}-${Random().nextInt(ORDER_NUMBER_RANDOM_BOUND)}",
+                checkoutId = checkout.id,
+                cartId = checkout.cart.id,
+                customerId = checkout.customerId,
+                accessTokenHash = checkout.accessTokenHash,
+                status = OrderStatus.PENDING_PAYMENT,
+                subtotalAmount = checkout.subtotalAmount,
+                shippingCostAmount = checkout.shippingCostAmount,
+                customerNotes = request.customerNotes,
+            )
+
+        // Snapshot Address
+        val checkoutAddress = checkout.shippingAddress
+        checkNotNull(checkoutAddress) { "Alamat pengiriman belum diset." }
+
+        order.shippingAddress =
+            OrderShippingAddress(
+                orderId = order.id,
+                order = order,
+                recipientName = checkoutAddress.recipientName,
+                phone = checkoutAddress.phone,
+                line1 = checkoutAddress.line1,
+                line2 = checkoutAddress.line2,
+                notes = checkoutAddress.notes,
+                areaId = checkoutAddress.areaId,
+                district = checkoutAddress.district,
+                city = checkoutAddress.city,
+                province = checkoutAddress.province,
+                postalCode = checkoutAddress.postalCode,
+                countryCode = checkoutAddress.countryCode,
+            )
+
+        // Snapshot Shipping Selection
+        val selectedQuote =
+            checkout.availableShippingQuotes.find { it.id == checkout.selectedShippingQuoteId }
+        checkNotNull(selectedQuote) { "Pilihan pengiriman tidak valid." }
+
+        order.shippingSelection =
+            OrderShippingSelection(
+                orderId = order.id,
+                order = order,
+                provider = selectedQuote.provider,
+                providerReference = selectedQuote.providerReference,
+                courierCode = selectedQuote.courierCode,
+                courierName = selectedQuote.courierName,
+                serviceCode = selectedQuote.serviceCode,
+                serviceName = selectedQuote.serviceName,
+                description = selectedQuote.description,
+                costAmount = selectedQuote.costAmount,
+                estimatedDaysMin = selectedQuote.estimatedDaysMin,
+                estimatedDaysMax = selectedQuote.estimatedDaysMax,
+                rawQuotePayload = selectedQuote.rawPayload,
+            )
+        return order
+    }
+
+    private fun finalizeCheckout(checkout: Checkout) {
+        checkout.status = CheckoutStatus.ORDER_CREATED
+        checkout.updatedAt = Instant.now()
+        checkoutRepository.save(checkout)
+
+        val cart = checkout.cart
+        cart.status = CartStatus.CONVERTED
+        cart.updatedAt = Instant.now()
+        cartRepository.save(cart)
     }
 
     fun getOrder(id: UUID): Order {
@@ -224,8 +248,8 @@ class OrderService(
                 return@handle order
             }
 
-            if (order.status == OrderStatus.COMPLETED) {
-                throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")
+            check(order.status != OrderStatus.COMPLETED) {
+                "Pesanan tidak dapat dibatalkan dalam status: ${order.status}"
             }
 
             order.status = OrderStatus.CANCELLED
@@ -260,8 +284,8 @@ class OrderService(
                 return@handle order
             }
 
-            if (order.status == OrderStatus.COMPLETED) {
-                throw IllegalStateException("Pesanan tidak dapat dibatalkan dalam status: ${order.status}")
+            check(order.status != OrderStatus.COMPLETED) {
+                "Pesanan tidak dapat dibatalkan dalam status: ${order.status}"
             }
 
             order.status = OrderStatus.CANCELLED
@@ -276,27 +300,41 @@ class OrderService(
         }
     }
 
-    private fun validateOrderAccess(
+    fun validateOrderAccess(
         order: Order,
         orderToken: String?,
     ) {
         val currentUserId = SecurityUtils.getCurrentUserId()
 
         if (order.customerId != null) {
-            if (order.customerId != currentUserId) {
-                if (currentUserId == null) {
-                    throw UnauthorizedException("Silakan login untuk mengakses pesanan ini.")
-                }
-                throw ForbiddenException("Akses pesanan ditolak.")
-            }
+            validateCustomerAccess(order, currentUserId)
             return
         }
 
         if (order.accessTokenHash != null) {
-            val token = orderToken ?: throw UnauthorizedException("Token pesanan diperlukan.")
-            if (HashUtils.sha256(token) != order.accessTokenHash) {
-                throw UnauthorizedException("Token pesanan tidak valid.")
+            validateGuestAccess(order, orderToken)
+        }
+    }
+
+    private fun validateCustomerAccess(
+        order: Order,
+        currentUserId: UUID?,
+    ) {
+        if (order.customerId != currentUserId) {
+            if (currentUserId == null) {
+                throw UnauthorizedException("Silakan login untuk mengakses pesanan ini.")
             }
+            throw ForbiddenException("Akses pesanan ditolak.")
+        }
+    }
+
+    private fun validateGuestAccess(
+        order: Order,
+        orderToken: String?,
+    ) {
+        val token = orderToken ?: throw UnauthorizedException("Token pesanan diperlukan.")
+        if (HashUtils.sha256(token) != order.accessTokenHash) {
+            throw UnauthorizedException("Token pesanan tidak valid.")
         }
     }
 }

@@ -21,13 +21,22 @@ class CartService(
     private val cartItemRepository: CartItemRepository,
     private val variantRepository: ProductVariantRepository,
 ) {
+    companion object {
+        private const val DEFAULT_EXPIRY_DAYS = 7L
+        private const val MAX_ITEM_QUANTITY = 99
+        private const val SECONDS_IN_DAY = 86400L
+        private const val CURRENCY_CODE_LENGTH = 3
+    }
+
     @Transactional
     fun createCart(
         customerId: UUID?,
         currency: String,
     ): Pair<Cart, String?> {
         val normalizedCurrency = currency.trim().uppercase()
-        require(normalizedCurrency.length == 3) { "Kode mata uang harus terdiri dari 3 huruf." }
+        require(normalizedCurrency.length == CURRENCY_CODE_LENGTH) {
+            "Kode mata uang harus terdiri dari $CURRENCY_CODE_LENGTH huruf."
+        }
 
         val cartId = UUID.randomUUID()
         var rawToken: String? = null
@@ -45,8 +54,7 @@ class CartService(
                 currencyCode = normalizedCurrency,
                 status = CartStatus.ACTIVE,
                 accessTokenHash = tokenHash,
-                // 7 days
-                expiresAt = Instant.now().plusSeconds(86400 * 7),
+                expiresAt = Instant.now().plusSeconds(SECONDS_IN_DAY * DEFAULT_EXPIRY_DAYS),
             )
 
         return cartRepository.save(cart) to rawToken
@@ -62,11 +70,9 @@ class CartService(
     ): Cart {
         val cart = getValidatedCart(cartId, customerId, cartToken)
 
-        if (cart.status != CartStatus.ACTIVE) {
-            throw IllegalStateException("Keranjang sudah tidak aktif.")
-        }
+        check(cart.status == CartStatus.ACTIVE) { "Keranjang sudah tidak aktif." }
 
-        require(quantity in 1..99) { "Jumlah item harus antara 1 dan 99." }
+        require(quantity in 1..MAX_ITEM_QUANTITY) { "Jumlah item harus antara 1 dan $MAX_ITEM_QUANTITY." }
 
         val variant =
             variantRepository.findById(variantId)
@@ -75,7 +81,7 @@ class CartService(
         val existingItem = cart.items.find { it.variant.id == variantId }
         if (existingItem != null) {
             existingItem.quantity += quantity
-            if (existingItem.quantity > 99) existingItem.quantity = 99
+            if (existingItem.quantity > MAX_ITEM_QUANTITY) existingItem.quantity = MAX_ITEM_QUANTITY
         } else {
             val newItem =
                 CartItem(
@@ -106,12 +112,10 @@ class CartService(
         customerId: UUID? = null,
         cartToken: String? = null,
     ): Cart {
-        require(quantity in 1..99) { "Jumlah item harus antara 1 dan 99." }
+        require(quantity in 1..MAX_ITEM_QUANTITY) { "Jumlah item harus antara 1 dan $MAX_ITEM_QUANTITY." }
 
         val cart = getValidatedCart(cartId, customerId, cartToken)
-        if (cart.status != CartStatus.ACTIVE) {
-            throw IllegalStateException("Keranjang sudah tidak aktif.")
-        }
+        check(cart.status == CartStatus.ACTIVE) { "Keranjang sudah tidak aktif." }
 
         val item =
             cart.items.find { it.id == itemId }
@@ -131,9 +135,7 @@ class CartService(
         cartToken: String? = null,
     ): Cart {
         val cart = getValidatedCart(cartId, customerId, cartToken)
-        if (cart.status != CartStatus.ACTIVE) {
-            throw IllegalStateException("Keranjang sudah tidak aktif.")
-        }
+        check(cart.status == CartStatus.ACTIVE) { "Keranjang sudah tidak aktif." }
 
         val item =
             cart.items.find { it.id == itemId }
@@ -154,20 +156,39 @@ class CartService(
             cartRepository.findById(cartId)
                 .orElseThrow { NoSuchElementException("Keranjang tidak ditemukan.") }
 
+        validateCartOwnership(cart, customerId, cartToken)
+
+        return cart
+    }
+
+    private fun validateCartOwnership(
+        cart: Cart,
+        customerId: UUID?,
+        cartToken: String?,
+    ) {
         if (cart.customerId != null && cart.customerId != customerId) {
-            if (customerId == null) {
-                throw UnauthorizedException("Silakan login untuk mengakses keranjang ini.")
-            }
-            throw ForbiddenException("Akses keranjang ditolak.")
+            handleCustomerOwnershipMismatch(customerId)
         }
 
         if (cart.accessTokenHash != null) {
-            if (cartToken == null || HashUtils.sha256(cartToken) != cart.accessTokenHash) {
-                throw UnauthorizedException("Token keranjang tidak valid.")
-            }
+            validateGuestToken(cartToken, cart.accessTokenHash)
         }
+    }
 
-        return cart
+    private fun handleCustomerOwnershipMismatch(customerId: UUID?) {
+        if (customerId == null) {
+            throw UnauthorizedException("Silakan login untuk mengakses keranjang ini.")
+        }
+        throw ForbiddenException("Akses keranjang ditolak.")
+    }
+
+    private fun validateGuestToken(
+        cartToken: String?,
+        accessTokenHash: String?,
+    ) {
+        if (cartToken == null || HashUtils.sha256(cartToken) != accessTokenHash) {
+            throw UnauthorizedException("Token keranjang tidak valid.")
+        }
     }
 
     private fun updateTotals(cart: Cart) {

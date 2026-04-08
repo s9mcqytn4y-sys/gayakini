@@ -10,6 +10,7 @@ import com.gayakini.common.util.HashUtils
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.customer.domain.Customer
 import com.gayakini.customer.domain.CustomerRepository
+import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.OrderRepository
@@ -20,6 +21,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
@@ -65,6 +68,9 @@ class OrderFlowIntegrationTest {
 
     @BeforeEach
     fun setup() {
+        // Clear security context to simulate guest by default
+        SecurityContextHolder.clearContext()
+
         val category =
             categoryRepository.save(
                 Category(
@@ -89,6 +95,7 @@ class OrderFlowIntegrationTest {
                 ),
             )
 
+        // Increased to avoid insufficient stock errors
         testVariant =
             ProductVariant(
                 id = UuidV7Generator.generate(),
@@ -97,7 +104,7 @@ class OrderFlowIntegrationTest {
                 sizeCode = "M",
                 color = "Black",
                 priceAmount = 50000,
-                stockOnHand = 10,
+                stockOnHand = 100,
             )
         testProduct.variants.add(testVariant)
         productRepository.save(testProduct)
@@ -202,6 +209,13 @@ class OrderFlowIntegrationTest {
         testCheckout.selectedShippingQuoteId = quote.id
 
         checkoutRepository.save(testCheckout)
+    }
+
+    @Suppress("unused")
+    private fun authenticateAs(customer: Customer) {
+        val principal = UserPrincipal(id = customer.id, email = customer.email, role = "CUSTOMER")
+        val auth = UsernamePasswordAuthenticationToken(principal, null, principal.toAuthorities())
+        SecurityContextHolder.getContext().authentication = auth
     }
 
     @Test

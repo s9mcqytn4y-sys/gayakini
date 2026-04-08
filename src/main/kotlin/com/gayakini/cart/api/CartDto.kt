@@ -10,6 +10,11 @@ import jakarta.validation.constraints.Pattern
 import java.time.Instant
 import java.util.UUID
 
+object CartConstants {
+    const val MIN_QUANTITY = 1L
+    const val MAX_QUANTITY = 99L
+}
+
 data class CreateCartRequest(
     @field:NotBlank
     @field:Pattern(regexp = "^[A-Z]{3}$")
@@ -18,14 +23,14 @@ data class CreateCartRequest(
 
 data class AddCartItemRequest(
     val variantId: UUID,
-    @field:Min(1)
-    @field:Max(99)
+    @field:Min(CartConstants.MIN_QUANTITY)
+    @field:Max(CartConstants.MAX_QUANTITY)
     val quantity: Int,
 )
 
 data class UpdateCartItemRequest(
-    @field:Min(1)
-    @field:Max(99)
+    @field:Min(CartConstants.MIN_QUANTITY)
+    @field:Max(CartConstants.MAX_QUANTITY)
     val quantity: Int,
 )
 

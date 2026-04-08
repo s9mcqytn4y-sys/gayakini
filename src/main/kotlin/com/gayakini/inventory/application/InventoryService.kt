@@ -26,10 +26,8 @@ class InventoryService(
             variantRepository.findWithLockById(variantId)
                 .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
 
-        if (variant.stockAvailable < quantity) {
-            throw IllegalStateException(
-                "Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}",
-            )
+        check(variant.stockAvailable >= quantity) {
+            "Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}"
         }
 
         // Update variant stock

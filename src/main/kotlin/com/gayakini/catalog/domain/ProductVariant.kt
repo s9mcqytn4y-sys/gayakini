@@ -1,5 +1,6 @@
 package com.gayakini.catalog.domain
 
+import com.fasterxml.jackson.annotation.JsonBackReference
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -16,11 +17,13 @@ import org.springframework.data.domain.Persistable
 import java.time.Instant
 import java.util.UUID
 
+@Suppress("LongParameterList")
 @Entity
 @Table(name = "product_variants", schema = "commerce")
 class ProductVariant(
     @Id
     private val id: UUID,
+    @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     val product: Product,
@@ -43,18 +46,21 @@ class ProductVariant(
     var stockOnHand: Int = 0,
     @Column(name = "stock_reserved", nullable = false)
     var stockReserved: Int = 0,
-    @Column(name = "stock_available", insertable = false, updatable = false)
-    private var _stockAvailable: Int? = 0,
-    @Column(name = "created_at", updatable = false)
-    val createdAt: Instant = Instant.now(),
-    @Column(name = "updated_at")
-    var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
+    @Column(name = "stock_available", insertable = false, updatable = false)
+    private var stockAvailableGenerated: Int? = 0
+
+    @Column(name = "created_at", updatable = false)
+    val createdAt: Instant = Instant.now()
+
+    @Column(name = "updated_at")
+    var updatedAt: Instant = Instant.now()
+
     @Transient
     private var isNewRecord = true
 
     val stockAvailable: Int
-        get() = _stockAvailable ?: (stockOnHand - stockReserved).coerceAtLeast(0)
+        get() = (stockOnHand - stockReserved).coerceAtLeast(0)
 
     override fun getId(): UUID = id
 

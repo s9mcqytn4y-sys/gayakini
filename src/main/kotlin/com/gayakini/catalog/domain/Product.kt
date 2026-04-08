@@ -1,5 +1,6 @@
 package com.gayakini.catalog.domain
 
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import jakarta.persistence.*
 import org.springframework.data.domain.Persistable
 import java.time.Instant
@@ -30,6 +31,7 @@ class Product(
     var publishedAt: Instant? = null,
     @Column(name = "archived_at")
     var archivedAt: Instant? = null,
+    @JsonManagedReference
     @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
     var variants: MutableList<ProductVariant> = mutableListOf(),
     @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)

@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
+import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
@@ -61,7 +62,7 @@ class MidtransPaymentProvider(
             )
         } else {
             logger.error("Gagal membuat sesi pembayaran Midtrans: {} - {}", response.statusCode, response.body)
-            throw IllegalStateException("Gagal membuat sesi pembayaran. Silakan coba lagi.")
+            error("Gagal membuat sesi pembayaran. Silakan coba lagi.")
         }
     }
 
@@ -90,7 +91,7 @@ class MidtransPaymentProvider(
             } else {
                 PaymentStatus.PENDING
             }
-        } catch (e: Exception) {
+        } catch (e: RestClientException) {
             logger.error("Gagal mengambil status pembayaran dari Midtrans: {}", e.message)
             PaymentStatus.PENDING
         }

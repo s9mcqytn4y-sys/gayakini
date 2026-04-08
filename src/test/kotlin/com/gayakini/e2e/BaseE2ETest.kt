@@ -9,7 +9,6 @@ import org.springframework.test.context.ActiveProfiles
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 abstract class BaseE2ETest {
-
     @Autowired
     protected lateinit var restTemplate: TestRestTemplate
 
@@ -18,22 +17,23 @@ abstract class BaseE2ETest {
 
     protected fun cleanupDatabase() {
         // Full order of truncation to avoid foreign key issues even with integrity off
-        val tables = listOf(
-            "commerce.order_items",
-            "commerce.payments",
-            "commerce.orders",
-            "commerce.checkouts",
-            "commerce.cart_items",
-            "commerce.carts",
-            "commerce.customer_addresses",
-            "commerce.customers",
-            "commerce.product_media",
-            "commerce.product_variants",
-            "commerce.product_collections",
-            "commerce.products",
-            "commerce.categories",
-            "commerce.collections"
-        )
+        val tables =
+            listOf(
+                "commerce.order_items",
+                "commerce.payments",
+                "commerce.orders",
+                "commerce.checkouts",
+                "commerce.cart_items",
+                "commerce.carts",
+                "commerce.customer_addresses",
+                "commerce.customers",
+                "commerce.product_media",
+                "commerce.product_variants",
+                "commerce.product_collections",
+                "commerce.products",
+                "commerce.categories",
+                "commerce.collections",
+            )
 
         jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE")
         tables.forEach { table ->

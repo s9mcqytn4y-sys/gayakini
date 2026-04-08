@@ -5,6 +5,7 @@ import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.order.api.AdminCreateShipmentRequest
 import com.gayakini.order.domain.FulfillmentStatus
+import com.gayakini.order.domain.Order
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
 import com.gayakini.shipping.domain.ContactInfo
@@ -37,21 +38,7 @@ class ShippingService(
 
         logger.info("Memproses webhook Biteship event: {} untuk order: {}", event, orderIdStr)
 
-        val shipment =
-            shipmentRepository.findByProviderOrderId(orderIdStr)
-                .orElseGet {
-                    try {
-                        val orderId = UUID.fromString(orderIdStr)
-                        shipmentRepository.findByOrderId(orderId).orElse(null)
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-
-        if (shipment == null) {
-            logger.warn("Shipment tidak ditemukan untuk external_id/order_id: {}", orderIdStr)
-            return
-        }
+        val shipment = findShipmentByExternalId(orderIdStr) ?: return
 
         when (event) {
             "order.status" -> handleStatusUpdate(shipment, payload)
@@ -60,6 +47,19 @@ class ShippingService(
 
         shipment.updatedAt = Instant.now()
         shipmentRepository.save(shipment)
+    }
+
+    private fun findShipmentByExternalId(externalId: String): Shipment? {
+        val shipment = shipmentRepository.findByProviderOrderId(externalId).orElse(null)
+        if (shipment != null) return shipment
+
+        return try {
+            val orderId = UUID.fromString(externalId)
+            shipmentRepository.findByOrderId(orderId).orElse(null)
+        } catch (e: IllegalArgumentException) {
+            logger.debug("External ID is not a valid UUID: {}", externalId)
+            null
+        }
     }
 
     @Transactional
@@ -81,69 +81,23 @@ class ShippingService(
                 orderRepository.findById(orderId)
                     .orElseThrow { NoSuchElementException("Order tidak ditemukan") }
 
-            if (order.status != OrderStatus.PAID && order.status != OrderStatus.READY_TO_SHIP) {
-                throw IllegalStateException("Order belum siap dibuatkan pengiriman.")
-            }
+            validateOrderForShipment(order)
 
-            val selection =
-                order.shippingSelection
-                    ?: throw IllegalStateException("Pilihan pengiriman order belum tersedia.")
-            val address =
-                order.shippingAddress
-                    ?: throw IllegalStateException("Alamat pengiriman order belum tersedia.")
+            val selection = order.shippingSelection
+            checkNotNull(selection) { "Pilihan pengiriman order belum tersedia." }
+            val address = order.shippingAddress
+            checkNotNull(address) { "Alamat pengiriman order belum tersedia." }
             val origin =
                 merchantOriginRepository.findDefaultActive()
                     .orElseThrow { IllegalStateException("Origin pengiriman merchant belum dikonfigurasi.") }
-
-            val sender =
-                ContactInfo(
-                    fullName = origin.contactName,
-                    phone = origin.contactPhone,
-                    email = origin.contactEmail,
-                    address =
-                        listOfNotNull(
-                            origin.line1,
-                            origin.line2,
-                            origin.district,
-                            origin.city,
-                            origin.province,
-                            origin.postalCode,
-                        ).joinToString(", "),
-                    areaId = origin.areaId,
-                )
-            val receiver =
-                ContactInfo(
-                    fullName = address.recipientName,
-                    phone = address.phone,
-                    email = order.customerId?.let { customerRepository.findById(it).orElse(null)?.email },
-                    address =
-                        listOfNotNull(
-                            address.line1,
-                            address.line2,
-                            address.district,
-                            address.city,
-                            address.province,
-                            address.postalCode,
-                        ).joinToString(", "),
-                    areaId = address.areaId,
-                )
-            val items =
-                order.items.map {
-                    ShippingItem(
-                        name = it.titleSnapshot,
-                        weightGrams = it.variant.weightGrams,
-                        quantity = it.quantity,
-                        valueIdr = it.unitPriceAmount,
-                    )
-                }
 
             val booking =
                 shippingProvider.createShipment(
                     orderId = order.id.toString(),
                     rateId = selection.providerReference ?: "${selection.courierCode}_${selection.serviceCode}",
-                    sender = sender,
-                    receiver = receiver,
-                    items = items,
+                    sender = createSenderContact(origin),
+                    receiver = createReceiverContact(order, address),
+                    items = createShippingItems(order),
                 )
 
             val shipment =
@@ -164,12 +118,71 @@ class ShippingService(
                     bookedAt = Instant.now(),
                 )
 
-            order.status = OrderStatus.READY_TO_SHIP
-            order.fulfillmentStatus = FulfillmentStatus.BOOKED
-            order.updatedAt = Instant.now()
-            orderRepository.save(order)
-
+            updateOrderAfterBooking(order)
             shipmentRepository.save(shipment)
+        }
+    }
+
+    private fun updateOrderAfterBooking(order: Order) {
+        order.status = OrderStatus.READY_TO_SHIP
+        order.fulfillmentStatus = FulfillmentStatus.BOOKED
+        order.updatedAt = Instant.now()
+        orderRepository.save(order)
+    }
+
+    private fun validateOrderForShipment(order: Order) {
+        check(order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP) {
+            "Order belum siap dibuatkan pengiriman."
+        }
+    }
+
+    private fun createSenderContact(origin: com.gayakini.shipping.domain.MerchantShippingOrigin): ContactInfo {
+        return ContactInfo(
+            fullName = origin.contactName,
+            phone = origin.contactPhone,
+            email = origin.contactEmail,
+            address =
+                listOfNotNull(
+                    origin.line1,
+                    origin.line2,
+                    origin.district,
+                    origin.city,
+                    origin.province,
+                    origin.postalCode,
+                ).joinToString(", "),
+            areaId = origin.areaId,
+        )
+    }
+
+    private fun createReceiverContact(
+        order: Order,
+        address: com.gayakini.order.domain.OrderShippingAddress,
+    ): ContactInfo {
+        return ContactInfo(
+            fullName = address.recipientName,
+            phone = address.phone,
+            email = order.customerId?.let { customerRepository.findById(it).orElse(null)?.email },
+            address =
+                listOfNotNull(
+                    address.line1,
+                    address.line2,
+                    address.district,
+                    address.city,
+                    address.province,
+                    address.postalCode,
+                ).joinToString(", "),
+            areaId = address.areaId,
+        )
+    }
+
+    private fun createShippingItems(order: Order): List<ShippingItem> {
+        return order.items.map {
+            ShippingItem(
+                name = it.titleSnapshot,
+                weightGrams = it.variant.weightGrams,
+                quantity = it.quantity,
+                valueIdr = it.unitPriceAmount,
+            )
         }
     }
 
