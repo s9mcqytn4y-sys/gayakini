@@ -7,19 +7,21 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.util.*
+import java.util.UUID
 
 @RestController
 @RequestMapping("/v1/locations")
 class LocationController(private val areaRepository: LocationAreaRepository) {
+    companion object {
+        private const val MIN_SEARCH_LENGTH = 2
+    }
+
     @GetMapping("/areas")
     fun searchAreas(
         @RequestParam input: String,
         @RequestParam(defaultValue = "10") limit: Int,
     ): LocationAreaListResponse {
-        if (input.length < 2) {
-            throw IllegalArgumentException("Input pencarian minimal 2 karakter.")
-        }
+        require(input.length >= MIN_SEARCH_LENGTH) { "Input pencarian minimal $MIN_SEARCH_LENGTH karakter." }
 
         val areas = areaRepository.searchByLabel(input, PageRequest.of(0, limit))
 

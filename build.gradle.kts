@@ -251,6 +251,13 @@ tasks.register("dbDoctor") {
     }
 }
 
+// Alias for dbDoctor to support common developer patterns
+tasks.register("doctor") {
+    group = "verification"
+    description = "Alias for dbDoctor."
+    dependsOn("dbDoctor")
+}
+
 // --- CORE QUALITY GATE (No DB needed) ---
 
 tasks.register("qualityCheck") {

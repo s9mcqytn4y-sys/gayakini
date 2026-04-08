@@ -2,13 +2,11 @@
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
-    <ID>ExplicitItLambdaParameter:HashUtils.kt$HashUtils${ str, it -&gt; str + "%02x".format(it) }</ID>
     <ID>ForbiddenComment:AdminProductController.kt$AdminProductController$// TODO: Actually handle category, collections, media in a real service</ID>
     <ID>ForbiddenComment:AdminProductController.kt$AdminProductController$// TODO: Map collections</ID>
     <ID>ForbiddenComment:AdminProductController.kt$AdminProductController$// TODO: Record in adjustment table</ID>
     <ID>ForbiddenComment:ProductController.kt$ProductController$// TODO: Map collections relationship if available in Product entity</ID>
     <ID>LongMethod:OrderFlowIntegrationTest.kt$OrderFlowIntegrationTest$@BeforeEach fun setup()</ID>
-    <ID>MagicNumber:AppConfig.kt$AppConfig$10</ID>
     <ID>ReturnCount:BiteshipShippingProvider.kt$BiteshipShippingProvider$override fun getRates( origin: String, destination: String, items: List&lt;ShippingItem&gt;, ): List&lt;ShippingRate&gt;</ID>
     <ID>ReturnCount:MidtransPaymentProvider.kt$MidtransPaymentProvider$override fun verifyWebhook( payload: Map&lt;String, Any&gt;, signature: String, ): Boolean</ID>
     <ID>ReturnCount:SecurityUtils.kt$SecurityUtils$fun getCurrentUser(): UserPrincipal?</ID>
@@ -16,18 +14,15 @@
     <ID>SpreadOperator:GayakiniApplication.kt$(*args)</ID>
     <ID>ThrowsCount:OrderService.kt$OrderService$private fun validateCheckoutState( checkout: Checkout, currentUser: UserPrincipal?, checkoutToken: String?, )</ID>
     <ID>TooGenericExceptionCaught:JwtService.kt$JwtService$e: Exception</ID>
-    <ID>UnusedParameter:AdminProductController.kt$AdminProductController$@RequestHeader("Idempotency-Key") idempotencyKey: String</ID>
     <ID>UnusedParameter:BiteshipShippingProvider.kt$BiteshipShippingProvider$orderId: String</ID>
     <ID>UnusedParameter:CheckoutController.kt$CheckoutController$@RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?</ID>
     <ID>UnusedParameter:WebhookController.kt$WebhookController$@RequestHeader("X-Callback-Signature", required = false) signature: String?</ID>
-    <ID>UnusedPrivateProperty:AdminProductController.kt$AdminProductController$private val productService: ProductService</ID>
     <ID>UnusedPrivateProperty:Cart.kt$CartItem$@Column(name = "line_total_amount", insertable = false, updatable = false) private var lineTotalAmountGenerated: Long? = 0</ID>
     <ID>UnusedPrivateProperty:Checkout.kt$Checkout$@Column(name = "total_amount", insertable = false, updatable = false) private var totalAmountGenerated: Long? = 0</ID>
     <ID>UnusedPrivateProperty:Checkout.kt$CheckoutItem$@Column(name = "line_total_amount", insertable = false, updatable = false) private var lineTotalAmountGenerated: Long? = 0</ID>
     <ID>UnusedPrivateProperty:Order.kt$Order$@Column(name = "total_amount", insertable = false, updatable = false) private var totalAmountGenerated: Long? = 0</ID>
     <ID>UnusedPrivateProperty:Order.kt$OrderItem$@Column(name = "line_total_amount", insertable = false, updatable = false) private var lineTotalAmountGenerated: Long? = 0</ID>
     <ID>UnusedPrivateProperty:ProductVariant.kt$ProductVariant$@Column(name = "stock_available", insertable = false, updatable = false) private var stockAvailableGenerated: Int? = 0</ID>
-    <ID>UseRequire:LocationController.kt$LocationController$throw IllegalArgumentException("Input pencarian minimal 2 karakter.")</ID>
     <ID>WildcardImport:AdminProductController.kt$import org.springframework.web.bind.annotation.*</ID>
     <ID>WildcardImport:AuthController.kt$import org.springframework.web.bind.annotation.*</ID>
     <ID>WildcardImport:BiteshipShippingProvider.kt$import com.gayakini.shipping.domain.*</ID>

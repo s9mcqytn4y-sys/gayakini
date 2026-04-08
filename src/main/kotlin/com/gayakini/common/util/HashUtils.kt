@@ -7,6 +7,6 @@ object HashUtils {
         val bytes = input.toByteArray()
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(bytes)
-        return digest.fold("") { str, it -> str + "%02x".format(it) }
+        return digest.fold("") { str, byte -> str + "%02x".format(byte) }
     }
 }

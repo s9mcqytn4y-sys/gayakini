@@ -1,6 +1,5 @@
 package com.gayakini.catalog.api
 
-import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.*
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.util.UuidV7Generator
@@ -13,7 +12,6 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/admin")
 class AdminProductController(
-    private val productService: ProductService,
     private val productRepository: ProductRepository,
     private val variantRepository: ProductVariantRepository,
 ) {
@@ -81,7 +79,7 @@ class AdminProductController(
         variantRepository.save(variant)
 
         return StockAdjustmentResponse(
-            message = "Stok berhasil diperbarui.",
+            message = "Stok berhasil diperbarui. Key: $idempotencyKey",
             data =
                 StockAdjustmentData(
                     variantId = variantId,

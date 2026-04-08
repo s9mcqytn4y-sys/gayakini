@@ -8,11 +8,15 @@ import java.time.Duration
 
 @Configuration
 class AppConfig {
+    companion object {
+        private const val DEFAULT_TIMEOUT_SECONDS = 10L
+    }
+
     @Bean
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
         return builder
-            .connectTimeout(Duration.ofSeconds(10))
-            .readTimeout(Duration.ofSeconds(10))
+            .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
+            .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS))
             .build()
     }
 }
