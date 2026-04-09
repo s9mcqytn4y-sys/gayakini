@@ -20,6 +20,18 @@ spring:
     validate-on-migrate: true
     clean-disabled: false
 
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:null}
+    password: ${SMTP_PASSWORD:null}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+
 logging:
   level:
     root: INFO

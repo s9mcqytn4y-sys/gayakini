@@ -21,6 +21,7 @@ import com.gayakini.payment.domain.PaymentProvider
 import com.gayakini.payment.domain.PaymentReceipt
 import com.gayakini.payment.domain.PaymentReceiptRepository
 import com.gayakini.payment.domain.PaymentRepository
+import com.gayakini.payment.domain.PaymentSettledEvent
 import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
@@ -98,14 +99,15 @@ class PaymentService(
                     entityType = "PAYMENT",
                     entityId = payment.transactionNumber,
                     eventType = "PAYMENT_SESSION_CREATED",
-                    newState = mapOf(
-                        "orderId" to order.id,
-                        "paymentId" to payment.id,
-                        "amount" to payment.grossAmount,
-                        "provider" to payment.provider
-                    ),
-                    reason = "Payment session created for order ${order.orderNumber}"
-                )
+                    newState =
+                        mapOf(
+                            "orderId" to order.id,
+                            "paymentId" to payment.id,
+                            "amount" to payment.grossAmount,
+                            "provider" to payment.provider,
+                        ),
+                    reason = "Payment session created for order ${order.orderNumber}",
+                ),
             )
 
             payment
@@ -320,10 +322,11 @@ class PaymentService(
 
         // 5. Update states if status changed or it's the first authoritative update
         if (payment.status != reconciledStatus || payment.rawProviderStatus != transactionStatus) {
-            val previousState = mapOf(
-                "status" to payment.status,
-                "rawStatus" to payment.rawProviderStatus
-            )
+            val previousState =
+                mapOf(
+                    "status" to payment.status,
+                    "rawStatus" to payment.rawProviderStatus,
+                )
 
             updatePaymentAndOrderStates(
                 payment = payment,
@@ -341,13 +344,14 @@ class PaymentService(
                     entityId = payment.transactionNumber,
                     eventType = "PAYMENT_STATUS_UPDATED",
                     previousState = previousState,
-                    newState = mapOf(
-                        "status" to payment.status,
-                        "rawStatus" to payment.rawProviderStatus,
-                        "orderStatus" to order.status
-                    ),
-                    reason = "Webhook reconciliation: $transactionStatus -> $reconciledStatus"
-                )
+                    newState =
+                        mapOf(
+                            "status" to payment.status,
+                            "rawStatus" to payment.rawProviderStatus,
+                            "orderStatus" to order.status,
+                        ),
+                    reason = "Webhook reconciliation: $transactionStatus -> $reconciledStatus",
+                ),
             )
         }
 
@@ -422,7 +426,19 @@ class PaymentService(
 
         paymentRepository.save(payment)
         order.updatedAt = Instant.now()
-        orderRepository.save(order)
+        val savedOrder = orderRepository.save(order)
+
+        if (reconciledStatus == PaymentStatus.PAID) {
+            eventPublisher.publishEvent(
+                PaymentSettledEvent(
+                    orderId = savedOrder.id,
+                    paymentId = payment.id,
+                    transactionNumber = payment.transactionNumber,
+                    amount = payment.grossAmount,
+                    provider = payment.provider,
+                ),
+            )
+        }
     }
 
     private fun handlePaidOrder(

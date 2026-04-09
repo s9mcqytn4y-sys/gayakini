@@ -13,5 +13,12 @@ object SecurityUtils {
         return null
     }
 
-    fun getCurrentUserId(): UUID? = getCurrentUser()?.id
+    fun getCurrentUserId(): UUID? {
+        return getCurrentUser()?.id
+    }
+
+    fun hasRole(role: String): Boolean {
+        val authentication = SecurityContextHolder.getContext().authentication ?: return false
+        return authentication.authorities.any { it.authority == "ROLE_$role" || it.authority == role }
+    }
 }

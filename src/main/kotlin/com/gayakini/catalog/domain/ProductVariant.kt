@@ -48,7 +48,7 @@ class ProductVariant(
     var stockReserved: Int = 0,
 ) : Persistable<UUID> {
     @Column(name = "stock_available", insertable = false, updatable = false)
-    private var stockAvailableGenerated: Int? = 0
+    var stockAvailableGenerated: Int? = null
 
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now()

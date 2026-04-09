@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice</title>
+    <style>
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 12pt;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        }
+        .header {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .header td {
+            vertical-align: top;
+        }
+        .title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #000;
+            text-align: right;
+        }
+        .company-info {
+            font-size: 10pt;
+            line-height: 1.4;
+        }
+        .meta-info {
+            width: 100%;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .meta-info td {
+            padding: 5px 0;
+        }
+        .address-section {
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        .address-section td {
+            width: 50%;
+            vertical-align: top;
+        }
+        .address-title {
+            font-weight: bold;
+            font-size: 11pt;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+            padding: 10px;
+            text-align: left;
+            font-size: 10pt;
+        }
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 10pt;
+        }
+        .summary-table {
+            width: 300px;
+            margin-left: auto;
+            border-collapse: collapse;
+        }
+        .summary-table td {
+            padding: 5px 10px;
+            text-align: right;
+            font-size: 10pt;
+        }
+        .summary-label {
+            text-align: left !important;
+            color: #666;
+        }
+        .grand-total {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #000;
+            border-top: 2px solid #333;
+            padding-top: 10px !important;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 9pt;
+            color: #999;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .text-right { text-align: right; }
+        .negative { color: #d9534f; }
+    </style>
+</head>
+<body>
+<div class="invoice-box">
+    <table class="header">
+        <tr>
+            <td class="company-info">
+                <div style="font-size: 18pt; font-weight: bold;">GAYAKINI</div>
+                <div>Jl. Fashion No. 123</div>
+                <div>Jakarta Selatan, 12190</div>
+                <div>Phone: +62 21 1234 5678</div>
+                <div>Email: billing@gayakini.com</div>
+            </td>
+            <td class="title">
+                TAX INVOICE<br/>
+                <span style="font-size: 14pt; color: #666;">E-RECEIPT</span>
+            </td>
+        </tr>
+    </table>
+
+    <table class="meta-info">
+        <tr>
+            <td><strong>Invoice No:</strong> <span th:text="${order.orderNumber}">ORD-12345</span></td>
+            <td class="text-right"><strong>Date of Issue:</strong> <span th:text="${#temporals.format(order.paidAt, 'dd MMMM yyyy HH:mm', 'id')}">09 April 2026</span></td>
+        </tr>
+        <tr>
+            <td><strong>Order ID:</strong> <span th:text="${order.id}">uuid-v7</span></td>
+            <td class="text-right"><strong>Status:</strong> PAID</td>
+        </tr>
+    </table>
+
+    <table class="address-section">
+        <tr>
+            <td>
+                <div class="address-title">Bill To</div>
+                <div th:text="${order.shippingAddress.recipientName}">Customer Name</div>
+                <div th:text="${order.shippingAddress.email}">customer@email.com</div>
+                <div th:text="${order.shippingAddress.phone}">08123456789</div>
+            </td>
+            <td>
+                <div class="address-title">Ship To</div>
+                <div th:text="${order.shippingAddress.recipientName}">Customer Name</div>
+                <div th:text="${order.shippingAddress.line1}">Street Address</div>
+                <div th:if="${order.shippingAddress.line2}" th:text="${order.shippingAddress.line2}">Suite/Apt</div>
+                <div th:text="${order.shippingAddress.city + ', ' + order.shippingAddress.province + ' ' + order.shippingAddress.postalCode}">City, Province Postal</div>
+                <div th:text="${order.shippingSelection.courierName + ' (' + order.shippingSelection.serviceName + ')'}">Courier Service</div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+        <tr>
+            <th style="width: 5%">No</th>
+            <th style="width: 55%">Item Description</th>
+            <th style="width: 10%" class="text-right">Qty</th>
+            <th style="width: 15%" class="text-right">Unit Price</th>
+            <th style="width: 15%" class="text-right">Total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item, iter : ${order.items}">
+            <td th:text="${iter.count}">1</td>
+            <td>
+                <div th:text="${item.titleSnapshot}" style="font-weight: bold;">Product Name</div>
+                <div style="font-size: 9pt; color: #666;" th:text="${'Color: ' + item.color + ', Size: ' + item.sizeCode}">Color: Blue, Size: XL</div>
+                <div style="font-size: 9pt; color: #999;" th:text="${'SKU: ' + item.skuSnapshot}">SKU-123</div>
+            </td>
+            <td class="text-right" th:text="${item.quantity}">1</td>
+            <td class="text-right" th:text="${#numbers.formatCurrency(item.unitPriceAmount)}">Rp 100.000</td>
+            <td class="text-right" th:text="${#numbers.formatCurrency(item.unitPriceAmount * item.quantity)}">Rp 100.000</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <tr>
+            <td class="summary-label">Subtotal</td>
+            <td th:text="${#numbers.formatCurrency(order.subtotalAmount)}">Rp 100.000</td>
+        </tr>
+        <tr>
+            <td class="summary-label">Shipping Cost</td>
+            <td th:text="${#numbers.formatCurrency(order.shippingCostAmount)}">Rp 15.000</td>
+        </tr>
+        <tr th:if="${order.discountAmount > 0}">
+            <td class="summary-label">Discount <span th:text="${'(' + order.promoCode + ')'}"></span></td>
+            <td class="negative" th:text="${'-' + #numbers.formatCurrency(order.discountAmount)}">-Rp 10.000</td>
+        </tr>
+        <tr class="grand-total">
+            <td class="summary-label">Grand Total</td>
+            <td th:text="${#numbers.formatCurrency(order.totalAmount)}">Rp 105.000</td>
+        </tr>
+    </table>
+
+    <div class="footer">
+        <p>This is a computer-generated document. No signature is required.</p>
+        <p><strong>Thank you for shopping at GAYAKINI!</strong></p>
+        <p>Contact us at support@gayakini.com for any inquiries regarding this receipt.</p>
+    </div>
+</div>
+</body>
+</html>

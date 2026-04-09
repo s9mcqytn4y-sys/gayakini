@@ -54,7 +54,7 @@ class Checkout(
     var updatedAt: Instant = Instant.now(),
 ) : Persistable<UUID> {
     @Column(name = "total_amount", insertable = false, updatable = false)
-    private var totalAmountGenerated: Long? = 0
+    val totalAmountGenerated: Long? = null
 
     @Transient
     private var isNewRecord = true
@@ -109,7 +109,7 @@ class CheckoutItem(
     val primaryImageUrl: String? = null,
 ) {
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    private var lineTotalAmountGenerated: Long? = 0
+    val lineTotalAmountGenerated: Long? = null
 
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now()

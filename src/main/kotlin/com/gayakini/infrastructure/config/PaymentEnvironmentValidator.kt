@@ -30,7 +30,7 @@ class PaymentEnvironmentValidator(
                 "SECURITY CRITICAL: Midtrans production mode is ENABLED " +
                     "while running in sandbox/local profile. Shutdown immediately."
             logger.error(errorMessage)
-            throw IllegalStateException(errorMessage)
+            error(errorMessage)
         }
 
         // Fail-fast if production URLs are found in sandbox/local
@@ -43,7 +43,7 @@ class PaymentEnvironmentValidator(
                     "SECURITY CRITICAL: Midtrans Production URLs detected in sandbox/local mode. " +
                         "API URL: $apiUrl, SNAP URL: $snapUrl. Shutdown immediately."
                 logger.error(errorMessage)
-                throw IllegalStateException(errorMessage)
+                error(errorMessage)
             }
         }
     }

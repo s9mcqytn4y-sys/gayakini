@@ -127,7 +127,7 @@ class CheckoutService(
             handleCustomerCartOwnershipMismatch(customerId)
         }
         if (cart.accessTokenHash != null) {
-            validateGuestCartToken(cartToken, cart.accessTokenHash!!)
+            validateGuestCartToken(cartToken, cart.accessTokenHash.orEmpty())
         }
     }
 
@@ -157,12 +157,12 @@ class CheckoutService(
                 CheckoutItem(
                     id = UuidV7Generator.generate(),
                     checkout = checkout,
-                    product = cartItem.product!!,
+                    product = cartItem.product ?: error("Product missing in cart item"),
                     variant = cartItem.variant,
-                    productTitleSnapshot = cartItem.productTitleSnapshot ?: "",
-                    skuSnapshot = cartItem.skuSnapshot ?: "",
-                    color = cartItem.color ?: "",
-                    sizeCode = cartItem.sizeCode ?: "",
+                    productTitleSnapshot = cartItem.productTitleSnapshot.orEmpty(),
+                    skuSnapshot = cartItem.skuSnapshot.orEmpty(),
+                    color = cartItem.color.orEmpty(),
+                    sizeCode = cartItem.sizeCode.orEmpty(),
                     quantity = cartItem.quantity,
                     unitPriceAmount = cartItem.unitPriceAmount,
                     compareAtAmount = cartItem.compareAtAmount,
@@ -447,7 +447,7 @@ class CheckoutService(
         }
 
         if (checkout.accessTokenHash != null) {
-            validateGuestCheckoutToken(checkoutToken, checkout.accessTokenHash!!)
+            validateGuestCheckoutToken(checkoutToken, checkout.accessTokenHash.orEmpty())
         }
     }
 

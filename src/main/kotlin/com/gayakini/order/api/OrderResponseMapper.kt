@@ -41,7 +41,7 @@ object OrderResponseMapper {
                     grossAmount = MoneyDto(amount = order.totalAmount),
                 ),
             shippingAddress =
-                order.shippingAddress!!.let { addr ->
+                order.shippingAddress?.let { addr ->
                     OrderAddressDto(
                         recipientName = addr.recipientName,
                         phone = addr.phone,
@@ -55,7 +55,7 @@ object OrderResponseMapper {
                         postalCode = addr.postalCode,
                         countryCode = addr.countryCode,
                     )
-                },
+                } ?: error("Order shipping address missing"),
             selectedShippingQuote =
                 order.shippingSelection?.let { selection ->
                     OrderShippingQuoteDto(

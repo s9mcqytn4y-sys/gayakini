@@ -71,7 +71,7 @@ class ShippingService(
         return idempotencyService.handle(
             scope = "book_shipment",
             key = idempotencyKey,
-            requestPayload = mapOf("orderId" to orderId, "note" to (request?.note ?: "")),
+            requestPayload = mapOf("orderId" to orderId, "note" to request?.note.orEmpty()),
             requesterType = "ADMIN",
             requesterId = null,
         ) {

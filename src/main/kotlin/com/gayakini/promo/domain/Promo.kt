@@ -34,7 +34,7 @@ class Promo(
     @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 20)
     var type: PromoType,
-    @Column(name = "value", nullable = false, precision = 19, scale = 4)
+    @Column(name = "\"value\"", nullable = false, precision = 19, scale = 4)
     var value: BigDecimal,
     @Column(name = "max_discount_amount", precision = 19, scale = 4)
     var maxDiscountAmount: BigDecimal? = null,
@@ -90,7 +90,7 @@ class Promo(
         return when {
             !isActive -> false
             now.isBefore(startDate) || now.isAfter(endDate) -> false
-            usageLimit != null && currentUsage >= usageLimit!! -> false
+            usageLimit != null && currentUsage >= (usageLimit ?: Int.MAX_VALUE) -> false
             orderSubtotal < minOrderValue -> false
             else -> true
         }
@@ -108,7 +108,7 @@ class Promo(
 
         val finalDiscount =
             if (type == PromoType.PERCENTAGE && maxDiscountAmount != null) {
-                discount.min(maxDiscountAmount!!)
+                discount.min(maxDiscountAmount ?: discount)
             } else {
                 discount.min(orderSubtotal)
             }

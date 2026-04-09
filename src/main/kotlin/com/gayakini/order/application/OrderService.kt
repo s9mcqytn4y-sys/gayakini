@@ -288,7 +288,7 @@ class OrderService(
         return idempotencyService.handle(
             scope = "cancel_order",
             key = idempotencyKey,
-            requestPayload = mapOf("orderId" to id, "reason" to (reason ?: "")),
+            requestPayload = mapOf("orderId" to id, "reason" to reason.orEmpty()),
             requesterType = if (currentUserId != null) "CUSTOMER" else "GUEST",
             requesterId = currentUserId,
         ) {
@@ -325,7 +325,7 @@ class OrderService(
         return idempotencyService.handle(
             scope = "admin_cancel_order",
             key = idempotencyKey,
-            requestPayload = mapOf("orderId" to id, "reason" to (reason ?: "")),
+            requestPayload = mapOf("orderId" to id, "reason" to reason.orEmpty()),
             requesterType = "ADMIN",
             requesterId = currentUserId,
         ) {

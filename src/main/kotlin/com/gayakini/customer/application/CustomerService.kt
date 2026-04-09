@@ -33,7 +33,7 @@ class CustomerService(
                 email = normalizedEmail,
                 passwordHash = passwordEncoder.encode(request.password),
                 fullName = request.fullName.trim(),
-                phone = request.phone?.trim(),
+                phone = request.phone.trim(),
             )
         val savedCustomer = customerRepository.save(customer)
 

@@ -55,3 +55,13 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: gayakini-mailpit
+    restart: unless-stopped
+    networks:
+      - gayakini-network
+    ports:
+      - "8025:8025" # Web UI
+      - "1025:1025" # SMTP

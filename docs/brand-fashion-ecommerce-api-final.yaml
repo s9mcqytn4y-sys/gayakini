@@ -754,6 +754,35 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/orders/{orderId}/invoice:
+    get:
+      tags:
+      - Orders
+      summary: Download order invoice (PDF)
+      description: |-
+        Generates and streams a professional PDF invoice for the specified order.
+        Strictly restricted to the order owner or users with ROLE_ADMIN.
+        The invoice is only available once the order is in a PAID or later state.
+      operationId: downloadOrderInvoice
+      security:
+      - customerBearerAuth: []
+      - orderTokenAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Invoice PDF stream.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
   /v1/me/orders:
     get:
       tags:

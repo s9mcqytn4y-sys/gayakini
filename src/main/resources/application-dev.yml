@@ -1,0 +1,15 @@
+gayakini:
+  storage:
+    local-path: storage/dev
+  billing:
+    invoice-prefix: INV
+    company:
+      name: GAYAKINI
+      address: Jl. Fashion No. 123, Jakarta Selatan
+      phone: +62 21 1234 5678
+      email: billing@gayakini.com
+
+logging:
+  level:
+    com.gayakini.billing: DEBUG
+    com.gayakini.infrastructure.storage: DEBUG

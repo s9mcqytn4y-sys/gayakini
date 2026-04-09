@@ -16,7 +16,7 @@ class GayakiniApplication(private val env: Environment) {
     @EventListener(ApplicationReadyEvent::class)
     fun onReady() {
         val port = env.getProperty("local.server.port") ?: env.getProperty("server.port") ?: "8080"
-        val contextPath = env.getProperty("server.servlet.context-path") ?: ""
+        val contextPath = env.getProperty("server.servlet.context-path").orEmpty()
         val profiles = env.activeProfiles.joinToString(", ")
         val host = "localhost"
 

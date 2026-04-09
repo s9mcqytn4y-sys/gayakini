@@ -6,6 +6,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.process.ExecOperations
 import org.gradle.kotlin.dsl.support.serviceOf
+import org.gradle.testing.jacoco.tasks.JacocoReport
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
+import java.sql.DriverManager
 
 buildscript {
     repositories {
@@ -27,6 +30,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
     id("org.flywaydb.flyway") version "10.20.1"
+    id("jacoco")
 }
 
 group = "com.gayakini"
@@ -52,11 +56,17 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.flywaydb:flyway-core:10.20.1")
     implementation("org.flywaydb:flyway-database-postgresql:10.20.1")
+
+    // PDF Generation
+    implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24")
+    implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
 
     // Fix Flyway Plugin "No database found"
     flywayMigration("org.postgresql:postgresql:42.7.4")
@@ -67,7 +77,6 @@ dependencies {
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
-    // UPGRADED to 2.7.0 for Spring Boot 3.4 compatibility
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     implementation("io.micrometer:micrometer-registry-prometheus")
 
@@ -79,6 +88,34 @@ dependencies {
 }
 
 // --- QUALITY GATES ---
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.withType<JacocoReport> {
+    dependsOn("test")
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.withType<JacocoCoverageVerification> {
+    dependsOn("jacocoTestReport")
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.80".toBigDecimal()
+            }
+            includes =
+                listOf(
+                    "com.gayakini.*.domain.*",
+                    "com.gayakini.*.application.*",
+                )
+        }
+    }
+}
 
 ktlint {
     verbose.set(true)
@@ -187,7 +224,7 @@ tasks.register("devHelp") {
               1. $ansiGreenLocal./gradlew localSetup$ansiResetLocal      - Initial .env setup
               2. $ansiGreenLocal./gradlew dbDoctor$ansiResetLocal        - Database & env diagnostic check
               3. $ansiGreenLocal./gradlew bootRun$ansiResetLocal         - Run app with pre-flight checks
-              4. $ansiGreenLocal./gradlew qualityCheck$ansiResetLocal    - Linting + Detekt + Unit Tests
+              4. $ansiGreenLocal./gradlew qualityGate$ansiResetLocal     - Strict quality gate (Lint + Detekt + Tests + Coverage)
               5. $ansiGreenLocal./gradlew validateMcp$ansiResetLocal     - Validate all MCP launchers
               6. $ansiGreenLocal./gradlew releaseCheck$ansiResetLocal    - Full quality gate (CI equivalent)
               7. $ansiGreenLocal./gradlew releaseCheckLocal$ansiResetLocal - Full gate + DB + MCP validation
@@ -216,22 +253,25 @@ tasks.register("localSetup") {
 
 tasks.register("dbDoctor") {
     group = "verification"
-    description = "Detailed database connectivity and environment check."
-    dependsOn("dbStart")
-    val envFileExists = file(".env").exists()
+    description = "Detailed database connectivity, Flyway validation, and seeding."
+    dependsOn("dbStart", "flywayMigrateLocal", "flywayValidateLocal")
+
     val dbHostVal = System.getProperty("DB_HOST") ?: "localhost"
     val dbPortVal = (System.getProperty("DB_PORT") ?: "5432").toInt()
     val dbNameVal = System.getProperty("DB_NAME") ?: "gayakini"
-    val javaVersion = System.getProperty("java.version")
+    val dbUserVal = System.getProperty("DB_USERNAME") ?: "postgres"
+    val dbPassVal = System.getProperty("DB_PASSWORD") ?: "password"
 
     doLast {
         val ansiResetLocal = "\u001B[0m"
         val ansiGreenLocal = "\u001B[32m"
         val ansiRedLocal = "\u001B[31m"
+        val ansiCyanLocal = "\u001B[36m"
         val ansiBoldLocal = "\u001B[1m"
 
-        println("\n$ansiBoldLocal[DATABASE DIAGNOSTICS]$ansiResetLocal")
+        println("\n$ansiBoldLocal[DATABASE DIAGNOSTICS & HEALTH]$ansiResetLocal")
 
+        // 1. Connectivity Check
         print("Connectivity ($dbHostVal:$dbPortVal): ")
         try {
             Socket(dbHostVal, dbPortVal).use { println("$ansiGreenLocal UP$ansiResetLocal") }
@@ -239,31 +279,82 @@ tasks.register("dbDoctor") {
             println("$ansiRedLocal DOWN$ansiResetLocal (${e.message})")
         }
 
-        println("Database Name: $dbNameVal")
-        println("Java Version: $javaVersion")
-        val envFound =
-            if (envFileExists) {
-                "$ansiGreenLocal FOUND$ansiResetLocal"
-            } else {
-                "$ansiRedLocal MISSING$ansiResetLocal"
+        // 2. Flyway Info
+        println("\n$ansiBoldLocal[FLYWAY STATUS]$ansiResetLocal")
+        val flyway = createLocalFlyway(file(projectDir.absolutePath))
+        val info = flyway.info()
+        info.all().forEach { migration ->
+            println("${migration.state} | ${migration.version ?: "<<repeatable>>"} | ${migration.description}")
+        }
+
+        // 3. Seeding Check (Sandbox Readiness)
+        println("\n$ansiBoldLocal[SANDBOX DATA SEEDING]$ansiResetLocal")
+        val url = System.getProperty("DB_URL") ?: "jdbc:postgresql://$dbHostVal:$dbPortVal/$dbNameVal"
+        try {
+            DriverManager.getConnection(url, dbUserVal, dbPassVal).use { conn ->
+                val stmt = conn.createStatement()
+
+                // Admin User
+                val adminRs =
+                    stmt.executeQuery(
+                        "SELECT count(*) FROM commerce.customers WHERE email = 'admin@gayakini.com'",
+                    )
+                adminRs.next()
+                if (adminRs.getInt(1) == 0) {
+                    println("[$ansiCyanLocal SEED $ansiResetLocal] Injecting default admin user...")
+                    stmt.execute(
+                        """
+                        INSERT INTO commerce.customers (id, email, password_hash, full_name, phone, created_at, updated_at)
+                        VALUES ('01918384-2591-789a-9e7b-7b3b7b3b7b3b', 'admin@gayakini.com',
+                                '${'$'}2a${'$'}12${'$'}S7q1N5R6Uj9WvLz.Yf8mHeU8X.k4a2hR.QzC1vY1V/RzYwN2yRzY.',
+                                'Gayakini Admin', '+628123456789', now(), now())
+                        """.trimIndent(),
+                    )
+                } else {
+                    println("[$ansiGreenLocal OK $ansiResetLocal] Admin user exists.")
+                }
+
+                // Promo Code
+                val promoRs = stmt.executeQuery("SELECT count(*) FROM commerce.promos WHERE code = 'SANDBOX2024'")
+                promoRs.next()
+                if (promoRs.getInt(1) == 0) {
+                    println("[$ansiCyanLocal SEED $ansiResetLocal] Injecting default promo code...")
+                    stmt.execute(
+                        """
+                        INSERT INTO commerce.promos (id, code, type, value, min_order_value, max_discount_amount,
+                                          is_active, start_date, end_date, created_at, updated_at)
+                        VALUES ('01918384-2591-789a-9e7b-7b3b7b3b7b3c', 'SANDBOX2024', 'PERCENTAGE', 10, 0, 50000,
+                                true, now(), now() + interval '1 year', now(), now())
+                        """.trimIndent(),
+                    )
+                } else {
+                    println("[$ansiGreenLocal OK $ansiResetLocal] Sandbox promo exists.")
+                }
             }
-        println(".env file: $envFound")
+        } catch (e: Exception) {
+            println("[$ansiRedLocal ERR $ansiResetLocal] Seeding check failed: ${e.message}")
+        }
     }
 }
 
-// Alias for dbDoctor to support common developer patterns
+// Alias for dbDoctor
 tasks.register("doctor") {
     group = "verification"
     description = "Alias for dbDoctor."
     dependsOn("dbDoctor")
 }
 
-// --- CORE QUALITY GATE (No DB needed) ---
+// --- CORE QUALITY GATE ---
 
-tasks.register("qualityCheck") {
+tasks.register("qualityGate") {
     group = "verification"
-    description = "Runs all code quality tools and unit tests."
-    dependsOn("ktlintCheck", "detekt", "test")
+    description = "Strict quality gate: Lint, Detekt, Tests, and Coverage."
+    dependsOn("ktlintCheck", "detekt", "test", "jacocoTestCoverageVerification")
+}
+
+// Ensure check runs qualityGate
+tasks.named("check") {
+    dependsOn("qualityGate")
 }
 
 // --- RELEASE GATE ---
@@ -271,13 +362,13 @@ tasks.register("qualityCheck") {
 tasks.register("releaseCheck") {
     group = "verification"
     description = "Full release quality gate (Clean + Quality + Build + MCP)."
-    dependsOn("clean", "qualityCheck", "assemble", "validateMcp")
+    dependsOn("clean", "qualityGate", "assemble", "validateMcp")
 }
 
 tasks.register("releaseCheckLocal") {
     group = "verification"
-    description = "Full release quality gate including local DB migration validation."
-    dependsOn("releaseCheck", "dbDoctor", "flywayValidateLocal")
+    description = "Full release quality gate including local DB health and seeding."
+    dependsOn("releaseCheck", "dbDoctor")
 }
 
 // --- BOOTRUN & LOCAL RUN ---
@@ -386,7 +477,7 @@ tasks.register("flywayInfoLocal") {
     group = "database"
     description = "Shows local Flyway migration status."
     dependsOn("dbStart")
-    val pDir = projectDir
+    val pDir = file(projectDir.absolutePath)
     doLast {
         val ansiResetLocal = "\u001B[0m"
         val ansiBoldLocal = "\u001B[1m"
@@ -403,7 +494,7 @@ tasks.register("flywayRepairLocal") {
     group = "database"
     description = "Repairs Flyway schema history for local database."
     dependsOn("dbStart")
-    val pDir = projectDir
+    val pDir = file(projectDir.absolutePath)
     doLast {
         val ansiResetLocal = "\u001B[0m"
         val ansiGreenLocal = "\u001B[32m"
@@ -416,7 +507,7 @@ tasks.register("flywayMigrateLocal") {
     group = "database"
     description = "Runs Flyway migrations against local database."
     dependsOn("dbStart")
-    val pDir = projectDir
+    val pDir = file(projectDir.absolutePath)
     doLast {
         val ansiResetLocal = "\u001B[0m"
         val ansiGreenLocal = "\u001B[32m"
@@ -430,7 +521,7 @@ tasks.register("flywayValidateLocal") {
     group = "verification"
     description = "Validates local migrations against local database."
     dependsOn("dbStart")
-    val pDir = projectDir
+    val pDir = file(projectDir.absolutePath)
     doLast {
         val ansiResetLocal = "\u001B[0m"
         val ansiGreenLocal = "\u001B[32m"

@@ -79,13 +79,13 @@ class CartController(private val cartService: CartService) {
                             CartItemDto(
                                 id = item.id,
                                 productId = item.product?.id ?: UUID.randomUUID(),
-                                productTitle = item.productTitleSnapshot ?: "",
+                                productTitle = item.productTitleSnapshot.orEmpty(),
                                 variantId = item.variant.id,
-                                sku = item.skuSnapshot ?: "",
+                                sku = item.skuSnapshot.orEmpty(),
                                 attributes =
                                     listOf(
-                                        ProductVariantAttributeDto(name = "color", value = item.color ?: ""),
-                                        ProductVariantAttributeDto(name = "size", value = item.sizeCode ?: ""),
+                                        ProductVariantAttributeDto(name = "color", value = item.color.orEmpty()),
+                                        ProductVariantAttributeDto(name = "size", value = item.sizeCode.orEmpty()),
                                     ),
                                 quantity = item.quantity,
                                 unitPrice = MoneyDto(amount = item.unitPriceAmount),

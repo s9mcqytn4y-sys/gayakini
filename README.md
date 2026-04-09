@@ -117,6 +117,17 @@ Untuk mengetes webhook dari provider luar (Midtrans/Biteship) ke mesin lokal And
 2. Update URL webhook di Dashboard Provider ke URL ngrok Anda (Misal: `https://abcd-123.ngrok-free.app/v1/webhooks/midtrans`).
 3. Gunakan file `http/90-webhooks.http` untuk simulasi payload tanpa ngrok.
 
+## Billing & Document Generation
+
+Gayakini menyediakan sistem pembuatan E-Receipt/Invoice otomatis yang aman dan skalabel:
+1. **Asynchronous Execution**: Invoice di-render secara background setelah status pembayaran menjadi `PAID`. Proses ini tidak menghambat respon webhook utama.
+2. **Professional PDF Rendering**: Menggunakan **Thymeleaf** (templating) dan **OpenHTMLtoPDF** dengan dukungan lokalisasi Indonesia (IDR, Tanggal).
+3. **Secure Storage Architecture**:
+    - **Directory Chunking**: File disimpan dengan struktur `YYYY/MM/DD` untuk performa filesystem yang optimal.
+    - **Secure Naming**: Nama file menggunakan generator kriptografis (`INV-{ORDER_NUMBER}-{HASH}.pdf`) untuk mencegah *ID enumeration*.
+4. **RBAC Streaming API**: Invoice dapat di-download melalui `GET /v1/orders/{orderId}/invoice`. Akses dibatasi ketat hanya untuk pemilik pesanan atau `ROLE_ADMIN`.
+5. **Audit Integration**: Setiap keberhasilan atau kegagalan pembuatan dokumen dicatat dalam Audit Trail sistem.
+
 Dokumen pendukung:
 - [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
 - [docs/TESTING.md](docs/TESTING.md)

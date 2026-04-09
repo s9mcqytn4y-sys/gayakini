@@ -89,7 +89,9 @@ class Order(
     var shippingSelection: OrderShippingSelection? = null,
 ) : Persistable<UUID> {
     @Column(name = "total_amount", insertable = false, updatable = false)
-    private var totalAmountGenerated: Long? = 0
+    private val totalAmountGenerated: Long? = 0
+
+    fun getTotalAmountGenerated(): Long? = totalAmountGenerated
 
     @Version
     @Column(name = "version", nullable = false)
@@ -110,6 +112,9 @@ class Order(
     @LastModifiedBy
     @Column(name = "updated_by")
     var updatedBy: UUID? = null
+
+    @Column(name = "receipt_path")
+    var receiptPath: String? = null
 
     @Transient
     private var isNewRecord = true
@@ -166,7 +171,9 @@ class OrderItem(
     val unitPriceAmount: Long,
 ) : Persistable<UUID> {
     @Column(name = "line_total_amount", insertable = false, updatable = false)
-    private var lineTotalAmountGenerated: Long? = 0
+    private val lineTotalAmountGenerated: Long? = null
+
+    fun getLineTotalAmountGenerated(): Long? = lineTotalAmountGenerated
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
