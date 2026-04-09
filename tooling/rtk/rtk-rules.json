@@ -1,0 +1,71 @@
+{
+  "noisyPatterns": [
+    "^\\s*$",
+    "^\\s*(Done|Success|Finished) in \\d+(\\.\\d+)?(ms|s|m|h)\\s*$",
+    "^\\s*[\\|\\-\\\\/]\\s*$",
+    "Scanning for projects...",
+    "Using cached results",
+    "up-to-date",
+    "skipped",
+    "Download(ing|ed)",
+    "Check(ing|ed)",
+    "^\\.*$",
+    "^\\s*at .+\\(Unknown Source\\)$",
+    "^\\s*at .+\\(\\d+\\)$"
+  ],
+  "preservePatterns": [
+    "ERROR:",
+    "WARNING:",
+    "Caused by:",
+    "BUILD FAILED",
+    "BUILD SUCCESSFUL",
+    "Tests Summary:",
+    "failedTests:",
+    "\\.(kt|java|sql|yml|yaml|kts):\\d+:\\d+",
+    "\\d+ passed, \\d+ failed"
+  ],
+  "collapsePatterns": [
+    "^\\s*at (org\\.gradle|org\\.springframework|java\\.base|kotlin|jdk\\.proxy).+",
+    "^\\s*at (com\\.gayakini).+"
+  ],
+  "progressPatterns": [
+    "\r",
+    "^\\s*\\d+%.+$",
+    "^\\s*\\d+/\\d+ (kB|MB|GB).+$"
+  ],
+  "envLeakPatterns": [
+    "token",
+    "secret",
+    "password",
+    "key",
+    "Authorization"
+  ],
+  "maxRepeatedLines": 3,
+  "maxStackFrames": 5,
+  "maxSectionLines": 50,
+  "truncateLongLineAt": 500,
+  "profiles": {
+    "conservative": {
+      "stripAnsi": true,
+      "dedupe": true,
+      "collapseStack": false,
+      "truncateOutput": false,
+      "dropNoisy": true
+    },
+    "balanced": {
+      "stripAnsi": true,
+      "dedupe": true,
+      "collapseStack": true,
+      "truncateOutput": true,
+      "dropNoisy": true
+    },
+    "aggressive": {
+      "stripAnsi": true,
+      "dedupe": true,
+      "collapseStack": true,
+      "truncateOutput": true,
+      "dropNoisy": true,
+      "summaryOnlyOnSuccess": true
+    }
+  }
+}

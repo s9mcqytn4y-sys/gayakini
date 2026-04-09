@@ -38,6 +38,7 @@ Repository Root: `C:\Software\gayakini`
 5. **gayakini-terminal:**
    - Use for `./gradlew` commands.
    - Use `./gradlew releaseCheck` for core evidence.
+   - **RTK Filter:** Use `.\tooling\rtk\rtk.ps1 -Cmd "..."` to reduce token noise from long CLI outputs.
 6. **gayakini-postgres:**
    - Use to verify schema in `commerce` or `public` schemas.
    - Local defaults: `localhost:5432`, database `gayakini`, user `postgres`, password `password`.

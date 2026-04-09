@@ -45,6 +45,13 @@ Gunakan `gayakini-terminal` untuk verifikasi:
 6. `./gradlew releaseCheckLocal` (Full gate: releaseCheck + Local DB validation)
 7. `./gradlew dbDoctor` (Database & Environment diagnostics)
 
+## RTK Terminal Filtering (Noise Reduction)
+Repo ini mendukung filtering output terminal untuk efisiensi token LLM via adaptasi RTK.
+- **Kapan Menggunakan:** Gunakan `.\tooling\rtk\rtk.ps1 -Cmd "..."` untuk perintah dengan output panjang atau repetitif (misal: `./gradlew test`).
+- **Prinsip:** RTK membuang progress bar, deduplikasi log berulang, dan meringkas stack trace framework.
+- **Fail-safe:** Jika filter gagal, output asli akan diteruskan. Raw logs selalu disimpan di `tooling/rtk/logs/`.
+- **Integrasi:** Aktifkan global via `RTK_ENABLED=true` di `.env` (default: false).
+
 ## Local MCP Defaults
 - `PROJECT_ROOT` / `REPO_ROOT`: default ke `C:\Software\gayakini`
 - `DB_HOST=localhost`

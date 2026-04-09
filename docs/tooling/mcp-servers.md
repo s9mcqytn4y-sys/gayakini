@@ -66,6 +66,11 @@ Shared helper:
 
 - Scope: command execution lokal untuk gradle/git/tooling.
 - Dipakai untuk verifikasi evidence-driven, bukan shortcut klaim hasil.
+- **RTK Filtering:** Mendukung pengurangan noise output via `tooling\rtk`.
+  - `RTK_ENABLED=true`: Aktifkan filtering.
+  - `RTK_PROFILE`: `conservative`, `balanced` (default), `aggressive`.
+  - `RTK_MODE`: `filtered` (default), `passthrough`, `summarize-on-error`.
+  - `RTK_TEE_DIR`: Folder untuk menyimpan raw log (default: `tooling\rtk\logs`).
 
 ### http
 
