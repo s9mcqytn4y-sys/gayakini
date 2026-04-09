@@ -130,7 +130,7 @@
     <table class="meta-info">
         <tr>
             <td><strong>Invoice No:</strong> <span th:text="${order.orderNumber}">ORD-12345</span></td>
-            <td class="text-right"><strong>Date of Issue:</strong> <span th:text="${#temporals.format(order.paidAt, 'dd MMMM yyyy HH:mm', 'id')}">09 April 2026</span></td>
+            <td class="text-right"><strong>Date of Issue:</strong> <span th:text="${#temporals.format(order.paidAt, 'dd MMMM yyyy HH:mm')}">09 April 2026</span></td>
         </tr>
         <tr>
             <td><strong>Order ID:</strong> <span th:text="${order.id}">uuid-v7</span></td>
