@@ -11,7 +11,22 @@
     "Check(ing|ed)",
     "^\\.*$",
     "^\\s*at .+\\(Unknown Source\\)$",
-    "^\\s*at .+\\(\\d+\\)$"
+    "^\\s*at .+\\(\\d+\\)$",
+    "^\\s*at .+\\(Native Method\\)$",
+    "Hibernate: ",
+    "Resolved [a-zA-Z0-9.]+Exception",
+    "Starting search for .+\\.sql",
+    "Validated \\d+ migrations",
+    "Current version of schema",
+    "Schema .?commerce.? is up to date",
+    "OpenJDK 64-Bit Server VM warning",
+    "spring.profiles.active=test",
+    "Starting .?GayakiniApplication.?",
+    "The following 1 profile is active: .?test.?",
+    "No active profile set, falling back to 1 default profile: .?default.?",
+    "Started .?GayakiniApplication.? in \\d+\\.\\d+ seconds",
+    "Adding .?X-Order-Token.? to header",
+    "Menerima webhook Midtrans untuk Order: "
   ],
   "preservePatterns": [
     "ERROR:",
@@ -22,16 +37,22 @@
     "Tests Summary:",
     "failedTests:",
     "\\.(kt|java|sql|yml|yaml|kts):\\d+:\\d+",
-    "\\d+ passed, \\d+ failed"
+    "\\d+ passed, \\d+ failed",
+    "Condition failed:",
+    "EXPECTED:",
+    "ACTUAL:",
+    "DIFF:",
+    "AssertionFailedError"
   ],
   "collapsePatterns": [
-    "^\\s*at (org\\.gradle|org\\.springframework|java\\.base|kotlin|jdk\\.proxy).+",
+    "^\\s*at (org\\.gradle|org\\.springframework|java\\.base|kotlin|jdk\\.proxy|org\\.junit|org\\.apache|org\\.hibernate|com\\.sun|sun\\.reflect).+",
     "^\\s*at (com\\.gayakini).+"
   ],
   "progressPatterns": [
     "\r",
     "^\\s*\\d+%.+$",
-    "^\\s*\\d+/\\d+ (kB|MB|GB).+$"
+    "^\\s*\\d+/\\d+ (kB|MB|GB).+$",
+    "^\\s*<[-=]*> \\d+%"
   ],
   "envLeakPatterns": [
     "token",
@@ -40,10 +61,10 @@
     "key",
     "Authorization"
   ],
-  "maxRepeatedLines": 3,
-  "maxStackFrames": 5,
+  "maxRepeatedLines": 2,
+  "maxStackFrames": 3,
   "maxSectionLines": 50,
-  "truncateLongLineAt": 500,
+  "truncateLongLineAt": 400,
   "profiles": {
     "conservative": {
       "stripAnsi": true,

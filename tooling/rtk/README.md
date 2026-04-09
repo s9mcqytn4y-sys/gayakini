@@ -1,36 +1,48 @@
-# RTK Terminal Filter: Gayakini Adaption
+# RTK Terminal Filter: Gayakini Adaption (V2)
 
 Adaptasi arsitektur [rtk-ai/rtk](https://github.com/rtk-ai/rtk) untuk efisiensi token LLM di repository Gayakini.
 
 ## Overview
-RTK (Reduced Terminal Kontext) bertindak sebagai proxy/filter untuk output terminal. Tujuannya adalah menyaring noise (progress bars, repetitive stack traces, banner, dll.) sehingga agent (Gemini, Codex, Claude) menerima informasi yang padat dan relevan saja.
+RTK (Reduced Terminal Kontext) bertindak sebagai proxy/filter untuk output terminal. Tujuannya adalah menyaring noise (progress bars, repetitive stack traces, banner, dll.) sehingga agent menerima informasi yang padat dan relevan saja.
 
 ## Komponen
-1.  **`filter-terminal-output.ps1`**: Script inti pemrosesan teks. Menggunakan Regex dan Rules untuk memadatkan output.
-2.  **`rtk-rules.json`**: Konfigurasi pola noise, pengelompokan, dan batas pemotongan teks.
-3.  **`tee-output.ps1`**: Menyimpan output asli (raw) ke disk untuk keperluan recovery/debugging jika filter terlalu agresif.
-4.  **`rtk.ps1`**: Wrapper utama untuk menjalankan command (Proxy).
+1.  **`filter-terminal-output.ps1`**: Script inti pemrosesan teks menggunakan Regex.
+2.  **`rtk-rules.json`**: Konfigurasi pola noise, pengelompokan, dan batas pemotongan.
+3.  **`tee-output.ps1`**: Menyimpan output asli (raw) ke `logs/` untuk pemulihan bukti jika filter terlalu agresif.
+4.  **`rtk.ps1`**: Wrapper/Proxy utama untuk menjalankan perintah.
+5.  **`fixtures/`**: Sampel output noisy untuk pengujian regresi.
+6.  **`replay-fixture.ps1`**: Helper untuk menguji filter terhadap file fixture.
 
 ## Cara Kerja
-Saat `RTK_ENABLED=true` di set di environment:
-1.  Command dijalankan dan output ditangkap.
-2.  Raw output disimpan ke `tooling/rtk/logs/`.
-3.  Output difilter berdasarkan profile yang dipilih (`balanced` secara default).
-4.  Agent menerima output yang sudah diringkas beserta referensi file log asli jika terjadi failure.
+Saat `RTK_ENABLED=true`:
+1.  Perintah dijalankan via `rtk.ps1`.
+2.  Output mentah disimpan ke `tooling/rtk/logs/`.
+3.  Output difilter menggunakan `filter-terminal-output.ps1`.
+4.  Jika filtering gagal, sistem otomatis fallback ke output mentah (fail-safe).
+5.  Exit code asli dari perintah selalu dipertahankan.
 
-## Konfigurasi (Environment Variables)
--   `RTK_ENABLED`: `true` atau `false`.
--   `RTK_PROFILE`: `conservative`, `balanced`, atau `aggressive`.
--   `RTK_MAX_LINES`: Batas jumlah baris output (default: 100).
--   `RTK_MAX_CHARS`: Batas jumlah karakter output (default: 10000).
+## Mode & Profile
+-   **Modes**:
+    -   `filtered`: (Default) Menampilkan output yang diringkas.
+    -   `passthrough`: Menampilkan output asli tanpa filter.
+    -   `summarize-on-error`: Ringkasan hanya ditampilkan jika command gagal.
+-   **Profiles**:
+    -   `conservative`: Hanya strip ANSI dan drop noise dasar.
+    -   `balanced`: (Default) Stack trace collapsing + deduplikasi.
+    -   `aggressive`: Ringkasan sangat ketat (cocok untuk perintah yang sangat noisy).
 
-## Penggunaan oleh Agent
-Agent disarankan untuk menjalankan perintah melalui wrapper RTK jika output diperkirakan akan sangat panjang atau noisy (seperti `./gradlew test` atau build yang gagal).
+## Penggunaan & Benchmark
+Agent disarankan memakai `rtk.ps1` untuk perintah panjang. Benchmark dapat diaktifkan untuk melihat efisiensi pengurangan noise.
 
-Contoh:
 ```powershell
-.\tooling\rtk\rtk.ps1 -Cmd "./gradlew test"
+# Jalankan perintah dengan filter dan lihat penghematan token
+.\tooling\rtk\rtk.ps1 -Cmd "./gradlew test" -Benchmark
 ```
 
-## Fallback
-Jika filter gagal atau ada kesalahan konfigurasi, sistem akan otomatis melakukan passthrough (menampilkan output asli) agar tidak mengganggu workflow.
+Output benchmark akan menampilkan:
+-   `RAW_LINES` vs `FILTERED_LINES`
+-   `REDUCTION %` (Biasanya 70-90% untuk kegagalan test/build)
+-   `EST_FILTERED_TOKENS` (Estimasi beban konteks AI)
+
+## Observabilitas
+Semua output mentah dapat ditemukan di `tooling/rtk/logs/raw-*.log`. Jika agent ragu dengan hasil filter, rujuk file tersebut.

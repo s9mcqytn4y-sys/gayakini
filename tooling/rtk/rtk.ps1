@@ -2,13 +2,15 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Cmd,
     [string]$Profile = "balanced",
-    [string]$Mode = "filtered"
+    [string]$Mode = "filtered",
+    [switch]$Benchmark
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $RtkEnabled = ($env:RTK_ENABLED -eq 'true')
+$ShowBenchmark = $Benchmark -or ($env:RTK_SHOW_BENCHMARK -eq 'true')
 $RulesPath = if ($env:RTK_RULES_PATH) { $env:RTK_RULES_PATH } else { "$PSScriptRoot\rtk-rules.json" }
 $TeeDir = if ($env:RTK_TEE_DIR) { $env:RTK_TEE_DIR } else { "$PSScriptRoot\logs" }
 
@@ -49,6 +51,7 @@ try {
         -CommandText $Cmd `
         -ExitCode $CapturedExitCode `
         -RawOutputRef $RawOutputRef `
+        -ShowBenchmark:$ShowBenchmark `
         -PassThruOnParseError
 } catch {
     # Fallback to raw output if filtering crashes

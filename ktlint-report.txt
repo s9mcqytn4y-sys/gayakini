@@ -1,4 +1,0 @@
-[90mC:\Software\gayakini\[0mbuild.gradle.kts[90m:[0m155[90m:121:[0m Missing trailing comma before ")" [90m(standard:trailing-comma-on-call-site)[0m
-
-Summary error count (descending) by rule:
-  standard:trailing-comma-on-call-site: 1
