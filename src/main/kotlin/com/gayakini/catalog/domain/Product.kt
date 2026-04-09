@@ -27,6 +27,8 @@ class Product(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: ProductStatus = ProductStatus.DRAFT,
+    @Column(name = "image_url")
+    var imageUrl: String? = null,
     @Column(name = "published_at")
     var publishedAt: Instant? = null,
     @Column(name = "archived_at")

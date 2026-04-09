@@ -5,9 +5,12 @@ import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.customer.api.*
 import com.gayakini.customer.domain.*
 import com.gayakini.infrastructure.security.JwtService
+import com.gayakini.infrastructure.storage.StorageCategory
+import com.gayakini.infrastructure.storage.StorageService
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.InputStream
 import java.time.Instant
 import java.util.NoSuchElementException
 import java.util.UUID
@@ -18,6 +21,7 @@ class CustomerService(
     private val addressRepository: CustomerAddressRepository,
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
+    private val storageService: StorageService,
 ) {
     companion object {
         private const val JWT_EXPIRY_SECONDS = 3600
@@ -216,5 +220,32 @@ class CustomerService(
             )
 
         return addressRepository.save(address)
+    }
+
+    @Transactional
+    fun updateProfilePicture(
+        customerId: UUID,
+        inputStream: InputStream,
+        originalFilename: String,
+    ): String {
+        val customer = getCustomer(customerId)
+
+        // Delete old profile picture if exists
+        customer.profileUrl?.let { oldUrl ->
+            storageService.delete(oldUrl, StorageCategory.PROFILES)
+        }
+
+        val relativePath =
+            storageService.store(
+                inputStream = inputStream,
+                filename = originalFilename,
+                category = StorageCategory.PROFILES,
+            )
+
+        customer.profileUrl = relativePath
+        customer.updatedAt = Instant.now()
+        customerRepository.save(customer)
+
+        return relativePath
     }
 }

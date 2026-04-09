@@ -25,10 +25,13 @@ import com.gayakini.payment.domain.PaymentSettledEvent
 import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
+import com.gayakini.infrastructure.storage.StorageCategory
+import com.gayakini.infrastructure.storage.StorageService
 import org.springframework.context.ApplicationEventPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.io.InputStream
 import java.time.Instant
 import java.util.NoSuchElementException
 import java.util.UUID
@@ -45,6 +48,7 @@ class PaymentService(
     private val objectMapper: ObjectMapper,
     private val eventPublisher: ApplicationEventPublisher,
     private val auditContext: AuditContext,
+    private val storageService: StorageService,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -467,5 +471,50 @@ class PaymentService(
         return status == PaymentStatus.CANCELLED ||
             status == PaymentStatus.EXPIRED ||
             status == PaymentStatus.FAILED
+    }
+
+    @Transactional
+    fun uploadPaymentProof(
+        paymentId: UUID,
+        inputStream: InputStream,
+        originalFilename: String,
+    ): String {
+        val payment =
+            paymentRepository.findById(paymentId)
+                .orElseThrow { NoSuchElementException("Data pembayaran tidak ditemukan.") }
+
+        // Only allow proof upload for pending payments
+        check(payment.status == PaymentStatus.PENDING) { "Hanya pembayaran pending yang dapat mengunggah bukti." }
+
+        // Delete old proof if exists
+        payment.proofUrl?.let { oldUrl ->
+            storageService.delete(oldUrl, StorageCategory.PROOFS)
+        }
+
+        val relativePath =
+            storageService.store(
+                inputStream = inputStream,
+                filename = originalFilename,
+                category = StorageCategory.PROOFS,
+            )
+
+        payment.proofUrl = relativePath
+        payment.updatedAt = Instant.now()
+        paymentRepository.save(payment)
+
+        val (actorId, actorRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = actorId,
+                actorRole = actorRole,
+                entityType = "PAYMENT",
+                entityId = payment.transactionNumber,
+                eventType = "PAYMENT_PROOF_UPLOADED",
+                newState = mapOf("proofUrl" to relativePath),
+                reason = "Payment proof uploaded for order ${payment.orderId}",
+            ),
+        )
+
+        return relativePath
     }
 }

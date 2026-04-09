@@ -25,6 +25,8 @@ class Customer(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var role: CustomerRole = CustomerRole.CUSTOMER,
+    @Column(name = "profile_url")
+    var profileUrl: String? = null,
     @Column(name = "is_active", nullable = false)
     var isActive: Boolean = true,
     @Column(name = "last_login_at")

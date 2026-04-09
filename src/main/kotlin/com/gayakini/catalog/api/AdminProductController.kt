@@ -1,5 +1,6 @@
 package com.gayakini.catalog.api
 
+import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.*
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.util.UuidV7Generator
@@ -7,6 +8,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.multipart.MultipartFile
 import java.util.*
 
 @RestController
@@ -14,6 +16,7 @@ import java.util.*
 class AdminProductController(
     private val productRepository: ProductRepository,
     private val variantRepository: ProductVariantRepository,
+    private val productService: ProductService,
 ) {
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
@@ -89,6 +92,30 @@ class AdminProductController(
                     // TODO: Record in adjustment table
                     lastAdjustmentId = UUID.randomUUID(),
                 ),
+            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+        )
+    }
+
+    @PostMapping("/products/{productId}/image")
+    @PreAuthorize("hasRole('ADMIN')")
+    fun uploadProductImage(
+        @PathVariable productId: UUID,
+        @RequestParam("file") file: MultipartFile,
+        @RequestParam(defaultValue = "Product image") altText: String,
+        @RequestParam(defaultValue = "false") isPrimary: Boolean,
+    ): AdminProductResponse {
+        val media =
+            productService.uploadProductMedia(
+                productId = productId,
+                inputStream = file.inputStream,
+                originalFilename = file.originalFilename ?: "image.jpg",
+                altText = altText,
+                isPrimary = isPrimary,
+            )
+
+        return AdminProductResponse(
+            message = "Gambar produk berhasil diunggah.",
+            data = mapToAdminData(media.product),
             meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }

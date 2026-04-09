@@ -55,6 +55,7 @@ class SecurityConfig(
                     .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/**").hasRole("ADMIN")
+                    .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling {

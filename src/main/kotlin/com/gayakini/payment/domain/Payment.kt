@@ -34,6 +34,8 @@ class Payment(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     var status: PaymentStatus = PaymentStatus.PENDING,
+    @Column(name = "proof_url")
+    var proofUrl: String? = null,
     @Column(name = "preferred_channel")
     var preferredChannel: String? = null,
     @Column(name = "enabled_channels", columnDefinition = "JSONB")

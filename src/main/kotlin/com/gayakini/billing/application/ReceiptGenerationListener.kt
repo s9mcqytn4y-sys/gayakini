@@ -2,6 +2,7 @@ package com.gayakini.billing.application
 
 import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.infrastructure.storage.FileNamingGenerator
+import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
 import com.gayakini.order.domain.Order
 import com.gayakini.order.domain.OrderRepository
@@ -48,7 +49,12 @@ class ReceiptGenerationListener(
             val filename = FileNamingGenerator.generateSecureInvoiceName(order.orderNumber)
 
             ByteArrayInputStream(pdfBytes).use { inputStream ->
-                val relativePath = storageService.store(inputStream, filename)
+                val relativePath =
+                    storageService.store(
+                        inputStream = inputStream,
+                        filename = filename,
+                        category = StorageCategory.RECEIPTS,
+                    )
                 order.receiptPath = relativePath
                 orderRepository.save(order)
             }

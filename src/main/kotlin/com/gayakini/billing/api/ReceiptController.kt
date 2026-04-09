@@ -2,6 +2,7 @@ package com.gayakini.billing.api
 
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.infrastructure.security.SecurityUtils
+import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
 import com.gayakini.order.domain.OrderRepository
 import org.slf4j.LoggerFactory
@@ -44,7 +45,7 @@ class ReceiptController(
             order.receiptPath
                 ?: throw NoSuchElementException("Invoice belum tersedia untuk order ini.")
 
-        val file = storageService.loadAsPath(receiptPath).toFile()
+        val file = storageService.loadAsPath(receiptPath, StorageCategory.RECEIPTS).toFile()
         val resource = FileSystemResource(file)
 
         logger.info("Streaming invoice for order: {} (Path: {})", order.orderNumber, receiptPath)

@@ -291,6 +291,67 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+    patch:
+      tags:
+      - Customer Profile
+      summary: Update current customer profile
+      operationId: updateMyProfile
+      security:
+      - customerBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                  maxLength: 120
+                phone:
+                  type: string
+                  maxLength: 30
+      responses:
+        '200':
+          description: Profil berhasil diperbarui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfileResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/me/profile-picture:
+    post:
+      tags:
+      - Customer Profile
+      summary: Upload profile picture
+      operationId: uploadProfilePicture
+      security:
+      - customerBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Profile image (jpeg, png, webp). Max 5MB.
+      responses:
+        '200':
+          description: Foto profil berhasil diunggah.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerProfileResponse'
+        '415':
+          $ref: '#/components/responses/Problem'
+        default:
+          $ref: '#/components/responses/Problem'
   /v1/me/addresses:
     get:
       tags:
@@ -980,6 +1041,22 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
   /v1/admin/products/{productId}:
+    get:
+      tags:
+      - Admin Catalog
+      summary: Get product for admin
+      operationId: adminGetProduct
+      security:
+      - Admin: []
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Detail produk berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
     patch:
       tags:
       - Admin Catalog
@@ -1002,6 +1079,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminProductResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /v1/admin/products/{productId}/image:
+    post:
+      tags:
+      - Admin Catalog
+      summary: Upload main product image
+      operationId: uploadProductImage
+      security:
+      - Admin: []
+      parameters:
+      - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Product image (jpeg, png, webp). Max 5MB.
+      responses:
+        '200':
+          description: Gambar produk berhasil diunggah.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        '415':
+          $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
   /v1/admin/products/{productId}/variants:
@@ -1171,6 +1282,103 @@ paths:
           $ref: '#/components/responses/Problem'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/admin/payments/{paymentId}/proof:
+    post:
+      tags:
+      - Payments
+      summary: Upload payment proof (Admin or Customer)
+      operationId: uploadPaymentProof
+      security:
+      - Admin: []
+      - customerBearerAuth: []
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Payment proof (jpeg, png, pdf). Max 5MB.
+      responses:
+        '200':
+          description: Bukti pembayaran berhasil diunggah.
+  /api/v1/media/secure/profiles/{filename}:
+    get:
+      tags:
+      - Customer Profile
+      summary: Retrieve secured profile picture
+      operationId: getSecureProfilePicture
+      security:
+      - customerBearerAuth: []
+      - Admin: []
+      parameters:
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Profile picture stream.
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+  /api/v1/media/secure/proofs/{year}/{month}/{day}/{filename}:
+    get:
+      tags:
+      - Payments
+      summary: Retrieve secured payment proof
+      operationId: getSecurePaymentProof
+      security:
+      - customerBearerAuth: []
+      - Admin: []
+      parameters:
+      - name: year
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: month
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: day
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: filename
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Payment proof stream.
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
   /v1/admin/orders/{orderId}/cancellations:
     post:
       tags:

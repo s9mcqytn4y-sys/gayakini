@@ -53,7 +53,26 @@ data class StandardResponse<T>(
     val message: String,
     val data: T? = null,
     val meta: ApiMeta? = ApiMeta(),
-)
+) {
+    companion object {
+        fun <T> success(
+            message: String,
+            data: T? = null,
+        ) = StandardResponse(true, message, data)
+
+        fun <T> error(
+            message: String,
+            code: String? = null,
+        ) = StandardResponse<T>(
+            success = false,
+            message = message,
+            data = null,
+            meta = ApiMeta(requestId = code ?: UUID.randomUUID().toString()),
+        )
+    }
+}
+
+typealias ApiResponse<T> = StandardResponse<T>
 
 /**
  * Standard Paginated Response as per OpenAPI Contract

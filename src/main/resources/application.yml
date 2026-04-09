@@ -1,8 +1,15 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
 spring:
   application:
     name: gayakini
   profiles:
-    active: local # Default to local. Use 'sandbox' for Midtrans testing.
+    active: local
     group:
       sandbox:
         - sandbox
@@ -27,13 +34,10 @@ spring:
     default-schema: ${DB_SCHEMA:commerce}
     schemas: ${DB_SCHEMA:commerce}, public
     create-schemas: true
-
-server:
-  port: ${SERVER_PORT:8080}
-  error:
-    include-message: never
-    include-binding-errors: never
-    include-stacktrace: never
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
 
 management:
   endpoints:
