@@ -6,6 +6,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
@@ -17,6 +19,11 @@ class BiteshipShippingProvider(
 ) : ShippingProvider {
     private val logger = LoggerFactory.getLogger(BiteshipShippingProvider::class.java)
 
+    @Retryable(
+        value = [RestClientException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 1000, multiplier = 2.0),
+    )
     override fun getRates(
         origin: String,
         destination: String,
@@ -83,6 +90,11 @@ class BiteshipShippingProvider(
         return if (isMin) parts.firstOrNull() else parts.lastOrNull()
     }
 
+    @Retryable(
+        value = [RestClientException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 1000, multiplier = 2.0),
+    )
     override fun createShipment(
         orderId: String,
         rateId: String,
@@ -153,6 +165,11 @@ class BiteshipShippingProvider(
         return request
     }
 
+    @Retryable(
+        value = [RestClientException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 1000, multiplier = 2.0),
+    )
     override fun trackShipment(waybillId: String): ShipmentTracking {
         val url = "${properties.biteship.apiUrl}/trackings/$waybillId"
         val headers = createHeaders()

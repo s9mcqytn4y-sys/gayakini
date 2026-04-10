@@ -61,15 +61,8 @@ class ProductService(
 
     @Transactional(readOnly = true)
     fun getProduct(id: UUID): Product {
-        val product =
-            productRepository.findById(id)
-                .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
-
-        // Eagerly initialize lazy collections to avoid LazyInitializationException in controller mapping
-        Hibernate.initialize(product.variants)
-        Hibernate.initialize(product.media)
-
-        return product
+        return productRepository.findById(id)
+            .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
     }
 
     @Transactional

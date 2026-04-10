@@ -1191,6 +1191,125 @@ paths:
                 $ref: '#/components/schemas/StockAdjustmentResponse'
         default:
           $ref: '#/components/responses/Problem'
+  /v1/admin/finance/balance:
+    get:
+      tags:
+      - Admin Finance
+      summary: Get current available balance
+      operationId: getFinanceBalance
+      security:
+      - Admin: []
+      responses:
+        '200':
+          description: Saldo berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+  /v1/admin/finance/withdrawals:
+    get:
+      tags:
+      - Admin Finance
+      summary: List all withdrawal requests
+      operationId: listWithdrawals
+      security:
+      - Admin: []
+      responses:
+        '200':
+          description: Daftar penarikan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WithdrawalResponse'
+    post:
+      tags:
+      - Admin Finance
+      summary: Create a new withdrawal request
+      operationId: createWithdrawal
+      security:
+      - Admin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequestInput'
+      responses:
+        '201':
+          description: Permintaan penarikan berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalResponse'
+  /v1/admin/finance/withdrawals/{id}/approve:
+    post:
+      tags:
+      - Admin Finance
+      summary: Approve a withdrawal request
+      operationId: approveWithdrawal
+      security:
+      - Admin: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveWithdrawalRequest'
+      responses:
+        '200':
+          description: Penarikan disetujui.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalResponse'
+  /v1/admin/finance/withdrawals/{id}/process:
+    post:
+      tags:
+      - Admin Finance
+      summary: Mark a withdrawal as processed (Sandbox Mock)
+      operationId: processWithdrawal
+      security:
+      - Admin: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Penarikan berhasil diproses.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WithdrawalResponse'
+  /v1/admin/finance/payout-destinations:
+    get:
+      tags:
+      - Admin Finance
+      summary: List active payout destinations
+      operationId: listPayoutDestinations
+      security:
+      - Admin: []
+      responses:
+        '200':
+          description: Daftar tujuan pencairan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PayoutDestination'
   /v1/admin/orders:
     get:
       tags:
@@ -3160,6 +3279,88 @@ components:
               const: true
         meta:
           $ref: '#/components/schemas/ApiMeta'
+    WithdrawalStatus:
+      type: string
+      enum:
+      - PENDING
+      - APPROVED
+      - PROCESSED
+      - REJECTED
+    BalanceResponse:
+      type: object
+      required:
+      - availableBalance
+      - currency
+      properties:
+        availableBalance:
+          type: integer
+          format: int64
+        currency:
+          type: string
+          default: IDR
+    WithdrawalRequestInput:
+      type: object
+      required:
+      - amount
+      - payoutDestinationId
+      properties:
+        amount:
+          type: integer
+          format: int64
+        payoutDestinationId:
+          type: string
+          format: uuid
+    WithdrawalResponse:
+      type: object
+      required:
+      - id
+      - amount
+      - status
+      - requestedAt
+      - payoutDestination
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/WithdrawalStatus'
+        requestedAt:
+          type: string
+          format: date-time
+        payoutDestination:
+          $ref: '#/components/schemas/PayoutDestination'
+        adminNotes:
+          type: string
+          nullable: true
+    PayoutDestination:
+      type: object
+      required:
+      - id
+      - bankName
+      - accountName
+      - accountNumber
+      properties:
+        id:
+          type: string
+          format: uuid
+        bankName:
+          type: string
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        branch:
+          type: string
+          nullable: true
+    ApproveWithdrawalRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          nullable: true
     AdminCreateProductRequest:
       type: object
       additionalProperties: false

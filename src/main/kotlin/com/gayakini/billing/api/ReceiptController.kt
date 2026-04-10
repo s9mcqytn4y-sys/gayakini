@@ -34,7 +34,7 @@ class ReceiptController(
                 .orElseThrow { NoSuchElementException("Order tidak ditemukan.") }
 
         val currentUserId = SecurityUtils.getCurrentUserId()
-        val isAdmin = SecurityUtils.hasRole("ADMIN")
+        val isAdmin = SecurityUtils.isAdmin()
 
         // RBAC: Admin can access all, Customer only their own
         if (!isAdmin && order.customerId != currentUserId) {

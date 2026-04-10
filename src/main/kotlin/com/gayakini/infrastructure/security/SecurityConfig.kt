@@ -1,16 +1,16 @@
 package com.gayakini.infrastructure.security
 
 import com.gayakini.infrastructure.config.GayakiniProperties
+import com.gayakini.infrastructure.security.exception.CustomAccessDeniedHandler
+import com.gayakini.infrastructure.security.exception.CustomAuthenticationEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.authentication.HttpStatusEntryPoint
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -21,6 +21,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 class SecurityConfig(
     private val properties: GayakiniProperties,
     private val jwtService: JwtService,
+    private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
+    private val customAccessDeniedHandler: CustomAccessDeniedHandler,
 ) {
     @Bean
     fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()
@@ -30,36 +32,38 @@ class SecurityConfig(
         http
             .csrf { it.disable() }
             .cors { it.configurationSource(corsConfigurationSource()) }
-            // Disable default form login and basic auth to avoid generated password
             .formLogin { it.disable() }
             .httpBasic { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    // Public Endpoints
+                    // Whitelist Public Endpoints
                     .requestMatchers("/v1/hello").permitAll()
                     .requestMatchers("/v1/products/**").permitAll()
                     .requestMatchers("/v1/locations/**").permitAll()
                     .requestMatchers("/v1/auth/**").permitAll()
                     .requestMatchers("/v1/webhooks/**").permitAll()
-                    // Cart & Checkout (Allow guest usage)
+                    // Cart & Checkout (Guest usage permitted, but ownership verified in service)
                     .requestMatchers("/v1/carts/**").permitAll()
                     .requestMatchers("/v1/checkouts/**").permitAll()
-                    .requestMatchers("/v1/orders/**").permitAll()
-                    .requestMatchers("/v1/payments/**").permitAll()
-                    // Customer Profile & Personal Orders
+                    // Restricted - No broad permitAll()
+                    .requestMatchers("/v1/orders/**").authenticated()
+                    .requestMatchers("/v1/payments/**").authenticated()
+                    // RBAC - Specific roles
                     .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
-                    // Admin (Strictly guarded, ONE role to rule them all)
                     .requestMatchers("/v1/admin/**").hasRole("ADMIN")
-                    // Documentation & Actuator
-                    .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .requestMatchers("/v1/finance/**").hasAnyRole("ADMIN", "FINANCE")
+                    .requestMatchers("/v1/operations/**").hasAnyRole("ADMIN", "OPERATOR")
+                    // Actuator & Docs
                     .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                     .requestMatchers("/actuator/**").hasRole("ADMIN")
+                    .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                     .requestMatchers("/error").permitAll()
                     .anyRequest().authenticated()
             }
             .exceptionHandling {
-                it.authenticationEntryPoint(HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                it.authenticationEntryPoint(customAuthenticationEntryPoint)
+                it.accessDeniedHandler(customAccessDeniedHandler)
             }
             .addFilterBefore(
                 JwtAuthenticationFilter(jwtService),

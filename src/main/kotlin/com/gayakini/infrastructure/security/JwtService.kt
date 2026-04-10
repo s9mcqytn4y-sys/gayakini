@@ -12,14 +12,16 @@ import javax.crypto.SecretKey
 
 @Service
 class JwtService(private val properties: GayakiniProperties) {
-    private val signingKey: SecretKey by lazy {
+    init {
         val secret = properties.jwt.secret
         val bytes = secret.toByteArray(StandardCharsets.UTF_8)
-        if (bytes.size < 32) {
-            Keys.hmacShaKeyFor(secret.padEnd(32, '0').toByteArray(StandardCharsets.UTF_8))
-        } else {
-            Keys.hmacShaKeyFor(bytes)
+        check(bytes.size >= 32) {
+            "CRITICAL SECURITY FAILURE: JWT secret key must be at least 256 bits (32 characters). Current length: ${bytes.size}. Application cannot start in this insecure state."
         }
+    }
+
+    private val signingKey: SecretKey by lazy {
+        Keys.hmacShaKeyFor(properties.jwt.secret.toByteArray(StandardCharsets.UTF_8))
     }
 
     fun generateAccessToken(

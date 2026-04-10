@@ -4,6 +4,8 @@ import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.customer.api.*
 import com.gayakini.customer.domain.*
+import com.gayakini.customer.infrastructure.persistence.entity.RefreshToken
+import com.gayakini.customer.infrastructure.persistence.repository.RefreshTokenRepository
 import com.gayakini.infrastructure.security.JwtService
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
@@ -22,9 +24,10 @@ class CustomerService(
     private val passwordEncoder: PasswordEncoder,
     private val jwtService: JwtService,
     private val storageService: StorageService,
+    private val refreshTokenRepository: RefreshTokenRepository,
 ) {
     companion object {
-        private const val JWT_EXPIRY_SECONDS = 3600
+        private const val ACCESS_TOKEN_EXPIRY_SECONDS = 3600L
     }
 
     @Transactional
@@ -41,7 +44,7 @@ class CustomerService(
             )
         val savedCustomer = customerRepository.save(customer)
 
-        val tokens = generateTokenPair(savedCustomer)
+        val tokens = generateAndSaveTokenPair(savedCustomer)
         return AuthTokensData(
             tokens = tokens,
             customer = mapToProfileResponse(savedCustomer),
@@ -59,39 +62,83 @@ class CustomerService(
         customer.updatedAt = Instant.now()
         val savedCustomer = customerRepository.save(customer)
 
-        val tokens = generateTokenPair(savedCustomer)
+        val tokens = generateAndSaveTokenPair(savedCustomer)
         return AuthTokensData(
             tokens = tokens,
             customer = mapToProfileResponse(savedCustomer),
         )
     }
 
+    @Transactional
     fun refresh(request: RefreshTokenRequest): AuthTokensData {
-        val customerId =
-            jwtService.parseRefreshTokenSubject(request.refreshToken)
-                ?: throw UnauthorizedException("Refresh token tidak valid.")
-        val customer = getCustomer(customerId)
+        val oldTokenEntity =
+            refreshTokenRepository.findByToken(request.refreshToken)
+                .orElseThrow { UnauthorizedException("Refresh token tidak valid.") }
+
+        if (oldTokenEntity.revoked) {
+            // Token reuse detected! Revoke all tokens in family for safety (Zero Trust)
+            val family = refreshTokenRepository.findAllByFamilyId(oldTokenEntity.familyId)
+            family.forEach { it.revoked = true }
+            refreshTokenRepository.saveAll(family)
+            throw ForbiddenException("Sesi telah berakhir karena deteksi penggunaan ganda. Silakan login kembali.")
+        }
+
+        if (oldTokenEntity.isExpired) {
+            throw UnauthorizedException("Sesi telah berakhir. Silakan login kembali.")
+        }
+
+        val customer = oldTokenEntity.customer
         if (!customer.isActive) {
             throw ForbiddenException("Akun tidak aktif.")
         }
+
+        // Rotate token
+        val newTokens = generateAndSaveTokenPair(customer, familyId = oldTokenEntity.familyId)
+
+        oldTokenEntity.revoked = true
+        oldTokenEntity.replacedByToken = newTokens.refreshToken
+        refreshTokenRepository.save(oldTokenEntity)
+
         return AuthTokensData(
-            tokens = generateTokenPair(customer),
+            tokens = newTokens,
             customer = mapToProfileResponse(customer),
         )
     }
 
-    private fun generateTokenPair(customer: Customer): JwtTokenPair {
+    @Transactional
+    fun logout(refreshToken: String) {
+        refreshTokenRepository.findByToken(refreshToken).ifPresent {
+            it.revoked = true
+            refreshTokenRepository.save(it)
+        }
+    }
+
+    private fun generateAndSaveTokenPair(
+        customer: Customer,
+        familyId: UUID? = null,
+    ): JwtTokenPair {
         val accessToken =
             jwtService.generateAccessToken(
                 userId = customer.id,
                 email = customer.email,
                 role = customer.role.name,
             )
-        val refreshToken = jwtService.generateRefreshToken(customer.id)
+        val refreshTokenString = jwtService.generateRefreshToken(customer.id)
+
+        val expiry = Instant.now().plusSeconds(30L * 24 * 60 * 60) // 30 days
+        val refreshTokenEntity =
+            RefreshToken(
+                customer = customer,
+                token = refreshTokenString,
+                expiryDate = expiry,
+                familyId = familyId ?: UUID.randomUUID(),
+            )
+        refreshTokenRepository.save(refreshTokenEntity)
+
         return JwtTokenPair(
             accessToken = accessToken,
-            refreshToken = refreshToken,
-            expiresIn = JWT_EXPIRY_SECONDS,
+            refreshToken = refreshTokenString,
+            expiresIn = ACCESS_TOKEN_EXPIRY_SECONDS.toInt(),
         )
     }
 

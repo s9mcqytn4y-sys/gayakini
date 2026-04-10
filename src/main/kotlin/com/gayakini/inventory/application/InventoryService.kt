@@ -52,7 +52,10 @@ class InventoryService(
         orderId: UUID,
         reason: String,
     ) {
-        val reservations = reservationRepository.findAllByOrderIdAndStatus(orderId, ReservationStatus.ACTIVE)
+        val reservations =
+            reservationRepository.findAllByOrderIdAndStatus(orderId, ReservationStatus.ACTIVE)
+                .sortedBy { it.variant.id } // Consistent lock ordering to prevent deadlocks
+
         reservations.forEach { reservation ->
             val variant =
                 variantRepository.findWithLockById(reservation.variant.id)

@@ -25,6 +25,7 @@ import com.gayakini.payment.domain.PaymentSettledEvent
 import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
+import com.gayakini.finance.application.FinanceService
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
 import org.springframework.context.ApplicationEventPublisher
@@ -49,6 +50,7 @@ class PaymentService(
     private val eventPublisher: ApplicationEventPublisher,
     private val auditContext: AuditContext,
     private val storageService: StorageService,
+    private val financeService: FinanceService,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -409,6 +411,22 @@ class PaymentService(
         paymentReceiptRepository.save(receipt)
     }
 
+    @Transactional
+    fun reconcilePaymentStatus(providerOrderId: String): Payment {
+        val reconciledStatus = paymentProvider.getPaymentStatus(providerOrderId)
+        val payment =
+            paymentRepository.findByProviderOrderId(providerOrderId)
+                .orElseThrow {
+                    NoSuchElementException("Data pembayaran tidak ditemukan untuk ID: $providerOrderId")
+                }
+
+        if (payment.status != reconciledStatus) {
+            val order = orderRepository.findById(payment.orderId).orElseThrow()
+            updatePaymentAndOrderStates(payment, order, reconciledStatus, emptyMap(), "Manual/Auto Reconciliation")
+        }
+        return payment
+    }
+
     private fun updatePaymentAndOrderStates(
         payment: Payment,
         order: Order,
@@ -441,6 +459,14 @@ class PaymentService(
                     amount = payment.grossAmount,
                     provider = payment.provider,
                 ),
+            )
+
+            // Authoritative Finance Posting
+            financeService.recordPaymentSettlement(
+                transactionId = payment.id,
+                orderNumber = savedOrder.orderNumber,
+                amount = payment.grossAmount,
+                metadata = mapOf("provider" to payment.provider, "providerOrderId" to payment.providerOrderId),
             )
         }
     }

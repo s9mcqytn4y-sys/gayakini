@@ -9,7 +9,5 @@ data class UserPrincipal(
     val email: String,
     val role: String,
 ) {
-    fun toAuthorities(): Collection<GrantedAuthority> {
-        return listOf(SimpleGrantedAuthority("ROLE_$role"))
-    }
+    fun toAuthorities(): Collection<GrantedAuthority> = listOf(SimpleGrantedAuthority("ROLE_$role"))
 }
