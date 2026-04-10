@@ -1,8 +1,16 @@
 package com.gayakini.finance.application
 
-import com.gayakini.finance.domain.*
+import com.gayakini.finance.domain.LedgerAccountRepository
+import com.gayakini.finance.domain.LedgerEntry
+import com.gayakini.finance.domain.LedgerEntryRepository
+import com.gayakini.finance.domain.PayoutDestination
+import com.gayakini.finance.domain.PayoutDestinationRepository
+import com.gayakini.finance.domain.WithdrawalRequest
+import com.gayakini.finance.domain.WithdrawalRequestRepository
+import com.gayakini.finance.domain.WithdrawalStatus
 import com.gayakini.infrastructure.security.SecurityUtils
 import org.slf4j.LoggerFactory
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -86,7 +94,7 @@ class FinanceService(
             payoutDestinationRepository.findById(destinationId)
                 .orElseThrow { NoSuchElementException("Tujuan pencairan tidak ditemukan.") }
 
-        val currentUserId = SecurityUtils.getCurrentUserId() ?: throw IllegalStateException("User context missing")
+        val currentUserId = SecurityUtils.getCurrentUserId() ?: throw AccessDeniedException("Sesi tidak valid.")
 
         val request =
             WithdrawalRequest(
@@ -138,7 +146,7 @@ class FinanceService(
         val request = withdrawalRepository.findById(id).orElseThrow()
         require(request.status == WithdrawalStatus.PENDING) { "Status request tidak valid untuk persetujuan." }
 
-        val adminId = SecurityUtils.getCurrentUserId() ?: throw IllegalStateException("Admin context missing")
+        val adminId = SecurityUtils.getCurrentUserId() ?: throw AccessDeniedException("Sesi tidak valid.")
 
         request.status = WithdrawalStatus.APPROVED
         request.approvedBy = adminId
@@ -156,7 +164,7 @@ class FinanceService(
             request.status == WithdrawalStatus.APPROVED,
         ) { "Hanya request yang sudah disetujui yang dapat diproses." }
 
-        val adminId = SecurityUtils.getCurrentUserId() ?: throw IllegalStateException("Admin context missing")
+        val adminId = SecurityUtils.getCurrentUserId() ?: throw AccessDeniedException("Sesi tidak valid.")
 
         request.status = WithdrawalStatus.PROCESSED
         request.processedBy = adminId

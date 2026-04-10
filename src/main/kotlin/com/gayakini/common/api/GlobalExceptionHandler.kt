@@ -64,4 +64,11 @@ class GlobalExceptionHandler {
             .status(HttpStatus.CONFLICT)
             .body(StandardResponse.error(e.message ?: "Terjadi kesalahan konflik data", "ERR_CONFLICT"))
     }
+
+    @ExceptionHandler(Exception::class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    fun handleAllExceptions(e: Exception): StandardResponse<Unit> {
+        logger.error("Unhandled exception: ", e)
+        return StandardResponse.error(e.message ?: "Terjadi kesalahan pada server", "ERR_INTERNAL")
+    }
 }

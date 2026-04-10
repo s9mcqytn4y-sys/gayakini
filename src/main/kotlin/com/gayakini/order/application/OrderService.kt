@@ -355,10 +355,12 @@ class OrderService(
         order: Order,
         orderToken: String?,
     ) {
-        val currentUserId = SecurityUtils.getCurrentUserId()
+        val user = SecurityUtils.getCurrentUser()
+
+        if (user?.role == "ADMIN") return
 
         if (order.customerId != null) {
-            validateCustomerAccess(order, currentUserId)
+            validateCustomerAccess(order, user?.id)
             return
         }
 

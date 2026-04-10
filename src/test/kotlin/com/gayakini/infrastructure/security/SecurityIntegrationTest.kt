@@ -81,37 +81,47 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    fun `guest checkout endpoint should not be blocked by authentication layer`() {
+    fun `checkout creation should be accessible for guests`() {
+        mockMvc.perform(
+            post("/v1/checkouts")
+                .contentType("application/json")
+                .content("{}"),
+        )
+            .andExpect(status().isBadRequest) // Missing required fields but NOT 401
+    }
+
+    @Test
+    fun `order placement should return unauthorized without token`() {
         val checkoutId = UUID.randomUUID()
         mockMvc.perform(
-            post("/v1/checkouts/{checkoutId}/orders", checkoutId)
+            post("/v1/orders/checkouts/{checkoutId}/orders", checkoutId)
                 .header("Idempotency-Key", "test-key")
                 .contentType("application/json")
                 .content("{}"),
         )
-            .andExpect(status().isNotFound)
+            .andExpect(status().isUnauthorized)
     }
 
     @Test
-    fun `guest payment endpoint should not be blocked by authentication layer`() {
+    fun `payment session creation should return unauthorized without token`() {
         mockMvc.perform(
-            post("/v1/orders/{orderId}/payments", UUID.randomUUID())
+            post("/v1/payments/orders/{orderId}", UUID.randomUUID())
                 .header("Idempotency-Key", "payment-key")
                 .contentType("application/json")
                 .content("{}"),
         )
-            .andExpect(status().isNotFound)
+            .andExpect(status().isUnauthorized)
     }
 
     @Test
-    fun `guest cancellation endpoint should not be blocked by authentication layer`() {
+    fun `admin order cancellation should return unauthorized without token`() {
         mockMvc.perform(
-            post("/v1/orders/{orderId}/cancellations", UUID.randomUUID())
+            post("/v1/admin/orders/{orderId}/cancellations", UUID.randomUUID())
                 .header("Idempotency-Key", "cancel-key")
                 .contentType("application/json")
                 .content("{}"),
         )
-            .andExpect(status().isNotFound)
+            .andExpect(status().isUnauthorized)
     }
 
     @Test

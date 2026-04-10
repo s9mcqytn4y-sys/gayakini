@@ -182,13 +182,18 @@ class PaymentService(
         // Hard requirement: Strict sum validation before calling provider
         val calculatedAmount = itemDetails.sumOf { it.price * it.quantity }
         check(calculatedAmount == order.totalAmount) {
-            logger.error("Integritas jumlah pembayaran terganggu: total={}, item_sum={}", order.totalAmount, calculatedAmount)
+            logger.error(
+                "Integritas jumlah pembayaran terganggu: total={}, item_sum={}",
+                order.totalAmount,
+                calculatedAmount,
+            )
             "Ketidaksesuaian perhitungan jumlah pembayaran."
         }
 
-        val enabledMidtransCodes = request?.enabledChannels
-            ?.flatMap { it.midtransCodes }
-            ?.distinct()
+        val enabledMidtransCodes =
+            request?.enabledChannels
+                ?.flatMap { it.midtransCodes }
+                ?.distinct()
         val preferredMidtransCodes = request?.preferredChannel?.midtransCodes
 
         val session =

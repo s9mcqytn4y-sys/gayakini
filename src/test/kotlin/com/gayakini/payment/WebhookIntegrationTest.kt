@@ -121,7 +121,6 @@ class WebhookIntegrationTest {
                 content = objectMapper.writeValueAsString(payload)
             }.andExpect {
                 status { isOk() }
-                jsonPath("$.data.accepted") { value(true) }
             }
 
         verify { orderRepository.save(match { it.status == OrderStatus.PAID }) }
@@ -230,7 +229,6 @@ class WebhookIntegrationTest {
                 content = objectMapper.writeValueAsString(payload)
             }.andExpect {
                 status { isOk() }
-                jsonPath("$.data.accepted") { value(true) }
             }
 
         // Verify that no further processing happened

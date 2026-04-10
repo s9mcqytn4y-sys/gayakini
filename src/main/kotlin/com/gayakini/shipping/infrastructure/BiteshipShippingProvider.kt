@@ -1,7 +1,13 @@
 package com.gayakini.shipping.infrastructure
 
 import com.gayakini.infrastructure.config.GayakiniProperties
-import com.gayakini.shipping.domain.*
+import com.gayakini.shipping.domain.ContactInfo
+import com.gayakini.shipping.domain.ShipmentBooking
+import com.gayakini.shipping.domain.ShipmentTracking
+import com.gayakini.shipping.domain.ShippingItem
+import com.gayakini.shipping.domain.ShippingProvider
+import com.gayakini.shipping.domain.ShippingRate
+import com.gayakini.shipping.domain.TrackingEvent
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -35,11 +41,14 @@ class BiteshipShippingProvider(
 
         return try {
             val response = restTemplate.postForEntity(url, HttpEntity(requestBody, headers), Map::class.java)
-            if (!response.statusCode.is2xxSuccessful) return emptyList()
+            val body = response.body as? Map<*, *>
 
-            val body = response.body as? Map<*, *> ?: return emptyList()
-            val pricing = body["pricing"] as? List<*> ?: return emptyList()
-            pricing.mapNotNull { it as? Map<*, *> }.map { mapToShippingRate(it) }
+            if (response.statusCode.is2xxSuccessful && body != null) {
+                val pricing = body["pricing"] as? List<*> ?: emptyList<Any>()
+                pricing.mapNotNull { it as? Map<*, *> }.map { mapToShippingRate(it) }
+            } else {
+                emptyList()
+            }
         } catch (e: RestClientException) {
             logger.error("Gagal mengambil tarif pengiriman Biteship", e)
             emptyList()

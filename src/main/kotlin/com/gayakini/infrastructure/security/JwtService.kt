@@ -12,11 +12,16 @@ import javax.crypto.SecretKey
 
 @Service
 class JwtService(private val properties: GayakiniProperties) {
+    companion object {
+        private const val MIN_SECRET_BYTE_SIZE = 32
+    }
+
     init {
         val secret = properties.jwt.secret
         val bytes = secret.toByteArray(StandardCharsets.UTF_8)
-        check(bytes.size >= 32) {
-            "CRITICAL SECURITY FAILURE: JWT secret key must be at least 256 bits (32 characters). Current length: ${bytes.size}. Application cannot start in this insecure state."
+        check(bytes.size >= MIN_SECRET_BYTE_SIZE) {
+            "CRITICAL SECURITY FAILURE: JWT secret key must be at least 256 bits (32 characters). " +
+                "Current length: ${bytes.size}. Application cannot start in this insecure state."
         }
     }
 

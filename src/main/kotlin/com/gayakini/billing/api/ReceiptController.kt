@@ -37,7 +37,7 @@ class ReceiptController(
         val isAdmin = SecurityUtils.isAdmin()
 
         // RBAC: Admin can access all, Customer only their own
-        if (!isAdmin && order.customerId != currentUserId) {
+        if (!isAdmin && (currentUserId == null || order.customerId != currentUserId)) {
             throw ForbiddenException("Anda tidak memiliki akses ke invoice ini.")
         }
 

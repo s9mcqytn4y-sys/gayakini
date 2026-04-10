@@ -13,8 +13,8 @@ object SecurityUtils {
         return authentication.principal as? UserPrincipal
     }
 
-    fun getCurrentUserId(): UUID {
-        return getCurrentUser()?.id ?: throw AccessDeniedException("Sesi tidak valid.")
+    fun getCurrentUserId(): UUID? {
+        return getCurrentUser()?.id
     }
 
     fun getCurrentUserRole(): String {

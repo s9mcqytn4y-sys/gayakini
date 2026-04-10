@@ -9,7 +9,6 @@ import com.gayakini.catalog.domain.PublicProductSummary
 import com.gayakini.catalog.domain.PublicProductSummaryRepository
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
-import org.hibernate.Hibernate
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort

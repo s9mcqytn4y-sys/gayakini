@@ -13,12 +13,14 @@ interface LedgerEntryRepository : JpaRepository<LedgerEntry, UUID> {
     fun findAllByTransactionId(transactionId: UUID): List<LedgerEntry>
 
     @Query(
-        "SELECT COALESCE(SUM(e.debitAmount) - SUM(e.creditAmount), 0) FROM LedgerEntry e WHERE e.account.id = :accountId",
+        "SELECT COALESCE(SUM(e.debitAmount) - SUM(e.creditAmount), 0) " +
+            "FROM LedgerEntry e WHERE e.account.id = :accountId",
     )
     fun getDebitBalance(accountId: UUID): Long
 
     @Query(
-        "SELECT COALESCE(SUM(e.creditAmount) - SUM(e.debitAmount), 0) FROM LedgerEntry e WHERE e.account.id = :accountId",
+        "SELECT COALESCE(SUM(e.creditAmount) - SUM(e.debitAmount), 0) " +
+            "FROM LedgerEntry e WHERE e.account.id = :accountId",
     )
     fun getCreditBalance(accountId: UUID): Long
 

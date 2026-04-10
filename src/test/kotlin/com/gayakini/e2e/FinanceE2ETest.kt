@@ -102,6 +102,7 @@ class FinanceE2ETest : BaseE2ETest() {
         if (merchantOriginRepository.findAll().isEmpty()) {
             merchantOriginRepository.save(
                 MerchantShippingOrigin(
+                    id = UUID.randomUUID(),
                     code = "MAIN_WH",
                     name = "Main Warehouse",
                     contactName = "Warehouse Manager",
@@ -152,7 +153,10 @@ class FinanceE2ETest : BaseE2ETest() {
     private fun setupUsers() {
         // Create Admin
         val adminEmail = "admin@gayakini.local"
-        customerRepository.findByEmail(adminEmail).ifPresent { customerRepository.delete(it) }
+        customerRepository.findByEmail(adminEmail).ifPresent {
+            jdbcTemplate.execute("DELETE FROM commerce.refresh_tokens WHERE customer_id = '${it.id}'")
+            customerRepository.delete(it)
+        }
         val admin =
             Customer(
                 id = UUID.randomUUID(),
@@ -170,9 +174,17 @@ class FinanceE2ETest : BaseE2ETest() {
 
         // Create Customer
         val customerEmail = "customer@gayakini.local"
-        customerRepository.findByEmail(customerEmail).ifPresent { customerRepository.delete(it) }
+        customerRepository.findByEmail(customerEmail).ifPresent {
+            jdbcTemplate.execute("DELETE FROM commerce.refresh_tokens WHERE customer_id = '${it.id}'")
+            customerRepository.delete(it)
+        }
         val registerRequest = E2EDataFactory.createRegisterRequest(email = customerEmail)
-        restTemplate.postForEntity("/v1/auth/register", registerRequest, Map::class.java)
+        val registerResp = restTemplate.postForEntity("/v1/auth/register", registerRequest, Map::class.java)
+        if (registerResp.statusCode != HttpStatus.CREATED && registerResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Registration failed for $customerEmail: ${registerResp.statusCode} - ${registerResp.body}")
+        }
+
+        // Wait briefly for DB consistency if needed, though usually not for H2/Postgres in same thread
         customerToken = loginAndGetToken(customerEmail, "Password123!")
     }
 
@@ -181,16 +193,43 @@ class FinanceE2ETest : BaseE2ETest() {
         pass: String,
     ): String {
         val loginRequest = mapOf("email" to email, "password" to pass)
-        val response = restTemplate.postForEntity("/v1/auth/login", loginRequest, Map::class.java)
-        val body = response.body as Map<*, *>
-        val data = body["data"] as Map<*, *>
-        val tokens = data["tokens"] as Map<*, *>
-        return tokens["accessToken"] as String
+        // Add a retry mechanism for login to handle potential race conditions in async environments
+        var lastResponse: org.springframework.http.ResponseEntity<Map<*, *>>? = null
+        for (i in 1..3) {
+            val response = restTemplate.postForEntity("/v1/auth/login", loginRequest, Map::class.java)
+            if (response.statusCode == HttpStatus.OK) {
+                val body = response.body ?: throw AssertionError("Login response body is null")
+                val data = body["data"] as? Map<*, *> ?: throw AssertionError("Login data is null: $body")
+                val tokens = data["tokens"] as? Map<*, *> ?: throw AssertionError("tokens is null or not a map: $data")
+                return tokens["accessToken"] as? String ?: throw AssertionError("accessToken is missing or not a string")
+            }
+            lastResponse = response
+            Thread.sleep(500)
+        }
+
+        throw AssertionError("Login failed for $email after retries: ${lastResponse?.statusCode} - ${lastResponse?.body}")
     }
 
     @Test
     fun `full flow - checkout to payment to ledger to withdrawal`() {
-        // 1. Create Cart & Add Item
+        val cartData = createAndPopulateCart()
+        val checkoutData = performCheckout(cartData)
+        setAddressAndSelectShipping(checkoutData)
+
+        val orderData = placeOrder(checkoutData)
+        val orderNumber = orderData["orderNumber"] as String
+        val totalAmount = (orderData["totalAmount"] as Number).toLong()
+
+        initiatePaymentSession(orderData["id"] as String)
+        mockMidtransWebhook(orderNumber, totalAmount)
+
+        verifyAdminBalance(totalAmount)
+        val withdrawalId = requestWithdrawal(totalAmount)
+        processWithdrawalWorkflow(withdrawalId)
+        verifyAdminBalance(0L)
+    }
+
+    private fun createAndPopulateCart(): Map<String, String> {
         val cartResponse =
             restTemplate.exchange(
                 "/v1/carts",
@@ -198,8 +237,9 @@ class FinanceE2ETest : BaseE2ETest() {
                 HttpEntity<Any>(HttpHeaders().apply { set("X-Cart-Token", "") }),
                 Map::class.java,
             )
-        val cartId = (cartResponse.body!!["data"] as Map<*, *>)["id"] as String
-        val cartToken = (cartResponse.body!!["data"] as Map<*, *>)["accessToken"] as String
+        val data = cartResponse.body!!["data"] as Map<*, *>
+        val cartId = data["id"] as String
+        val cartToken = data["accessToken"] as String
         val cartHeaders = HttpHeaders().apply { set("X-Cart-Token", cartToken) }
 
         val addRequest = E2EDataFactory.createAddCartItemRequest(testVariant.id, 1)
@@ -209,9 +249,12 @@ class FinanceE2ETest : BaseE2ETest() {
             HttpEntity(addRequest, cartHeaders),
             Map::class.java,
         )
+        return mapOf("id" to cartId, "token" to cartToken)
+    }
 
-        // 2. Checkout
-        val checkoutRequest = E2EDataFactory.createCheckoutRequest(UUID.fromString(cartId))
+    private fun performCheckout(cartData: Map<String, String>): Map<String, String> {
+        val cartHeaders = HttpHeaders().apply { set("X-Cart-Token", cartData["token"]!!) }
+        val checkoutRequest = E2EDataFactory.createCheckoutRequest(UUID.fromString(cartData["id"]!!))
         val checkoutResp =
             restTemplate.exchange(
                 "/v1/checkouts",
@@ -219,79 +262,98 @@ class FinanceE2ETest : BaseE2ETest() {
                 HttpEntity(checkoutRequest, cartHeaders),
                 Map::class.java,
             )
-        val checkoutId = (checkoutResp.body!!["data"] as Map<*, *>)["id"] as String
-        val checkoutToken = (checkoutResp.body!!["data"] as Map<*, *>)["accessToken"] as String
-        val checkoutHeaders = HttpHeaders().apply { set("X-Checkout-Token", checkoutToken) }
+        val data = checkoutResp.body!!["data"] as Map<*, *>
+        return mapOf(
+            "id" to data["id"] as String,
+            "token" to data["accessToken"] as String,
+        )
+    }
 
-        // 3. Set Address
+    private fun setAddressAndSelectShipping(checkoutData: Map<String, String>) {
+        val checkoutId = checkoutData["id"]!!
+        val checkoutHeaders = HttpHeaders().apply { set("X-Checkout-Token", checkoutData["token"]!!) }
+
         val addressRequest = E2EDataFactory.createShippingAddressRequest()
-        restTemplate.exchange(
+        val addressResp = restTemplate.exchange(
             "/v1/checkouts/$checkoutId/shipping-address",
             HttpMethod.PUT,
             HttpEntity(addressRequest, checkoutHeaders),
-            Map::class.java,
+            String::class.java,
         )
+        if (addressResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Failed to set shipping address: ${addressResp.statusCode} - ${addressResp.body}")
+        }
 
-        // 4. Get Quotes & Select
         val quotesResp =
             restTemplate.exchange(
                 "/v1/checkouts/$checkoutId/shipping-quotes",
                 HttpMethod.POST,
-                HttpEntity<Any>(checkoutHeaders),
+                HttpEntity<Any>(HttpHeaders().apply {
+                    set("X-Checkout-Token", checkoutData["token"]!!)
+                    set("Idempotency-Key", UUID.randomUUID().toString())
+                }),
                 Map::class.java,
             )
-        println("Quotes Response Body: ${objectMapper.writeValueAsString(quotesResp.body)}")
+
+        if (quotesResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Failed to get shipping quotes: ${quotesResp.body}")
+        }
 
         val quotesBody = quotesResp.body ?: throw AssertionError("Quotes response body is null")
-        val checkoutData = quotesBody["data"] as? Map<*, *>
-            ?: throw AssertionError(
-                "Checkout data in quotes response is null",
-            )
-        val quotesList = checkoutData["availableShippingQuotes"] as? List<Map<*, *>>
-            ?: throw AssertionError(
-                "availableShippingQuotes is null",
-            )
+        val quotesData = quotesBody["data"] as? Map<*, *> ?: throw AssertionError("Quotes data is null: $quotesBody")
+        val quotesList = quotesData["availableShippingQuotes"] as? List<Map<*, *>>
+            ?: throw AssertionError("availableShippingQuotes is null or not a list: $quotesData")
 
-        if (quotesList.isEmpty()) throw AssertionError("availableShippingQuotes is empty")
+        if (quotesList.isEmpty()) {
+            throw AssertionError("No shipping quotes available. Check MerchantShippingOrigin and areaId: ${addressRequest.guestAddress?.areaId}")
+        }
 
-        val quoteId = quotesList.first()["id"] as String
-        restTemplate.exchange(
+        val quoteId = quotesList.first()["quoteId"] as? String ?: throw AssertionError("quoteId is missing in first quote")
+
+        val selectionResp = restTemplate.exchange(
             "/v1/checkouts/$checkoutId/shipping-selection",
             HttpMethod.PUT,
             HttpEntity(E2EDataFactory.createSelectShippingQuoteRequest(UUID.fromString(quoteId)), checkoutHeaders),
             Map::class.java,
         )
+        if (selectionResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Failed to select shipping: ${selectionResp.body}")
+        }
+    }
 
-        // 5. Place Order
-        val authHeaders = HttpHeaders().apply { setBearerAuth(customerToken) }
+    private fun placeOrder(checkoutData: Map<String, String>): Map<*, *> {
+        val checkoutHeaders = HttpHeaders().apply {
+            set("X-Checkout-Token", checkoutData["token"]!!)
+            set("Idempotency-Key", UUID.randomUUID().toString())
+        }
         val placeOrderResp =
             restTemplate.exchange(
-                "/v1/orders?checkoutId=$checkoutId",
+                "/v1/checkouts/${checkoutData["id"]}/orders",
                 HttpMethod.POST,
-                HttpEntity(E2EDataFactory.createPlaceOrderRequest(), authHeaders),
+                HttpEntity(E2EDataFactory.createPlaceOrderRequest(), checkoutHeaders),
                 Map::class.java,
             )
-        val orderId = (placeOrderResp.body!!["data"] as Map<*, *>)["id"] as String
-        val orderNumber = (placeOrderResp.body!!["data"] as Map<*, *>)["orderNumber"] as String
-        val totalAmount = ((placeOrderResp.body!!["data"] as Map<*, *>)["totalAmount"] as Number).toLong()
+        return placeOrderResp.body!!["data"] as Map<*, *>
+    }
 
-        // 6. Create Payment Session
+    private fun initiatePaymentSession(orderId: String) {
+        val orderHeaders = HttpHeaders().apply {
+            set("Idempotency-Key", UUID.randomUUID().toString())
+        }
         val paymentSessionResp =
             restTemplate.exchange(
                 "/v1/payments/orders/$orderId",
                 HttpMethod.POST,
-                HttpEntity<Any>(authHeaders),
+                HttpEntity<Any>(orderHeaders),
                 Map::class.java,
             )
-        assertEquals(HttpStatus.OK, paymentSessionResp.statusCode)
+        assertEquals(HttpStatus.CREATED, paymentSessionResp.statusCode)
+    }
 
-        // 7. Mock Midtrans Webhook (Settlement)
-        // Signature: SHA512(order_id + status_code + gross_amount + server_key)
-        // We need to match the signature logic in MidtransPaymentProvider
-        // In E2E/Test, we should ideally use a fixed server key from application-test.yml
-        // For simplicity here, let's assume signature validation passes or we bypass it if possible.
-        // Actually, the PaymentService.processMidtransWebhook calls verifyWebhook.
-
+    private fun mockMidtransWebhook(
+        orderNumber: String,
+        totalAmount: Long,
+    ) {
         val webhookPayload =
             mapOf(
                 "order_id" to orderNumber,
@@ -301,15 +363,8 @@ class FinanceE2ETest : BaseE2ETest() {
                 "transaction_id" to "midtrans-tx-123",
             )
 
-        // We can't easily calculate SHA512 here without knowing the exact server-key used in the test context
-        // But we can check application-test.yml or just use the same logic.
-        // Assuming server-key is from properties
         val signature = sha512(orderNumber + "200" + totalAmount.toString() + gayakiniProperties.midtrans.serverKey)
-
-        val webhookHeaders =
-            HttpHeaders().apply {
-                set("X-Signature-Key", signature)
-            }
+        val webhookHeaders = HttpHeaders().apply { set("X-Signature-Key", signature) }
 
         val webhookResp =
             restTemplate.postForEntity(
@@ -318,9 +373,9 @@ class FinanceE2ETest : BaseE2ETest() {
                 Map::class.java,
             )
         assertEquals(HttpStatus.OK, webhookResp.statusCode)
+    }
 
-        // 8. Verify Ledger & Balance (Admin)
-        // Wait a bit for async processing if any, though current implementation is likely sync
+    private fun verifyAdminBalance(expectedBalance: Long) {
         val adminHeaders = HttpHeaders().apply { setBearerAuth(adminToken) }
         val balanceResp =
             restTemplate.exchange(
@@ -329,51 +384,56 @@ class FinanceE2ETest : BaseE2ETest() {
                 HttpEntity<Any>(adminHeaders),
                 Map::class.java,
             )
-        println("Balance Response Body: ${balanceResp.body}")
+        if (balanceResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Failed to get balance: ${balanceResp.statusCode} - ${balanceResp.body}")
+        }
         val balanceData = balanceResp.body!!["data"] as Map<*, *>
         val balance = (balanceData["availableBalance"] as Number).toLong()
-        assertEquals(totalAmount, balance)
+        assertEquals(expectedBalance, balance)
+    }
 
-        // 9. Withdrawal Request
-        val destinationId = destinationRepository.findAll().first().id
-        val withdrawalRequest =
-            mapOf(
-                "amount" to totalAmount,
-                "payoutDestinationId" to destinationId,
-            )
-        val withdrawalResp =
+    private fun requestWithdrawal(amount: Long): String {
+        val adminHeaders = HttpHeaders().apply { setBearerAuth(adminToken) }
+        val destinations = destinationRepository.findAll()
+        if (destinations.isEmpty()) {
+            throw AssertionError("No payout destinations found in database")
+        }
+        val destinationId = destinations.first().id
+        val request = mapOf("amount" to amount, "payoutDestinationId" to destinationId)
+        val resp =
             restTemplate.exchange(
                 "/v1/admin/finance/withdrawals",
                 HttpMethod.POST,
-                HttpEntity(withdrawalRequest, adminHeaders),
+                HttpEntity(request, adminHeaders),
                 Map::class.java,
             )
-        val withdrawalId = (withdrawalResp.body!!["data"] as Map<*, *>)["id"] as String
+        if (resp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Withdrawal request failed: ${resp.statusCode} - ${resp.body}")
+        }
+        return (resp.body!!["data"] as Map<*, *>)["id"] as String
+    }
 
-        // 10. Approve & Process
-        restTemplate.exchange(
+    private fun processWithdrawalWorkflow(withdrawalId: String) {
+        val adminHeaders = HttpHeaders().apply { setBearerAuth(adminToken) }
+        val approveResp = restTemplate.exchange(
             "/v1/admin/finance/withdrawals/$withdrawalId/approve",
             HttpMethod.POST,
             HttpEntity(mapOf("notes" to "Approved E2E"), adminHeaders),
             Map::class.java,
         )
-        restTemplate.exchange(
+        if (approveResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Withdrawal approval failed: ${approveResp.statusCode} - ${approveResp.body}")
+        }
+
+        val processResp = restTemplate.exchange(
             "/v1/admin/finance/withdrawals/$withdrawalId/process",
             HttpMethod.POST,
             HttpEntity<Any>(adminHeaders),
             Map::class.java,
         )
-
-        // 11. Final Balance Check
-        val finalBalanceResp =
-            restTemplate.exchange(
-                "/v1/admin/finance/balance",
-                HttpMethod.GET,
-                HttpEntity<Any>(adminHeaders),
-                Map::class.java,
-            )
-        val finalBalance = ((finalBalanceResp.body!!["data"] as Map<*, *>)["availableBalance"] as Number).toLong()
-        assertEquals(0L, finalBalance)
+        if (processResp.statusCode != HttpStatus.OK) {
+            throw AssertionError("Withdrawal processing failed: ${processResp.statusCode} - ${processResp.body}")
+        }
     }
 
     private fun sha512(input: String): String {

@@ -2,8 +2,18 @@ package com.gayakini.customer.application
 
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.UnauthorizedException
-import com.gayakini.customer.api.*
-import com.gayakini.customer.domain.*
+import com.gayakini.customer.api.AddressUpsertRequest
+import com.gayakini.customer.api.AuthTokensData
+import com.gayakini.customer.api.CustomerProfileResponse
+import com.gayakini.customer.api.JwtTokenPair
+import com.gayakini.customer.api.LoginRequest
+import com.gayakini.customer.api.RefreshTokenRequest
+import com.gayakini.customer.api.RegisterRequest
+import com.gayakini.customer.api.UpdateProfileRequest
+import com.gayakini.customer.domain.Customer
+import com.gayakini.customer.domain.CustomerAddress
+import com.gayakini.customer.domain.CustomerAddressRepository
+import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.customer.infrastructure.persistence.entity.RefreshToken
 import com.gayakini.customer.infrastructure.persistence.repository.RefreshTokenRepository
 import com.gayakini.infrastructure.security.JwtService
@@ -76,11 +86,7 @@ class CustomerService(
                 .orElseThrow { UnauthorizedException("Refresh token tidak valid.") }
 
         if (oldTokenEntity.revoked) {
-            // Token reuse detected! Revoke all tokens in family for safety (Zero Trust)
-            val family = refreshTokenRepository.findAllByFamilyId(oldTokenEntity.familyId)
-            family.forEach { it.revoked = true }
-            refreshTokenRepository.saveAll(family)
-            throw ForbiddenException("Sesi telah berakhir karena deteksi penggunaan ganda. Silakan login kembali.")
+            handleRevokedToken(oldTokenEntity)
         }
 
         if (oldTokenEntity.isExpired) {
@@ -103,6 +109,14 @@ class CustomerService(
             tokens = newTokens,
             customer = mapToProfileResponse(customer),
         )
+    }
+
+    private fun handleRevokedToken(token: RefreshToken) {
+        // Token reuse detected! Revoke all tokens in family for safety (Zero Trust)
+        val family = refreshTokenRepository.findAllByFamilyId(token.familyId)
+        family.forEach { it.revoked = true }
+        refreshTokenRepository.saveAll(family)
+        throw ForbiddenException("Sesi telah berakhir karena deteksi penggunaan ganda. Silakan login kembali.")
     }
 
     @Transactional

@@ -4,6 +4,7 @@ import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.Cart
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
+import com.gayakini.infrastructure.security.SecurityUtils
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.*
 import java.util.*
@@ -15,7 +16,7 @@ class CartController(private val cartService: CartService) {
     fun createCart(
         @RequestParam(required = false) currency: String?,
     ): CartResponse {
-        val (cart, rawToken) = cartService.createCart(null, currency ?: "IDR")
+        val (cart, rawToken) = cartService.createCart(SecurityUtils.getCurrentUserId(), currency ?: "IDR")
         return mapToResponse(cart, "Keranjang berhasil dibuat.", rawToken)
     }
 
@@ -24,7 +25,7 @@ class CartController(private val cartService: CartService) {
         @PathVariable cartId: UUID,
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
     ): CartResponse {
-        val cart = cartService.getValidatedCart(cartId, null, cartToken)
+        val cart = cartService.getValidatedCart(cartId, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Keranjang berhasil diambil.")
     }
 
@@ -34,7 +35,7 @@ class CartController(private val cartService: CartService) {
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
         @Valid @RequestBody request: AddCartItemRequest,
     ): CartResponse {
-        val cart = cartService.addItem(cartId, request.variantId, request.quantity, null, cartToken)
+        val cart = cartService.addItem(cartId, request.variantId, request.quantity, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Produk berhasil dimasukkan ke keranjang.")
     }
 
@@ -45,7 +46,7 @@ class CartController(private val cartService: CartService) {
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
         @Valid @RequestBody request: UpdateCartItemRequest,
     ): CartResponse {
-        val cart = cartService.updateItem(cartId, itemId, request.quantity, null, cartToken)
+        val cart = cartService.updateItem(cartId, itemId, request.quantity, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Item keranjang berhasil diperbarui.")
     }
 
@@ -55,7 +56,7 @@ class CartController(private val cartService: CartService) {
         @PathVariable itemId: UUID,
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
     ): CartResponse {
-        val cart = cartService.removeItem(cartId, itemId, null, cartToken)
+        val cart = cartService.removeItem(cartId, itemId, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Item keranjang berhasil dihapus.")
     }
 

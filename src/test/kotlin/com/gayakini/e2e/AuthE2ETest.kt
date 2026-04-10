@@ -25,6 +25,7 @@ class AuthE2ETest : BaseE2ETest() {
         assertEquals(HttpStatus.CREATED, response.statusCode)
         val body = response.body ?: throw AssertionError("Response body is null")
         assertEquals("Akun berhasil dibuat.", body["message"])
+        assertEquals(true, body["success"])
 
         val data = body["data"] as Map<*, *>
         val tokens = data["tokens"] as Map<*, *>
@@ -54,6 +55,7 @@ class AuthE2ETest : BaseE2ETest() {
         assertEquals(HttpStatus.OK, loginResponse.statusCode)
         val body = loginResponse.body ?: throw AssertionError("Response body is null")
         assertEquals("Login berhasil.", body["message"])
+        assertEquals(true, body["success"])
 
         val data = body["data"] as Map<*, *>
         val tokens = data["tokens"] as Map<*, *>
