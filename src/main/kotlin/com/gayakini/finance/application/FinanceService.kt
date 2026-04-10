@@ -76,9 +76,19 @@ class FinanceService(
 
     @Transactional(readOnly = true)
     fun getAvailableBalance(): Long {
-        val revenueAcc = accountRepository.findByCode(ACC_REVENUE).orElseThrow()
-        // Revenue account: Balance = Credit - Debit
-        return entryRepository.getCreditBalance(revenueAcc.id)
+        val gatewayAcc = accountRepository.findByCode(ACC_GATEWAY)
+            .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
+        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
+            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
+
+        // Available Balance = Gateway Assets (Debit Balance) - Payout Liabilities (Credit Balance)
+        // This ensures we don't over-withdraw when funds are committed to pending payouts.
+        val assets = entryRepository.getDebitBalance(gatewayAcc.id)
+        val liabilities = entryRepository.getCreditBalance(liabilityAcc.id)
+
+        val balance = assets - liabilities
+        logger.debug("Available balance calculation: Assets({}) - Liabilities({}) = {}", assets, liabilities, balance)
+        return balance
     }
 
     @Transactional
@@ -111,8 +121,15 @@ class FinanceService(
     }
 
     private fun postWithdrawalCommit(request: WithdrawalRequest) {
-        val revenueAcc = accountRepository.findByCode(ACC_REVENUE).orElseThrow()
-        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY).orElseThrow()
+        if (entryRepository.existsByTransactionIdAndTransactionType(request.id, "WITHDRAWAL_COMMIT")) {
+            logger.info("Withdrawal commit already posted for request: {}", request.id)
+            return
+        }
+
+        val revenueAcc = accountRepository.findByCode(ACC_REVENUE)
+            .orElseThrow { IllegalStateException("Account $ACC_REVENUE not found") }
+        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
+            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
 
         // Debit Revenue (Revenue down), Credit Liability (Liability up)
         entryRepository.save(
@@ -136,6 +153,7 @@ class FinanceService(
                 description = "Pending payout liability: ${request.id}",
             ),
         )
+        logger.info("Posted withdrawal commit ledger for request: {}", request.id)
     }
 
     @Transactional
@@ -178,8 +196,15 @@ class FinanceService(
     }
 
     private fun postWithdrawalFinalize(request: WithdrawalRequest) {
-        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY).orElseThrow()
-        val gatewayAcc = accountRepository.findByCode(ACC_GATEWAY).orElseThrow()
+        if (entryRepository.existsByTransactionIdAndTransactionType(request.id, "WITHDRAWAL_FINALIZE")) {
+            logger.info("Withdrawal finalize already posted for request: {}", request.id)
+            return
+        }
+
+        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
+            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
+        val gatewayAcc = accountRepository.findByCode(ACC_GATEWAY)
+            .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
 
         // Debit Liability (Liability down), Credit Gateway (Asset down)
         entryRepository.save(
@@ -203,6 +228,7 @@ class FinanceService(
                 description = "Funds transferred from gateway: ${request.id}",
             ),
         )
+        logger.info("Posted withdrawal finalize ledger for request: {}", request.id)
     }
 
     fun listWithdrawals(): List<WithdrawalRequest> = withdrawalRepository.findAll()

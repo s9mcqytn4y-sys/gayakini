@@ -26,8 +26,8 @@ class PaymentReceipt(
     val transactionStatus: String,
     @Column(name = "fraud_status")
     var fraudStatus: String? = null,
-    @Column(name = "signature_key_hash", nullable = false)
-    val signatureKeyHash: String,
+    @Column(name = "received_signature", nullable = false)
+    val receivedSignature: String,
     @Column(name = "raw_payload", columnDefinition = "jsonb", nullable = false)
     val rawPayload: String,
     @Enumerated(EnumType.STRING)

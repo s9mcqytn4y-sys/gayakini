@@ -136,10 +136,15 @@ class MidtransPaymentProvider(
         val rawData = orderId + statusCode + grossAmount + serverKey
 
         val calculatedSignature = sha512(rawData)
-        val isValid = calculatedSignature.equals(signature, ignoreCase = true)
+
+        // Use constant-time comparison to prevent timing attacks
+        val isValid = MessageDigest.isEqual(
+            calculatedSignature.lowercase().toByteArray(StandardCharsets.UTF_8),
+            signature.lowercase().toByteArray(StandardCharsets.UTF_8)
+        )
 
         if (!isValid) {
-            logger.warn("Midtrans signature mismatch! Calculated: {}, Received: {}", calculatedSignature, signature)
+            logger.warn("Midtrans signature mismatch for order {}! Calculated: {}, Received: {}", orderId, calculatedSignature, signature)
         }
 
         return isValid

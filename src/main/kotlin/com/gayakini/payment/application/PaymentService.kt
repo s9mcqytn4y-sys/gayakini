@@ -270,8 +270,10 @@ class PaymentService(
         payload: Map<String, Any>,
         signature: String,
     ) {
-        val providerOrderId = payload["order_id"] as String
-        val transactionStatus = payload["transaction_status"] as String
+        val providerOrderId = payload["order_id"] as? String
+            ?: throw IllegalArgumentException("Missing order_id in payload")
+        val transactionStatus = payload["transaction_status"] as? String
+            ?: throw IllegalArgumentException("Missing transaction_status in payload")
 
         // 1. Audit Trail: Log the incoming webhook immediately
         val receipt =
@@ -281,7 +283,7 @@ class PaymentService(
                 transactionId = payload["transaction_id"] as? String,
                 transactionStatus = transactionStatus,
                 fraudStatus = payload["fraud_status"] as? String,
-                signatureKeyHash = signature,
+                receivedSignature = signature,
                 rawPayload = objectMapper.writeValueAsString(payload),
                 processingStatus = ReceiptProcessingStatus.PENDING,
             )

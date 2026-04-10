@@ -99,24 +99,22 @@ File utama:
 - `http/90-webhooks.http` (Midtrans & Biteship)
 - `http/80-admin.http`
 
-## Webhook Security & Testing
+## Webhook Security & Idempotency
 
-Gayakini menggunakan strategi **Authoritative Reconciliation** untuk semua webhook:
-1. **Deterministic `provider_order_id`**: Setiap sesi pembayaran (`Payment`) menggunakan format `{OrderNumber}-{Hash(IdempotencyKey)}`. Hal ini memastikan bahwa request ulang dengan `Idempotency-Key` yang sama akan selalu menghasilkan `order_id` yang sama di sisi Midtrans, mencegah duplikasi transaksi di Dashboard Midtrans.
-2. **Authoritative Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
-3. **Strict Data Integrity (Snap Payload)**: Payload ke Midtrans divalidasi secara ketat sebelum dikirim. Sum dari `item_details` (produk, biaya kirim, diskon) **wajib** sama persis dengan `gross_amount` untuk mencegah penolakan sistem Midtrans.
-4. **Audit Trail & Event-Driven Logging**: Setiap perubahan status bisnis (Order, Payment, Promo) dicatat secara terpusat di tabel `audit_logs` menggunakan Spring `ApplicationEventPublisher`.
-    - **Non-blocking**: Pencatatan audit dilakukan via `@TransactionalEventListener` sebelum commit.
-    - **Traceability**: Mencatat `actor_id`, `actor_role`, `previous_state`, dan `new_state` (JSONB).
-    - **Security**: Data sensitif (password, token, signature) disensor secara otomatis.
-    - **Admin Access**: Audit trail dapat diakses oleh Admin melalui `GET /api/v1/admin/audits`.
-4. **Anti-Spoofing Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
+Gayakini implements **Zero-Trust Webhook Hardening** with the following patterns:
+
+1. **Authoritative Webhooks Only**: Webhooks are the single source of truth for payment settlement. Redirects (`/payment/finish`, etc.) are strictly read-only and never trigger state changes.
+2. **Cryptographic Rigor**: Midtrans signatures are reconstructed and verified using `MessageDigest.isEqual()` for constant-time comparison, mitigating cryptographic timing attacks.
+3. **Idempotent Receiver Pattern**: Concurrent webhook deliveries are handled via database receipt persistence and status-based guards. If a duplicate webhook is received for an already settled payment, the system returns `200 OK` to stop retries while skipping double-processing.
+4. **Atomic State Transitions**: Updates to `PaymentReceipt`, `Payment` session, `Order` status, and `Finance` ledger entries are executed within a single `@Transactional` boundary.
+5. **Deterministic `provider_order_id`**: Every `Payment` session uses `{OrderNumber}-{Hash(IdempotencyKey)}`. This ensures that retrying the same session results in the same order ID in Midtrans.
+6. **Anti-Spoofing Reconciliation**: After signature verification, the system optionally performs a direct server-to-server call to Midtrans API to reconcile the payment status before committing transitions.
 
 ### Testing Webhook Lokal
-Untuk mengetes webhook dari provider luar (Midtrans/Biteship) ke mesin lokal Anda:
-1. Gunakan **ngrok** atau **localtunnel**: `ngrok http 8080`.
-2. Update URL webhook di Dashboard Provider ke URL ngrok Anda (Misal: `https://abcd-123.ngrok-free.app/v1/webhooks/midtrans`).
-3. Gunakan file `http/90-webhooks.http` untuk simulasi payload tanpa ngrok.
+To test external webhooks (Midtrans/Biteship) on your local machine:
+1. Use **ngrok** or **localtunnel**: `ngrok http 8080`.
+2. Update Webhook URL in Provider Dashboard to your ngrok URL (e.g., `https://abcd-123.ngrok-free.app/v1/webhooks/midtrans`).
+3. Use `http/90-webhooks.http` for manual simulation (includes bad signature and duplicate tests).
 
 ## Billing & Document Generation
 

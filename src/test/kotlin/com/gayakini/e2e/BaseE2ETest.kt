@@ -19,6 +19,10 @@ abstract class BaseE2ETest {
         // Full order of truncation to avoid foreign key issues even with integrity off
         val tables =
             listOf(
+                "finance.ledger_entries",
+                "finance.withdrawal_requests",
+                "finance.ledger_accounts",
+                "finance.payout_destinations",
                 "commerce.order_items",
                 "commerce.payments",
                 "commerce.orders",

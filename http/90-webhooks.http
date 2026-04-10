@@ -1,4 +1,5 @@
-﻿POST {{APP_BASE_URL}}/v1/webhooks/midtrans
+﻿### 1. Midtrans: Settlement (Valid Signature)
+POST {{APP_BASE_URL}}/v1/webhooks/midtrans
 Content-Type: application/json
 X-Signature-Key: 8a3b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b
 
@@ -14,8 +15,31 @@ X-Signature-Key: 8a3b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4
   "settlement_time": "2024-04-09 10:05:00"
 }
 
-###
+### 2. Midtrans: Settlement (Duplicate Payload - Should Return 200 OK & Skip)
+POST {{APP_BASE_URL}}/v1/webhooks/midtrans
+Content-Type: application/json
 
+{
+  "order_id": "TRX-1712613663-abcd1234",
+  "status_code": "200",
+  "transaction_status": "settlement",
+  "gross_amount": "100000.00",
+  "signature_key": "8a3b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b"
+}
+
+### 3. Midtrans: Invalid Signature (Should Return 403 Forbidden)
+POST {{APP_BASE_URL}}/v1/webhooks/midtrans
+Content-Type: application/json
+
+{
+  "order_id": "TRX-1712613663-abcd1234",
+  "status_code": "200",
+  "transaction_status": "settlement",
+  "gross_amount": "100000.00",
+  "signature_key": "WRONG_SIGNATURE"
+}
+
+### 4. Midtrans: Expire Webhook
 POST {{APP_BASE_URL}}/v1/webhooks/midtrans
 Content-Type: application/json
 

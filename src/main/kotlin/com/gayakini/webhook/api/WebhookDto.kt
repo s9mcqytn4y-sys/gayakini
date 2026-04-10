@@ -10,7 +10,7 @@ data class MidtransWebhookPayload(
     @JsonProperty("status_code") val statusCode: String,
     @JsonProperty("transaction_status") val transactionStatus: String,
     @JsonProperty("gross_amount") val grossAmount: String,
-    @JsonProperty("signature_key") val signatureKey: String,
+    @JsonProperty("signature_key") val signatureKey: String? = null,
     @JsonProperty("transaction_id") val transactionId: String? = null,
     @JsonProperty("payment_type") val paymentType: String? = null,
     @JsonProperty("fraud_status") val fraudStatus: String? = null,

@@ -1,9 +1,12 @@
 package com.gayakini.webhook.api
 
+import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
+import com.gayakini.webhook.api.MidtransWebhookPayload
+import com.gayakini.webhook.api.BiteshipWebhookPayload
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.*
@@ -22,23 +25,23 @@ class WebhookController(
         @Valid @RequestBody payload: MidtransWebhookPayload,
         @RequestHeader("X-Signature-Key", required = false) signature: String?,
     ): WebhookAckResponse {
-        logger.info("Menerima webhook Midtrans untuk Order: {}", payload.orderId)
+        logger.info("Webhook received for Midtrans Order: {}, status: {}", payload.orderId, payload.transactionStatus)
 
-        // Midtrans signature key validation is handled by PaymentService/Provider
-        // We pass the payload as a map to maintain consistency with PaymentService's expectation
-        val payloadMap =
-            mutableMapOf<String, Any>(
-                "order_id" to payload.orderId,
-                "status_code" to payload.statusCode,
-                "transaction_status" to payload.transactionStatus,
-                "gross_amount" to payload.grossAmount,
-                "signature_key" to payload.signatureKey,
-            )
-
-        payload.transactionId?.let { payloadMap["transaction_id"] = it }
-        payload.fraudStatus?.let { payloadMap["fraud_status"] = it }
-
+        // The webhook MUST be authoritative. PaymentService will handle verification and idempotency.
         val effectiveSignature = signature ?: payload.signatureKey
+            ?: throw ForbiddenException("Missing signature key")
+
+        // Convert data class to map for PaymentService compatibility
+        val payloadMap = mapOf(
+            "order_id" to payload.orderId,
+            "status_code" to payload.statusCode,
+            "transaction_status" to payload.transactionStatus,
+            "gross_amount" to payload.grossAmount,
+            "transaction_id" to (payload.transactionId ?: ""),
+            "payment_type" to (payload.paymentType ?: ""),
+            "fraud_status" to (payload.fraudStatus ?: ""),
+            "signature_key" to (payload.signatureKey ?: "")
+        )
 
         paymentService.processMidtransWebhook(payloadMap, effectiveSignature)
 
