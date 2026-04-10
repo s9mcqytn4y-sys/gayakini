@@ -3,25 +3,40 @@ GET {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}
 Authorization: Bearer {{accessToken}}
 Accept: application/json
 
-### 2. Get Payment Details for Order
-GET {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/payments
-Authorization: Bearer {{accessToken}}
-Accept: application/json
-
-### 3. Create Payment Redirect (Midtrans)
+### 2. Create Payment Session (MIDTRANS SNAP)
+# Deterministic Order ID: ORD-YYYYMMDD-XXXX-HASH
 POST {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/payments
 Authorization: Bearer {{accessToken}}
+Idempotency-Key: payment-attempt-001
 Content-Type: application/json
 
 {
-  "paymentMethod": "credit_card"
+  "provider": "MIDTRANS",
+  "flow": "SNAP",
+  "preferredChannel": "GOPAY",
+  "enabledChannels": ["GOPAY", "QRIS", "BANK_TRANSFER"]
+}
+
+### 3. Retry Create Payment Session (Idempotent)
+# Should return the EXACT same snapToken and providerOrderId
+POST {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/payments
+Authorization: Bearer {{accessToken}}
+Idempotency-Key: payment-attempt-001
+Content-Type: application/json
+
+{
+  "provider": "MIDTRANS",
+  "flow": "SNAP",
+  "preferredChannel": "GOPAY",
+  "enabledChannels": ["GOPAY", "QRIS", "BANK_TRANSFER"]
 }
 
 ### 4. Cancel Order
 POST {{protocol}}://{{host}}{{apiPrefix}}/orders/{{orderId}}/cancellations
 Authorization: Bearer {{accessToken}}
+Idempotency-Key: cancel-attempt-001
 Content-Type: application/json
 
 {
-  "reason": "Changed my mind"
+  "reason": "Salah pilih metode pembayaran"
 }

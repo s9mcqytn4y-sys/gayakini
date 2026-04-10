@@ -243,8 +243,14 @@ class FinanceE2ETest : BaseE2ETest() {
         println("Quotes Response Body: ${objectMapper.writeValueAsString(quotesResp.body)}")
 
         val quotesBody = quotesResp.body ?: throw AssertionError("Quotes response body is null")
-        val checkoutData = quotesBody["data"] as? Map<*, *> ?: throw AssertionError("Checkout data in quotes response is null")
-        val quotesList = checkoutData["availableShippingQuotes"] as? List<Map<*, *>> ?: throw AssertionError("availableShippingQuotes is null")
+        val checkoutData = quotesBody["data"] as? Map<*, *>
+            ?: throw AssertionError(
+                "Checkout data in quotes response is null",
+            )
+        val quotesList = checkoutData["availableShippingQuotes"] as? List<Map<*, *>>
+            ?: throw AssertionError(
+                "availableShippingQuotes is null",
+            )
 
         if (quotesList.isEmpty()) throw AssertionError("availableShippingQuotes is empty")
 

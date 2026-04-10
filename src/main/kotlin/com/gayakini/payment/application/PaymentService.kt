@@ -91,7 +91,7 @@ class PaymentService(
                 return@handle existingPayment.get()
             }
 
-            val payment = createNewPaymentSession(order, request)
+            val payment = createNewPaymentSession(order, idempotencyKey, request)
 
             order.currentPaymentId = payment.id
             order.updatedAt = Instant.now()
@@ -122,6 +122,7 @@ class PaymentService(
 
     private fun createNewPaymentSession(
         order: Order,
+        idempotencyKey: String,
         request: CreatePaymentRequest?,
     ): Payment {
         // Get customer email from order or customer profile
@@ -130,7 +131,8 @@ class PaymentService(
                 customerRepository.findById(id).map { it.email }.orElse("customer@example.com")
             } ?: "customer@example.com"
 
-        val providerOrderId = "TRX-${Instant.now().epochSecond}-${UUID.randomUUID().toString().take(8)}"
+        val hash = HashUtils.sha256(idempotencyKey).take(8)
+        val providerOrderId = "${order.orderNumber}-$hash"
 
         val customerDetails =
             CustomerPaymentDetails(
@@ -177,8 +179,17 @@ class PaymentService(
             )
         }
 
-        val enabledPayments = request?.enabledChannels?.map { it.midtransCode }
-        val preferredChannel = request?.preferredChannel?.midtransCode
+        // Hard requirement: Strict sum validation before calling provider
+        val calculatedAmount = itemDetails.sumOf { it.price * it.quantity }
+        check(calculatedAmount == order.totalAmount) {
+            logger.error("Integritas jumlah pembayaran terganggu: total={}, item_sum={}", order.totalAmount, calculatedAmount)
+            "Ketidaksesuaian perhitungan jumlah pembayaran."
+        }
+
+        val enabledMidtransCodes = request?.enabledChannels
+            ?.flatMap { it.midtransCodes }
+            ?.distinct()
+        val preferredMidtransCodes = request?.preferredChannel?.midtransCodes
 
         val session =
             paymentProvider.createPaymentSession(
@@ -187,6 +198,7 @@ class PaymentService(
                 amount = order.totalAmount,
                 customerDetails = customerDetails,
                 itemDetails = itemDetails,
+                enabledChannels = enabledMidtransCodes,
             )
 
         val payment =
@@ -196,8 +208,8 @@ class PaymentService(
                 provider = "MIDTRANS",
                 flow = "SNAP",
                 status = PaymentStatus.PENDING,
-                preferredChannel = preferredChannel,
-                enabledChannels = enabledPayments?.let { objectMapper.writeValueAsString(it) },
+                preferredChannel = preferredMidtransCodes?.firstOrNull(),
+                enabledChannels = enabledMidtransCodes?.let { objectMapper.writeValueAsString(it) },
                 providerOrderId = providerOrderId,
                 grossAmount = order.totalAmount,
                 snapToken = session.token,

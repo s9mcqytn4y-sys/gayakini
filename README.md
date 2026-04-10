@@ -102,9 +102,10 @@ File utama:
 ## Webhook Security & Testing
 
 Gayakini menggunakan strategi **Authoritative Reconciliation** untuk semua webhook:
-1. **Strict Signature Validation**: Setiap payload divalidasi menggunakan SHA512 HMAC (Midtrans) atau Secret Header (Biteship).
-2. **Anti-Spoofing Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
-3. **Audit Trail & Event-Driven Logging**: Setiap perubahan status bisnis (Order, Payment, Promo) dicatat secara terpusat di tabel `audit_logs` menggunakan Spring `ApplicationEventPublisher`. 
+1. **Deterministic `provider_order_id`**: Setiap sesi pembayaran (`Payment`) menggunakan format `{OrderNumber}-{Hash(IdempotencyKey)}`. Hal ini memastikan bahwa request ulang dengan `Idempotency-Key` yang sama akan selalu menghasilkan `order_id` yang sama di sisi Midtrans, mencegah duplikasi transaksi di Dashboard Midtrans.
+2. **Authoritative Reconciliation**: Sistem tidak pernah mempercayai payload webhook secara membabi buta. Setelah signature valid, sistem akan melakukan *direct call* ke API provider (Misal: `[GET] /v2/{order_id}/status`) untuk mendapatkan status resmi.
+3. **Strict Data Integrity (Snap Payload)**: Payload ke Midtrans divalidasi secara ketat sebelum dikirim. Sum dari `item_details` (produk, biaya kirim, diskon) **wajib** sama persis dengan `gross_amount` untuk mencegah penolakan sistem Midtrans.
+4. **Audit Trail & Event-Driven Logging**: Setiap perubahan status bisnis (Order, Payment, Promo) dicatat secara terpusat di tabel `audit_logs` menggunakan Spring `ApplicationEventPublisher`.
     - **Non-blocking**: Pencatatan audit dilakukan via `@TransactionalEventListener` sebelum commit.
     - **Traceability**: Mencatat `actor_id`, `actor_role`, `previous_state`, dan `new_state` (JSONB).
     - **Security**: Data sensitif (password, token, signature) disensor secara otomatis.

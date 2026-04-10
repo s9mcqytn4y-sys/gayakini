@@ -5,16 +5,13 @@ import jakarta.validation.constraints.Pattern
 import java.time.Instant
 import java.util.UUID
 
-enum class PaymentChannel(val midtransCode: String) {
-    CREDIT_CARD("credit_card"),
-    BCA_VA("bca_va"),
-    BNI_VA("bni_va"),
-    BRI_VA("bri_va"),
-    MANDIRI_BILL("echannel"),
-    PERMATA_VA("permata_va"),
-    GOPAY("gopay"),
-    SHOPEEPAY("shopeepay"),
-    QRIS("qris"),
+enum class PaymentChannel(val midtransCodes: List<String>) {
+    CREDIT_CARD(listOf("credit_card")),
+    BANK_TRANSFER(listOf("bca_va", "bni_va", "bri_va", "echannel", "permata_va")),
+    GOPAY(listOf("gopay")),
+    SHOPEEPAY(listOf("shopeepay")),
+    QRIS(listOf("qris")),
+    CSTORE(listOf("indomaret", "alfamart")),
 }
 
 data class CreatePaymentRequest(

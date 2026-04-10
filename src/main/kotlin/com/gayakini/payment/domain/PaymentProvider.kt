@@ -10,6 +10,7 @@ interface PaymentProvider {
         amount: Long,
         customerDetails: CustomerPaymentDetails,
         itemDetails: List<PaymentItemDetail> = emptyList(),
+        enabledChannels: List<String>? = null,
     ): PaymentSession
 
     fun verifyWebhook(

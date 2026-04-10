@@ -36,6 +36,7 @@ class MidtransPaymentProvider(
         amount: Long,
         customerDetails: CustomerPaymentDetails,
         itemDetails: List<PaymentItemDetail>,
+        enabledChannels: List<String>?,
     ): PaymentSession {
         // Validation: sum of (price * quantity) must match amount
         val calculatedAmount = itemDetails.sumOf { it.price * it.quantity }
@@ -68,6 +69,12 @@ class MidtransPaymentProvider(
                     ),
                 "usage_limit" to 1,
             )
+
+        enabledChannels?.let {
+            if (it.isNotEmpty()) {
+                requestMap["enabled_payments"] = it
+            }
+        }
 
         val requestPayload = objectMapper.writeValueAsString(requestMap)
         val headers = createHeaders()
