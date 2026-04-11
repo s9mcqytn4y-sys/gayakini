@@ -62,10 +62,14 @@ dependencies {
     implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24")
     implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
 
+    // Payment & Shipping SDKs
+    implementation("com.midtrans:java-library:3.2.2")
+
     // Test Baseline
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly("com.h2database:h2")
 }
 
 // --- CORE QUALITY GUARDRAILS ---
@@ -89,6 +93,13 @@ tasks.named("check") {
     dependsOn("ktlintCheck", "detekt")
 }
 
+// Release Check Task: Aggregates all quality gates
+tasks.register("releaseCheck") {
+    group = "verification"
+    description = "Runs all quality gates: check (ktlint, detekt), test, and build."
+    dependsOn("check", "test", "bootJar")
+}
+
 // --- COMPILER CONFIGURATION ---
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -106,4 +117,8 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     systemProperty("spring.profiles.active", "local")
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

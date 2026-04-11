@@ -8,32 +8,47 @@ import com.gayakini.payment.domain.PaymentGatewayException
 import com.gayakini.payment.domain.PaymentItemDetail
 import com.gayakini.payment.domain.PaymentProvider
 import com.gayakini.payment.domain.PaymentSession
+import com.midtrans.Config
+import com.midtrans.ConfigFactory
+import com.midtrans.httpclient.error.MidtransError
+import com.midtrans.service.MidtransSnapApi
+import com.midtrans.service.MidtransCoreApi
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpMethod
-import org.springframework.http.MediaType
 import org.springframework.retry.annotation.Backoff
 import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Component
-import org.springframework.web.client.HttpClientErrorException
-import org.springframework.web.client.HttpServerErrorException
-import org.springframework.web.client.RestClientException
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.util.UUID
+import java.util.*
+import jakarta.annotation.PostConstruct
 
 @Component
+@Suppress("TooGenericExceptionCaught")
 class MidtransPaymentProvider(
     private val properties: GayakiniProperties,
-    restTemplateBuilder: org.springframework.boot.web.client.RestTemplateBuilder,
     private val objectMapper: ObjectMapper,
 ) : PaymentProvider {
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
-    private val restTemplate = restTemplateBuilder.build()
+
+    private lateinit var snapApi: MidtransSnapApi
+    private lateinit var coreApi: MidtransCoreApi
+
+    @PostConstruct
+    fun init() {
+        val config =
+            Config.builder()
+                .setServerKey(properties.midtrans.serverKey)
+                .setClientKey(properties.midtrans.clientKey)
+                .setIsProduction(properties.midtrans.isProduction)
+                .build()
+
+        val factory = ConfigFactory(config)
+        snapApi = factory.getSnapApi()
+        coreApi = factory.getCoreApi()
+    }
 
     @Retryable(
-        value = [RestClientException::class, PaymentGatewayException::class],
+        value = [MidtransError::class, PaymentGatewayException::class],
         maxAttempts = 3,
         backoff = Backoff(delay = 1000, multiplier = 2.0),
     )
@@ -52,7 +67,7 @@ class MidtransPaymentProvider(
             throw PaymentGatewayException("Ketidaksesuaian jumlah pembayaran dalam sistem.")
         }
 
-        val requestMap =
+        val params =
             mutableMapOf<String, Any>(
                 "transaction_details" to
                     mapOf(
@@ -79,54 +94,27 @@ class MidtransPaymentProvider(
 
         enabledChannels?.let {
             if (it.isNotEmpty()) {
-                requestMap["enabled_payments"] = it
+                params["enabled_payments"] = it
             }
         }
 
-        val requestPayload = objectMapper.writeValueAsString(requestMap)
-        val headers = createHeaders()
-
         return try {
-            val response =
-                restTemplate.postForEntity(
-                    properties.midtrans.snapUrl,
-                    HttpEntity(requestMap, headers),
-                    Map::class.java,
-                )
+            // Using SDK to create transaction
+            val response = snapApi.createTransaction(params)
 
-            val responsePayload = objectMapper.writeValueAsString(response.body)
-
-            if (response.statusCode.is2xxSuccessful) {
-                val body = response.body as Map<*, *>
-                val token = body["token"] as String
-                val redirectUrl = body["redirect_url"] as String
-                PaymentSession(
-                    token = token,
-                    redirectUrl = redirectUrl,
-                    providerOrderId = providerOrderId,
-                    requestPayload = requestPayload,
-                    responsePayload = responsePayload,
-                )
-            } else {
-                logger.error(
-                    "Gagal membuat sesi pembayaran Midtrans: {} - {}",
-                    response.statusCode,
-                    responsePayload,
-                )
-                throw PaymentGatewayException(
-                    "Gagal membuat sesi pembayaran. Provider merespon dengan status ${response.statusCode}.",
-                )
-            }
-        } catch (e: HttpClientErrorException) {
-            val errorBody = e.responseBodyAsString
-            logger.error("Midtrans Client Error (4xx): {} - {}", e.statusCode, errorBody)
-            throw PaymentGatewayException("Permintaan pembayaran ditolak oleh provider: $errorBody")
-        } catch (e: HttpServerErrorException) {
-            logger.error("Midtrans Server Error (5xx): {} - {}", e.statusCode, e.responseBodyAsString)
-            throw PaymentGatewayException("Provider pembayaran sedang mengalami gangguan teknis.")
-        } catch (e: RestClientException) {
-            logger.error("Midtrans Connection Error: {}", e.message)
-            throw PaymentGatewayException("Tidak dapat terhubung ke provider pembayaran.")
+            PaymentSession(
+                token = response.getString("token"),
+                redirectUrl = response.getString("redirect_url"),
+                providerOrderId = providerOrderId,
+                requestPayload = objectMapper.writeValueAsString(params),
+                responsePayload = response.toString(),
+            )
+        } catch (e: MidtransError) {
+            logger.error("Midtrans SDK Error: {} (Status: {})", e.message, e.statusCode)
+            throw PaymentGatewayException("Gagal membuat sesi pembayaran: ${e.message}", e)
+        } catch (e: Exception) {
+            logger.error("Unexpected Error creating Midtrans session", e)
+            throw PaymentGatewayException("Terjadi kesalahan teknis saat menghubungi provider pembayaran.", e)
         }
     }
 
@@ -141,10 +129,8 @@ class MidtransPaymentProvider(
 
         // Midtrans SHA512 signature: SHA512(order_id + status_code + gross_amount + server_key)
         val rawData = orderId + statusCode + grossAmount + serverKey
-
         val calculatedSignature = sha512(rawData)
 
-        // Use constant-time comparison to prevent timing attacks
         val isValid =
             MessageDigest.isEqual(
                 calculatedSignature.lowercase().toByteArray(StandardCharsets.UTF_8),
@@ -152,51 +138,24 @@ class MidtransPaymentProvider(
             )
 
         if (!isValid) {
-            logger.warn(
-                "Midtrans signature mismatch for order {}! Calculated: {}, Received: {}",
-                orderId,
-                calculatedSignature,
-                signature,
-            )
+            logger.warn("Midtrans signature mismatch for order {}!", orderId)
         }
 
         return isValid
     }
 
-    @Retryable(
-        value = [RestClientException::class],
-        maxAttempts = 3,
-        backoff = Backoff(delay = 1000, multiplier = 2.0),
-    )
     override fun getPaymentStatus(providerOrderId: String): PaymentStatus {
-        val statusUrl = "${properties.midtrans.apiUrl}/$providerOrderId/status"
-
-        val headers = createHeaders()
         return try {
-            val response =
-                restTemplate.exchange(
-                    statusUrl,
-                    HttpMethod.GET,
-                    HttpEntity<Any>(headers),
-                    Map::class.java,
-                )
-            if (response.statusCode.is2xxSuccessful) {
-                val body = response.body as Map<*, *>
-                mapStatus(body["transaction_status"] as String)
-            } else {
-                PaymentStatus.PENDING
-            }
-        } catch (e: RestClientException) {
-            logger.error("Gagal mengambil status pembayaran dari Midtrans: {}", e.message)
+            // Using SDK CoreApi equivalent for status check
+            val response = coreApi.checkTransaction(providerOrderId)
+            mapStatus(response.getString("transaction_status"))
+        } catch (e: MidtransError) {
+            logger.error("Gagal mengambil status pembayaran dari Midtrans SDK: {}", e.message)
+            PaymentStatus.PENDING
+        } catch (e: Exception) {
+            logger.error("Unexpected Error checking Midtrans status", e)
             PaymentStatus.PENDING
         }
-    }
-
-    private fun createHeaders(): HttpHeaders {
-        val headers = HttpHeaders()
-        headers.contentType = MediaType.APPLICATION_JSON
-        headers.setBasicAuth(properties.midtrans.serverKey, "", StandardCharsets.UTF_8)
-        return headers
     }
 
     private fun mapStatus(midtransStatus: String): PaymentStatus {

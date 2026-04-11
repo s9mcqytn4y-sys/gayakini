@@ -14,7 +14,6 @@ import java.util.UUID
 class ProductCollection(
     @EmbeddedId
     val id: ProductCollectionId,
-
     @Column(name = "created_at", updatable = false, nullable = false)
     val createdAt: Instant = Instant.now(),
 )
@@ -25,8 +24,13 @@ data class ProductCollectionId(
     val productId: UUID,
     @Column(name = "collection_id", nullable = false)
     val collectionId: UUID,
-) : Serializable
+) : Serializable {
+    companion object {
+        private const val serialVersionUID: Long = 1L
+    }
+}
 
-interface ProductCollectionRepository : org.springframework.data.jpa.repository.JpaRepository<ProductCollection, ProductCollectionId> {
+interface ProductCollectionRepository :
+    org.springframework.data.jpa.repository.JpaRepository<ProductCollection, ProductCollectionId> {
     fun findAllByIdProductId(productId: UUID): List<ProductCollection>
 }

@@ -13,7 +13,6 @@ import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.catalog.domain.CategoryRepository
 import com.gayakini.catalog.domain.CollectionRepository
-import com.gayakini.catalog.domain.ProductCollectionRepository
 import com.gayakini.catalog.domain.ProductRepository
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

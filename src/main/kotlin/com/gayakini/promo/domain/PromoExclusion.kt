@@ -16,17 +16,13 @@ class PromoExclusion(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     val id: UUID = UuidV7Generator.generate(),
-
     @Column(name = "promo_id", nullable = false)
     val promoId: UUID,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "exclusion_type", nullable = false, length = 20)
     val exclusionType: ExclusionType,
-
     @Column(name = "excluded_entity_id", nullable = false)
     val excludedEntityId: UUID,
-
     @Column(name = "created_at", updatable = false, nullable = false)
     val createdAt: Instant = Instant.now(),
 )

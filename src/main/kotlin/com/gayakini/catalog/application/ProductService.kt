@@ -18,7 +18,6 @@ import java.util.UUID
 @Service
 class ProductService(
     private val productRepository: ProductRepository,
-    private val productVariantRepository: ProductVariantRepository,
     private val publicProductSummaryRepository: PublicProductSummaryRepository,
     private val categoryRepository: CategoryRepository,
     private val storageService: StorageService,

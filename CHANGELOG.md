@@ -44,5 +44,21 @@ Format changelog ini mengikuti [Keep a Changelog](https://keepachangelog.com/en/
 - Pengaturan `SecurityConfig` yang lebih granular untuk public vs authenticated endpoints.
 - Verifikasi schema Flyway dalam task `releaseCheck`.
 
+### Added
+- Integrasi Midtrans Java SDK `3.2.2` untuk pembuatan sesi pembayaran dan pengecekan status.
+- Migrasi Flyway `V17` untuk sinkronisasi kolom `received_signature` pada tabel `payment_receipts`.
+- `OrderStateIntegrationTest` untuk verifikasi end-to-end lifecycle pesanan dan integritas inventaris.
+
+### Fixed
+- `SchemaManagementException` pada startup akibat mismatch nama kolom `PaymentReceipt`.
+- Pelanggaran `detekt` (TooGenericExceptionCaught, SwallowedException) pada `MidtransPaymentProvider`.
+- Pelanggaran `ktlint` dan unused property pada `OrderStateIntegrationTest`.
+- Mismatch signature verification pada `MidtransPaymentProvider` dengan standardisasi `MessageDigest.isEqual`.
+
+### Changed
+- Refaktor `MidtransPaymentProvider` untuk menggunakan SDK resmi alih-alih manual `RestTemplate`.
+- Penggunaan `@Suppress("TooGenericExceptionCaught")` pada provider untuk menangani pengecualian SDK secara terpusat.
+- Pembersihan `OrderStateIntegrationTest` dari dependency yang tidak digunakan.
+
 ---
-*Last update: 2025-05-25*
+*Last update: 2026-04-11*

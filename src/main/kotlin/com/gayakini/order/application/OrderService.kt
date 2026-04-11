@@ -135,7 +135,12 @@ class OrderService(
                 order.items.add(orderItem)
 
                 // Atomic stock lock and reservation inside inventoryService
-                inventoryService.reserveStock(order.id, orderItem.id, orderItem.variant.id, orderItem.quantity)
+                inventoryService.reserveStock(
+                    orderId = order.id,
+                    orderItemId = orderItem.id,
+                    variantId = orderItem.variant.id,
+                    quantity = orderItem.quantity,
+                )
             }
 
             val savedOrder = orderRepository.save(order)
@@ -310,8 +315,14 @@ class OrderService(
             inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
 
             // Restock if order was already paid/processed
-            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP || order.status == OrderStatus.SHIPPED) {
-                inventoryService.restockOrder(order.id, AdjustmentReason.CANCELLATION_RESTOCK, "User cancellation: $reason")
+            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
+                order.status == OrderStatus.SHIPPED
+            ) {
+                inventoryService.restockOrder(
+                    orderId = order.id,
+                    reason = AdjustmentReason.CANCELLATION_RESTOCK,
+                    note = "User cancellation: $reason",
+                )
             }
 
             // Revert promo usage
@@ -347,8 +358,14 @@ class OrderService(
             inventoryService.releaseReservations(order.id, "Order cancelled by admin: $reason")
 
             // Restock if order was already paid/processed
-            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP || order.status == OrderStatus.SHIPPED) {
-                inventoryService.restockOrder(order.id, AdjustmentReason.CANCELLATION_RESTOCK, "Admin cancellation: $reason")
+            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
+                order.status == OrderStatus.SHIPPED
+            ) {
+                inventoryService.restockOrder(
+                    orderId = order.id,
+                    reason = AdjustmentReason.CANCELLATION_RESTOCK,
+                    note = "Admin cancellation: $reason",
+                )
             }
 
             // Revert promo usage

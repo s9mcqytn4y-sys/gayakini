@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;INIT=CREATE SCHEMA IF NOT EXISTS commerce
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        default_schema: commerce
+        format_sql: true
+  flyway:
+    enabled: false
+  sql:
+    init:
+      mode: always
+
+gayakini:
+  midtrans:
+    server-key: "dummy-test-key"
+    client-key: "dummy-test-key"
+    is-production: false
+  biteship:
+    api-key: "dummy-test-key"
+    api-url: "https://api.biteship.com/v1"
+  jwt:
+    secret: super-secret-key-change-this-in-production-at-least-chars-32
+  cors:
+    allowed-origins:
+      - "*"

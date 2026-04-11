@@ -28,21 +28,20 @@ data class PromoResponse(
         fun fromEntity(
             entity: Promo,
             exclusions: List<com.gayakini.promo.domain.PromoExclusion> = emptyList(),
-        ) =
-            PromoResponse(
-                id = entity.id,
-                code = entity.code,
-                type = entity.type,
-                value = entity.value,
-                maxDiscountAmount = entity.maxDiscountAmount,
-                minOrderValue = entity.minOrderValue,
-                usageLimit = entity.usageLimit,
-                currentUsage = entity.currentUsage,
-                startDate = entity.startDate,
-                endDate = entity.endDate,
-                isActive = entity.isActive,
-                exclusions = exclusions.map { ExclusionResponse.fromEntity(it) },
-            )
+        ) = PromoResponse(
+            id = entity.id,
+            code = entity.code,
+            type = entity.type,
+            value = entity.value,
+            maxDiscountAmount = entity.maxDiscountAmount,
+            minOrderValue = entity.minOrderValue,
+            usageLimit = entity.usageLimit,
+            currentUsage = entity.currentUsage,
+            startDate = entity.startDate,
+            endDate = entity.endDate,
+            isActive = entity.isActive,
+            exclusions = exclusions.map { ExclusionResponse.fromEntity(it) },
+        )
     }
 }
 
