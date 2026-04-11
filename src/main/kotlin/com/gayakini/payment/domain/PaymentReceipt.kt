@@ -12,7 +12,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "payment_receipts")
+@Table(name = "payment_receipts", schema = "commerce")
 class PaymentReceipt(
     @Id
     val id: UUID = UUID.randomUUID(),

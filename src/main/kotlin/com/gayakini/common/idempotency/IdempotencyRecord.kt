@@ -10,7 +10,7 @@ import java.time.Instant
 import java.util.UUID
 
 @Entity
-@Table(name = "idempotency_records")
+@Table(name = "idempotency_records", schema = "commerce")
 class IdempotencyRecord(
     @Id
     val id: UUID,
