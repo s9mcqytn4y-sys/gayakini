@@ -124,9 +124,7 @@ class ShippingService(
     }
 
     private fun updateOrderAfterBooking(order: Order) {
-        order.status = OrderStatus.READY_TO_SHIP
-        order.fulfillmentStatus = FulfillmentStatus.BOOKED
-        order.updatedAt = Instant.now()
+        order.markAsReadyToShip()
         orderRepository.save(order)
     }
 
@@ -206,14 +204,12 @@ class ShippingService(
                 }
                 shipment.status = FulfillmentStatus.IN_TRANSIT
                 shipment.shippedAt = shipment.shippedAt ?: Instant.now()
-                order.status = OrderStatus.SHIPPED
-                order.fulfillmentStatus = FulfillmentStatus.IN_TRANSIT
+                order.markAsShipped()
             }
             "delivered" -> {
                 shipment.status = FulfillmentStatus.DELIVERED
                 shipment.deliveredAt = shipment.deliveredAt ?: Instant.now()
-                order.status = OrderStatus.COMPLETED
-                order.fulfillmentStatus = FulfillmentStatus.DELIVERED
+                order.markAsCompleted()
             }
         }
         orderRepository.save(order)

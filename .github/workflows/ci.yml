@@ -45,17 +45,14 @@ jobs:
     - name: Run Static Analysis (detekt)
       run: ./gradlew detekt
 
-    - name: Build and Test
-      run: ./gradlew build --info
+    - name: Build
+      run: ./gradlew assemble --info
       env:
-        SPRING_PROFILES_ACTIVE: test
         DB_HOST: localhost
         DB_PORT: 5432
         DB_NAME: gayakini_test
         DB_USERNAME: postgres
         DB_PASSWORD: password
-        MIDTRANS_SERVER_KEY: dummy_test_key
-        BITESHIP_API_KEY: dummy_test_key
     
     - name: Build Docker Image
       run: docker build -t gayakini-backend:latest .

@@ -271,9 +271,10 @@ class PaymentService(
         signature: String,
     ) {
         val providerOrderId = payload["order_id"] as? String
-            ?: throw IllegalArgumentException("Missing order_id in payload")
         val transactionStatus = payload["transaction_status"] as? String
-            ?: throw IllegalArgumentException("Missing transaction_status in payload")
+
+        requireNotNull(providerOrderId) { "Missing order_id in payload" }
+        requireNotNull(transactionStatus) { "Missing transaction_status in payload" }
 
         // 1. Audit Trail: Log the incoming webhook immediately
         val receipt =
@@ -333,6 +334,20 @@ class PaymentService(
             transactionStatus,
         )
 
+        processAuthoritativeUpdate(providerOrderId, reconciledStatus, payload, transactionStatus)
+
+        // 6. Mark receipt as processed
+        receipt.processingStatus = ReceiptProcessingStatus.PROCESSED
+        receipt.processedAt = Instant.now()
+        paymentReceiptRepository.save(receipt)
+    }
+
+    private fun processAuthoritativeUpdate(
+        providerOrderId: String,
+        reconciledStatus: PaymentStatus,
+        payload: Map<String, Any>,
+        transactionStatus: String,
+    ) {
         val payment =
             paymentRepository.findByProviderOrderId(providerOrderId)
                 .orElseThrow {
@@ -379,11 +394,6 @@ class PaymentService(
                 ),
             )
         }
-
-        // 6. Mark receipt as processed
-        receipt.processingStatus = ReceiptProcessingStatus.PROCESSED
-        receipt.processedAt = Instant.now()
-        paymentReceiptRepository.save(receipt)
     }
 
     private fun handleInvalidSignature(
@@ -495,18 +505,17 @@ class PaymentService(
         order: Order,
     ) {
         payment.paidAt = Instant.now()
-        order.status = OrderStatus.PAID
-        order.paymentStatus = PaymentStatus.PAID
-        order.paidAt = Instant.now()
+        order.markAsPaid()
     }
 
     private fun handleFailedOrder(
         order: Order,
         reconciledStatus: PaymentStatus,
     ) {
-        order.status = OrderStatus.CANCELLED
-        order.paymentStatus = reconciledStatus
-        order.cancelledAt = Instant.now()
+        order.cancel(
+            reason = "Payment failure state: $reconciledStatus",
+            paymentStatus = reconciledStatus,
+        )
 
         // Release inventory reservations (Hard Requirement 12)
         inventoryService.releaseReservations(order.id, "Payment failure state: $reconciledStatus")

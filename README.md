@@ -116,6 +116,15 @@ To test external webhooks (Midtrans/Biteship) on your local machine:
 2. Update Webhook URL in Provider Dashboard to your ngrok URL (e.g., `https://abcd-123.ngrok-free.app/v1/webhooks/midtrans`).
 3. Use `http/90-webhooks.http` for manual simulation (includes bad signature and duplicate tests).
 
+## Order Lifecycle & Stock Integrity
+
+Gayakini enforces a strict state machine and pessimistic locking to ensure business consistency:
+
+1. **Domain-Driven Transitions**: Order status changes are strictly governed by the `Order` entity. Transitions (e.g., `markAsPaid`, `cancel`) encapsulate logic for payment validation, fulfillment readiness, and inventory release.
+2. **Pessimistic Stock Locking**: `InventoryService` utilizes `PESSIMISTIC_WRITE` locks during stock reservation and consumption. This prevents "race conditions" where multiple concurrent checkouts might oversell the same `ProductVariant`.
+3. **Atomic Inventory Operations**: Stock reservation is performed within the same transaction as order placement. If a transaction fails, the reservation is automatically rolled back.
+4. **Strict Cancelation Rules**: Inventory is released back to the catalog only when an order is explicitly canceled or expires. The system prevents canceling orders that have already been shipped.
+
 ## Billing & Document Generation
 
 Gayakini menyediakan sistem pembuatan E-Receipt/Invoice otomatis yang aman dan skalabel:

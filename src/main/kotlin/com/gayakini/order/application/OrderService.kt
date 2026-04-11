@@ -299,14 +299,7 @@ class OrderService(
                 return@handle order
             }
 
-            check(order.status != OrderStatus.COMPLETED) {
-                "Pesanan tidak dapat dibatalkan dalam status: ${order.status}"
-            }
-
-            order.status = OrderStatus.CANCELLED
-            order.cancelledAt = Instant.now()
-            order.cancellationReason = reason
-            order.updatedAt = Instant.now()
+            order.cancel(reason)
 
             inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
 
@@ -335,15 +328,7 @@ class OrderService(
                 return@handle order
             }
 
-            check(order.status != OrderStatus.COMPLETED) {
-                "Pesanan tidak dapat dibatalkan dalam status: ${order.status}"
-            }
-
-            order.status = OrderStatus.CANCELLED
-            order.fulfillmentStatus = FulfillmentStatus.CANCELLED
-            order.cancelledAt = Instant.now()
-            order.cancellationReason = reason
-            order.updatedAt = Instant.now()
+            order.cancel(reason)
 
             inventoryService.releaseReservations(order.id, "Order cancelled by admin: $reason")
 

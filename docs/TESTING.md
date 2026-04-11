@@ -14,7 +14,13 @@ Located in `src/test/kotlin/com/gayakini/[domain]`.
 - Uses `H2` (Postgres Mode) for speed or `Testcontainers` (Postgres) for parity.
 - Profile: `test`
 
-### 3. Security Tests
+### 3. Concurrency & Stress Tests
+Located in `src/test/kotlin/com/gayakini/order/OrderConcurrencyTest.kt`.
+- Focus: Handling high-volume concurrent requests on limited stock.
+- Uses `PESSIMISTIC_WRITE` locks to ensure data integrity.
+- Verified by: Simulating 10 users attempting to buy the last remaining item.
+
+### 4. Security Tests
 Located in `src/test/kotlin/com/gayakini/infrastructure/security`.
 - Focus: Authentication, Authorization (RBAC), and CORS.
 

@@ -131,9 +131,80 @@ class Order(
     fun markNotNew() {
         isNewRecord = false
     }
+
+    fun markAsPaid() {
+        validateTransition(OrderStatus.PAID)
+        this.status = OrderStatus.PAID
+        this.paymentStatus = PaymentStatus.PAID
+        this.paidAt = Instant.now()
+        this.updatedAt = Instant.now()
+    }
+
+    fun markAsReadyToShip() {
+        validateTransition(OrderStatus.READY_TO_SHIP)
+        this.status = OrderStatus.READY_TO_SHIP
+        this.fulfillmentStatus = FulfillmentStatus.BOOKED
+        this.updatedAt = Instant.now()
+    }
+
+    fun markAsShipped() {
+        validateTransition(OrderStatus.SHIPPED)
+        this.status = OrderStatus.SHIPPED
+        this.fulfillmentStatus = FulfillmentStatus.IN_TRANSIT
+        this.updatedAt = Instant.now()
+    }
+
+    fun markAsCompleted() {
+        validateTransition(OrderStatus.COMPLETED)
+        this.status = OrderStatus.COMPLETED
+        this.fulfillmentStatus = FulfillmentStatus.DELIVERED
+        this.updatedAt = Instant.now()
+    }
+
+    fun cancel(
+        reason: String?,
+        paymentStatus: PaymentStatus? = null,
+    ) {
+        validateTransition(OrderStatus.CANCELLED)
+        this.status = OrderStatus.CANCELLED
+        this.paymentStatus = paymentStatus ?: if (this.paymentStatus == PaymentStatus.PAID) {
+            PaymentStatus.REFUNDED
+        } else {
+            PaymentStatus.CANCELLED
+        }
+        this.fulfillmentStatus = FulfillmentStatus.CANCELLED
+        this.cancelledAt = Instant.now()
+        this.cancellationReason = reason
+        this.updatedAt = Instant.now()
+    }
+
+    private fun validateTransition(newStatus: OrderStatus) {
+        check(status.canTransitionTo(newStatus)) {
+            "Transisi status pesanan tidak valid: $status -> $newStatus"
+        }
+    }
 }
 
-enum class OrderStatus { PENDING_PAYMENT, PAID, READY_TO_SHIP, SHIPPED, COMPLETED, CANCELLED }
+enum class OrderStatus {
+    PENDING_PAYMENT,
+    PAID,
+    READY_TO_SHIP,
+    SHIPPED,
+    COMPLETED,
+    CANCELLED,
+    ;
+
+    fun canTransitionTo(target: OrderStatus): Boolean {
+        return when (this) {
+            PENDING_PAYMENT -> target in listOf(PAID, CANCELLED)
+            PAID -> target in listOf(READY_TO_SHIP, CANCELLED)
+            READY_TO_SHIP -> target in listOf(SHIPPED, CANCELLED)
+            SHIPPED -> target in listOf(COMPLETED, CANCELLED)
+            COMPLETED -> false
+            CANCELLED -> false
+        }
+    }
+}
 
 enum class PaymentStatus { PENDING, PAID, FAILED, EXPIRED, CANCELLED, REFUNDED }
 

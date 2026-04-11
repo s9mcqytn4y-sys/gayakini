@@ -14,29 +14,23 @@ class AuditEventListener(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    @TransactionalEventListener(phase = TransactionPhase.BEFORE_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     fun handleAuditEvent(event: AuditEvent) {
-        try {
-            val log =
-                AuditLog(
-                    id = event.id,
-                    actorId = event.actorId,
-                    actorRole = event.actorRole,
-                    entityType = event.entityType,
-                    entityId = event.entityId,
-                    eventType = event.eventType,
-                    previousState = redactSensitiveData(event.previousState),
-                    newState = redactSensitiveData(event.newState),
-                    reason = event.reason,
-                    createdAt = event.createdAt,
-                )
-            auditRepository.save(log)
-            logger.info("Audit log saved for {} - {}: {}", event.entityType, event.entityId, event.eventType)
-        } catch (e: IllegalArgumentException) {
-            logger.error("Failed to save audit log: {}", e.message)
-        } catch (e: IllegalStateException) {
-            logger.error("Failed to save audit log: {}", e.message)
-        }
+        val log =
+            AuditLog(
+                id = event.id,
+                actorId = event.actorId,
+                actorRole = event.actorRole,
+                entityType = event.entityType,
+                entityId = event.entityId,
+                eventType = event.eventType,
+                previousState = redactSensitiveData(event.previousState),
+                newState = redactSensitiveData(event.newState),
+                reason = event.reason,
+                createdAt = event.createdAt,
+            )
+        auditRepository.save(log)
+        logger.info("Audit log saved for {} - {}: {}", event.entityType, event.entityId, event.eventType)
     }
 
     private fun redactSensitiveData(data: Map<String, Any?>?): Map<String, Any?>? {

@@ -76,10 +76,12 @@ class FinanceService(
 
     @Transactional(readOnly = true)
     fun getAvailableBalance(): Long {
-        val gatewayAcc = accountRepository.findByCode(ACC_GATEWAY)
-            .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
-        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
-            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
+        val gatewayAcc =
+            accountRepository.findByCode(ACC_GATEWAY)
+                .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
+        val liabilityAcc =
+            accountRepository.findByCode(ACC_LIABILITY)
+                .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
 
         // Available Balance = Gateway Assets (Debit Balance) - Payout Liabilities (Credit Balance)
         // This ensures we don't over-withdraw when funds are committed to pending payouts.
@@ -126,10 +128,12 @@ class FinanceService(
             return
         }
 
-        val revenueAcc = accountRepository.findByCode(ACC_REVENUE)
-            .orElseThrow { IllegalStateException("Account $ACC_REVENUE not found") }
-        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
-            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
+        val revenueAcc =
+            accountRepository.findByCode(ACC_REVENUE)
+                .orElseThrow { IllegalStateException("Account $ACC_REVENUE not found") }
+        val liabilityAcc =
+            accountRepository.findByCode(ACC_LIABILITY)
+                .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
 
         // Debit Revenue (Revenue down), Credit Liability (Liability up)
         entryRepository.save(
@@ -201,10 +205,12 @@ class FinanceService(
             return
         }
 
-        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY)
-            .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
-        val gatewayAcc = accountRepository.findByCode(ACC_GATEWAY)
-            .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
+        val liabilityAcc =
+            accountRepository.findByCode(ACC_LIABILITY)
+                .orElseThrow { IllegalStateException("Account $ACC_LIABILITY not found") }
+        val gatewayAcc =
+            accountRepository.findByCode(ACC_GATEWAY)
+                .orElseThrow { IllegalStateException("Account $ACC_GATEWAY not found") }
 
         // Debit Liability (Liability down), Credit Gateway (Asset down)
         entryRepository.save(

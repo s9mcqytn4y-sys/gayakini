@@ -35,7 +35,14 @@ class CartController(private val cartService: CartService) {
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
         @Valid @RequestBody request: AddCartItemRequest,
     ): CartResponse {
-        val cart = cartService.addItem(cartId, request.variantId, request.quantity, SecurityUtils.getCurrentUserId(), cartToken)
+        val cart =
+            cartService.addItem(
+                cartId,
+                request.variantId,
+                request.quantity,
+                SecurityUtils.getCurrentUserId(),
+                cartToken,
+            )
         return mapToResponse(cart, "Produk berhasil dimasukkan ke keranjang.")
     }
 

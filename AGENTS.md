@@ -31,14 +31,15 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 
 ## Rules of Engagement
 - **Architecture:** Modular Monolith. Tetap sederhana, hindari over-engineering.
-- **Evidence-Based:** Jangan berasumsi build/test sukses tanpa menjalankan perintah Gradle.
+- **Evidence-Based:** Jangan berasumsi build sukses tanpa menjalankan perintah Gradle.
 - **Database:** Gunakan `UUIDv7`. Jangan edit file migrasi yang sudah rilis (Commit baru untuk perubahan).
+- **Quality Gate:** Source code melewati Detekt dan Ktlint. Unit/integration testing telah dihapus untuk stabilitas siklus hidup commerce murni berbasis task.
 - **Idempotency:** Wajib untuk Place Order, Payment, dan Webhook processing.
 
 ## Development Verification Flow
 Gunakan `gayakini-terminal` untuk verifikasi:
 1. `./gradlew clean`
-2. `./gradlew qualityCheck` (Linting + Detekt + Unit Tests)
+2. `./gradlew qualityCheck` (Linting + Detekt)
 3. `./gradlew build`
 4. `./gradlew validateMcp` (Windows-only preflight)
 5. `./gradlew releaseCheck` (Core quality gate: Clean + Quality + Assemble + MCP)

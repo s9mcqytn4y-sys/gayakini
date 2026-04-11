@@ -55,6 +55,7 @@ class JwtService(private val properties: GayakiniProperties) {
             .subject(userId.toString())
             .issuedAt(now)
             .expiration(expiry)
+            .id(UUID.randomUUID().toString())
             .signWith(signingKey)
             .compact()
     }

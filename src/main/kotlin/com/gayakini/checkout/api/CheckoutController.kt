@@ -6,7 +6,6 @@ import com.gayakini.checkout.application.CheckoutService
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
 import com.gayakini.infrastructure.security.SecurityUtils
-import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
