@@ -33,18 +33,17 @@ Saat menggunakan MCP tools, gunakan input seminimal mungkin.
 - **Architecture:** Modular Monolith. Tetap sederhana, hindari over-engineering.
 - **Evidence-Based:** Jangan berasumsi build sukses tanpa menjalankan perintah Gradle.
 - **Database:** Gunakan `UUIDv7`. Jangan edit file migrasi yang sudah rilis (Commit baru untuk perubahan).
-- **Quality Gate:** Source code melewati Detekt dan Ktlint. Unit/integration testing telah dihapus untuk stabilitas siklus hidup commerce murni berbasis task.
+- **Quality Gate:** Source code melewati Detekt dan Ktlint. Unit/integration testing telah dihapus; verifikasi mengandalkan `./gradlew releaseCheck`.
 - **Idempotency:** Wajib untuk Place Order, Payment, dan Webhook processing.
 
 ## Development Verification Flow
 Gunakan `gayakini-terminal` untuk verifikasi:
 1. `./gradlew clean`
 2. `./gradlew qualityCheck` (Linting + Detekt)
-3. `./gradlew build`
+3. `./gradlew assemble`
 4. `./gradlew validateMcp` (Windows-only preflight)
 5. `./gradlew releaseCheck` (Core quality gate: Clean + Quality + Assemble + MCP)
-6. `./gradlew releaseCheckLocal` (Full gate: releaseCheck + Local DB validation)
-7. `./gradlew dbDoctor` (Database & Environment diagnostics)
+6. `./gradlew dbDoctor` (Database & Environment diagnostics: Start -> Migrate -> Verify -> Seed)
 
 ## RTK Terminal Filtering (Noise Reduction V2)
 Repo ini mendukung filtering output terminal untuk efisiensi token LLM via adaptasi RTK.

@@ -17,11 +17,10 @@ Equivalent of the VSCode task "Gradle: releaseCheck".
 ```
 
 This task includes:
-- `doctor`: Environment and DB diagnostics.
+- `dbVerify`: Read-only diagnostics for database connectivity.
 - `ktlintCheck`: Code style enforcement (**Blocking**).
 - `detekt`: Static analysis (**Blocking**).
-- `test`: Unit and Integration tests (**Blocking**).
-- `flywayValidateLocal`: Migration integrity check.
+- `assemble`: Build the application artifact.
 - `validateMcp`: MCP launcher preflight.
 
 Note: All gates are now **blocking**. Failure in any step will prevent the release from being considered compliant.

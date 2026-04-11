@@ -5,18 +5,25 @@ Format changelog ini mengikuti [Keep a Changelog](https://keepachangelog.com/en/
 ## [Unreleased]
 
 ### Added
-- `CONTRIBUTING.md` untuk panduan kontribusi developer.
-- `CHANGELOG.md` untuk pelacakan perubahan proyek.
-- Dokumentasi `LOCAL_DEVELOPMENT.md` yang diperbarui.
-- Integrasi Midtrans Sandbox dengan `fail-fast security` checks.
-- Task `./gradlew localSetup` untuk mempermudah setup awal lingkungan lokal.
-- Launcher MCP (Model Context Protocol) untuk otomatisasi lokal (filesystem, postgres, http, terminal, git, github, browser).
-- Hardening webhook Midtrans dengan validasi signature SHA512, rekonsiliasi status otoritatif, audit logging, dan idempotensi.
-- Redirect endpoints untuk frontend (`/v1/payments/redirect/**`) guna pemisahan mutasi state dan navigasi UI.
-- Audit Trail terpusat menggunakan Spring `ApplicationEventPublisher` dan `@TransactionalEventListener`.
-- Penyimpanan audit log di `commerce.audit_logs` dengan dukungan JSONB untuk snapshot `previous_state` dan `new_state`.
-- Redaction engine otomatis untuk data sensitif (password, token, dll.) pada audit trail.
-- API Query Audit untuk admin (`/api/v1/admin/audits`) dengan filtering `entityType` dan `entityId`.
+- `gradle/scripts/local-env.gradle.kts` untuk manajemen lingkungan lokal yang terisolasi.
+- `gradle/scripts/quality.gradle.kts` untuk orkestrasi quality gate (Ktlint, Detekt).
+- Task `releaseCheck` sebagai authoritative quality gate tunggal (Clean + Quality + Assemble + MCP Validation).
+- Dukungan penuh Gradle Configuration Cache pada task custom (`validateMcp`, `dbStart`).
+
+### Changed
+- Refaktor `build.gradle.kts` menjadi lebih modular dengan script plugins.
+- Peningkatan batas baris Ktlint menjadi 120 karakter untuk konsistensi pembacaan database URL.
+- Stabilisasi lifecycle commerce (Order, Product, Payment, Shipping) dengan hardening pada `OrderService`.
+- Pembersihan total lingkungan testing (`src/test`) untuk mendukung model verifikasi berbasis task dan quality gate.
+
+### Fixed
+- Serialization error pada Gradle Configuration Cache untuk task yang menggunakan `ExecOperations` atau `Project` object di execution phase.
+- Duplikasi logika loading `.env` dengan memusatkan state pada extra property `localEnv`.
+- Inkonsistensi dokumentasi `AGENTS.md` terkait workflow testing yang sudah dihapus.
+
+### Security
+- Isolasi environment variable dalam task execution menggunakan `doFirst` dan `environment` injection.
+- Hardening MCP launchers dengan validasi `-ValidateOnly` terotomatisasi.
 
 ### Changed
 - Migrasi dari Spring Boot 3.3 ke Spring Boot 3.4.
@@ -38,4 +45,4 @@ Format changelog ini mengikuti [Keep a Changelog](https://keepachangelog.com/en/
 - Verifikasi schema Flyway dalam task `releaseCheck`.
 
 ---
-*Last update: 2025-05-24*
+*Last update: 2025-05-25*

@@ -10,14 +10,14 @@ Repository Root: `C:\Software\gayakini`
 - **Database:** PostgreSQL 18+ with Flyway migrations.
 - **Tools:** Gradle 8.11+, ktlint, detekt.
 - **Key Integrations:** Midtrans (Payments), Biteship (Logistics).
-- **Quality Gate:** `./gradlew releaseCheck` (Clean + Quality + Build + MCP Validation).
+- **Quality Gate:** `./gradlew releaseCheck` (Clean + Quality + Assemble + MCP Validation).
 
 ## Documentation Hierarchy
 1. **Source Code:** Implementation truth.
 2. **OpenAPI (`docs/brand-fashion-ecommerce-api-final.yaml`):** API Contract truth.
-3. **`CONTRIBUTING.md`:** Developer guidelines & release gates.
-4. **`CHANGELOG.md`:** Versioned changes and history.
-5. **`AGENTS.md`:** Operational agent/MCP truth.
+3. **`AGENTS.md`:** Operational agent/MCP truth.
+4. **`CONTRIBUTING.md`:** Developer guidelines & release gates.
+5. **`CHANGELOG.md`:** Versioned changes and history.
 
 ## MCP Server Rules
 1. **gayakini-filesystem:**
@@ -67,9 +67,9 @@ Equivalent workflows tersedia di `.agents/workflows/`:
 Before task completion:
 1. Run `./gradlew clean`
 2. Run `./gradlew releaseCheck`
-3. Verify documentation sync (README, CONTRIBUTING, CHANGELOG).
+3. Verify documentation sync (README, CHANGELOG, AGENTS.md).
 
 ## Troubleshooting
 1. Start from `./gradlew validateMcp`.
-2. For Gradle stuck, use `./gradlew doctor` to check PostgreSQL.
+2. For Gradle stuck, use `./gradlew dbDoctor` to check PostgreSQL.
 3. For GitHub issues, check token source only, never commit token values.
