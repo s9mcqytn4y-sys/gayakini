@@ -9,7 +9,6 @@ plugins {
     kotlin("plugin.jpa") version "2.0.21"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
-    id("org.flywaydb.flyway") version "10.20.1"
 }
 
 group = "com.gayakini"
@@ -25,9 +24,6 @@ repositories {
     mavenCentral()
 }
 
-// Configuration for Flyway migrations if needed as a dependency
-val flywayMigration by configurations.creating
-
 dependencies {
     // Spring Boot Starters
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -42,13 +38,10 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-    // Database & Persistence
+    // Database & Persistence (Compile-time / Runtime only)
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.flywaydb:flyway-core:10.20.1")
     implementation("org.flywaydb:flyway-database-postgresql:10.20.1")
-    flywayMigration("org.postgresql:postgresql:42.7.4")
-    flywayMigration("org.flywaydb:flyway-core:10.20.1")
-    flywayMigration("org.flywaydb:flyway-database-postgresql:10.20.1")
 
     // Utils
     implementation("org.springframework.retry:spring-retry")
@@ -68,6 +61,11 @@ dependencies {
     // PDF Generation
     implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24")
     implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
+
+    // Test Baseline
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 // --- CORE QUALITY GUARDRAILS ---
@@ -86,6 +84,7 @@ detekt {
     ignoreFailures = false
 }
 
+// Wire quality gates to check
 tasks.named("check") {
     dependsOn("ktlintCheck", "detekt")
 }
@@ -107,14 +106,4 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     systemProperty("spring.profiles.active", "local")
-}
-
-// Standard Flyway block for standard 'flywayMigrate' etc.
-flyway {
-    driver = "org.postgresql.Driver"
-    schemas = arrayOf("commerce", "public")
-    defaultSchema = "commerce"
-    createSchemas = true
-    baselineOnMigrate = true
-    configurations = arrayOf("runtimeClasspath", "flywayMigration")
 }
