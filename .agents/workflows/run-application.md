@@ -15,21 +15,20 @@ Equivalent of the VSCode launch config "GayakiniApplication".
 
 ## Steps
 
-1. Run the doctor diagnostic first to verify prerequisites:
+1. Run the dbDoctor diagnostic first to verify prerequisites and seed data:
 ```shell
-.\gradlew.bat doctor --console=plain
+.\gradlew.bat dbDoctor --console=plain
 ```
 
-2. Start the application with Gradle bootRun (includes Flyway migration):
+2. Start the application with Gradle bootRun:
 ```shell
 .\gradlew.bat bootRun --console=plain
 ```
 
 The `bootRun` task automatically:
-- Checks PostgreSQL connectivity via `ensurePostgres`
-- Runs Flyway migrations via `flywayMigrateLocal`
-- Sets `spring.profiles.active=local`
 - Loads env vars from `.env`
+- Sets `spring.profiles.active=local`
+- Runs in local environment mode
 
 ## Endpoints after startup
 
@@ -40,16 +39,9 @@ The `bootRun` task automatically:
 | OpenAPI JSON | http://localhost:8080/api-docs |
 | Health | http://localhost:8080/actuator/health |
 
-## Running Tests (Debug Tests equivalent)
-
-To run all tests with JUnit Platform:
-```shell
-.\gradlew.bat test --console=plain
-```
-
 ## Quick Smoke Test
 
 After the server is running, verify key endpoints:
 ```shell
-.\gradlew.bat smokeTest --console=plain
+.\gradlew.bat releaseCheck --console=plain
 ```
