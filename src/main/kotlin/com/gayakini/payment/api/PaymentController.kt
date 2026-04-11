@@ -40,7 +40,7 @@ class PaymentController(
                     snapRedirectUrl = payment.snapRedirectUrl,
                     expiresAt = payment.expiresAt,
                 ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 

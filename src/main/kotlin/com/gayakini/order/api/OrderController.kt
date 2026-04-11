@@ -54,7 +54,6 @@ class OrderController(
                     size = size,
                     totalElements = orders.size.toLong(),
                     totalPages = 1,
-                    requestId = UUID.randomUUID().toString(),
                 ),
         )
     }

@@ -29,6 +29,8 @@ The repository has been reset to a clean, modern Gradle baseline.
 - **Evidence-Based:** Always run Gradle commands to verify success.
 - **Quality Gate:** All changes must pass `./gradlew check`.
 - **K2 Compiler:** Kotlin 2.0.21 is active.
+- **Resilience:** All external provider integrations (Midtrans, Biteship) MUST use `@Retryable` for transient network/server errors.
+- **Observability:** Health indicators MUST reflect external provider availability; custom business metrics MUST be tracked via Micrometer.
 
 ## Local Defaults
 - `PROJECT_ROOT`: `C:\Software\gayakini`

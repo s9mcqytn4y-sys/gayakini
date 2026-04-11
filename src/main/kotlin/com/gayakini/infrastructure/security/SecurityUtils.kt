@@ -17,6 +17,10 @@ object SecurityUtils {
         return getCurrentUser()?.id
     }
 
+    fun getCurrentUserEmail(): String? {
+        return getCurrentUser()?.email
+    }
+
     fun getCurrentUserRole(): String {
         return getCurrentUser()?.role ?: throw AccessDeniedException("Sesi tidak valid.")
     }

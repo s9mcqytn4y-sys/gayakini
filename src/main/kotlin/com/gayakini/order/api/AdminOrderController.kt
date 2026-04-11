@@ -49,7 +49,6 @@ class AdminOrderController(
                     size = size,
                     totalElements = filtered.size.toLong(),
                     totalPages = if (filtered.isEmpty()) 0 else ((filtered.size + size - 1) / size),
-                    requestId = UUID.randomUUID().toString(),
                 ),
         )
     }

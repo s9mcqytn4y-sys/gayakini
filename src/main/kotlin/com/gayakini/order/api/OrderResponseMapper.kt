@@ -17,7 +17,7 @@ object OrderResponseMapper {
         return OrderResponse(
             message = message,
             data = toDto(order, shipment, accessToken),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 

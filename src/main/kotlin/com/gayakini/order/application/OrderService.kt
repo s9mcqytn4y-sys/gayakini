@@ -16,6 +16,7 @@ import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.inventory.application.InventoryService
+import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.domain.*
 import org.springframework.security.core.context.SecurityContextHolder
@@ -36,6 +37,7 @@ class OrderService(
     private val cartRepository: CartRepository,
     private val cartService: CartService,
     private val inventoryService: InventoryService,
+    private val promoService: com.gayakini.promo.application.PromoService,
     private val idempotencyService: IdempotencyService,
     private val eventPublisher: ApplicationEventPublisher,
     private val auditContext: AuditContext,
@@ -98,6 +100,10 @@ class OrderService(
             checkoutRepository.save(checkout)
 
             val order = createOrderFromCheckout(checkout, request)
+
+            // If promo is used, increment its usage (PESSIMISTIC_WRITE lock inside)
+            order.promoCode?.let { promoService.incrementUsage(it) }
+
             val (actorId, actorRole) = auditContext.getCurrentActor()
             eventPublisher.publishEvent(
                 AuditEvent(
@@ -303,6 +309,14 @@ class OrderService(
 
             inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
 
+            // Restock if order was already paid/processed
+            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP || order.status == OrderStatus.SHIPPED) {
+                inventoryService.restockOrder(order.id, AdjustmentReason.CANCELLATION_RESTOCK, "User cancellation: $reason")
+            }
+
+            // Revert promo usage
+            order.promoCode?.let { promoService.decrementUsage(it) }
+
             orderRepository.save(order)
         }
     }
@@ -331,6 +345,14 @@ class OrderService(
             order.cancel(reason)
 
             inventoryService.releaseReservations(order.id, "Order cancelled by admin: $reason")
+
+            // Restock if order was already paid/processed
+            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP || order.status == OrderStatus.SHIPPED) {
+                inventoryService.restockOrder(order.id, AdjustmentReason.CANCELLATION_RESTOCK, "Admin cancellation: $reason")
+            }
+
+            // Revert promo usage
+            order.promoCode?.let { promoService.decrementUsage(it) }
 
             orderRepository.save(order)
         }

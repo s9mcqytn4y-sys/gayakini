@@ -24,7 +24,7 @@ class AdminFinanceController(
         return StandardResponse(
             message = "Saldo berhasil diambil.",
             data = BalanceResponse(availableBalance = financeService.getAvailableBalance()),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -34,7 +34,7 @@ class AdminFinanceController(
         return StandardResponse(
             message = "Daftar penarikan berhasil diambil.",
             data = financeService.listWithdrawals().map { mapToResponse(it) },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -48,7 +48,7 @@ class AdminFinanceController(
         return StandardResponse(
             message = "Penarikan disetujui.",
             data = mapToResponse(approved),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -61,7 +61,7 @@ class AdminFinanceController(
         return StandardResponse(
             message = "Penarikan berhasil diproses (Sandbox Mock).",
             data = mapToResponse(processed),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -80,7 +80,7 @@ class AdminFinanceController(
                         branch = it.branch,
                     )
                 },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -93,7 +93,7 @@ class AdminFinanceController(
         return StandardResponse(
             message = "Permintaan penarikan berhasil dibuat.",
             data = mapToResponse(created),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -115,7 +115,7 @@ class AdminFinanceController(
                         postedAt = it.postedAt,
                     )
                 },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 

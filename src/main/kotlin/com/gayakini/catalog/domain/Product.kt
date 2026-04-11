@@ -12,7 +12,7 @@ class Product(
     @Id
     private val id: UUID,
     @Column(unique = true, nullable = false)
-    val slug: String,
+    var slug: String,
     @Column(nullable = false)
     var title: String,
     @Column(length = 180)

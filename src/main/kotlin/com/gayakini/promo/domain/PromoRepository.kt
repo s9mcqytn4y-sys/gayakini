@@ -9,6 +9,6 @@ import java.util.UUID
 interface PromoRepository : JpaRepository<Promo, UUID> {
     fun findByCode(code: String): Optional<Promo>
 
-    @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     fun findWithLockByCode(code: String): Optional<Promo>
 }

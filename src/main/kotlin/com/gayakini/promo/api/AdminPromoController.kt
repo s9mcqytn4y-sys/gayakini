@@ -44,4 +44,18 @@ class AdminPromoController(
     fun deletePromo(
         @PathVariable id: UUID,
     ) = promoService.deletePromo(id)
+
+    @PostMapping("/{id}/exclusions")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun addExclusion(
+        @PathVariable id: UUID,
+        @RequestBody @Valid request: AddExclusionRequest,
+    ) = promoService.addExclusion(id, request)
+
+    @DeleteMapping("/{id}/exclusions")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun removeExclusion(
+        @PathVariable id: UUID,
+        @RequestBody @Valid request: AddExclusionRequest,
+    ) = promoService.removeExclusion(id, request)
 }

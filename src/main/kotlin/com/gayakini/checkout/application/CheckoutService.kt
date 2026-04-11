@@ -4,6 +4,7 @@ import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.Cart
 import com.gayakini.cart.domain.CartRepository
 import com.gayakini.cart.domain.CartStatus
+import com.gayakini.catalog.domain.ProductCollectionRepository
 import com.gayakini.catalog.domain.ProductStatus
 import com.gayakini.catalog.domain.VariantStatus
 import com.gayakini.checkout.api.CheckoutShippingAddressRequest
@@ -34,6 +35,7 @@ class CheckoutService(
     private val customerAddressRepository: CustomerAddressRepository,
     private val merchantOriginRepository: MerchantShippingOriginRepository,
     private val promoService: com.gayakini.promo.application.PromoService,
+    private val productCollectionRepository: ProductCollectionRepository,
 ) {
     companion object {
         private const val CHECKOUT_EXPIRY_SECONDS = 3600L
@@ -398,7 +400,29 @@ class CheckoutService(
     ): Checkout {
         val checkout = getValidatedCheckout(checkoutId, customerId, checkoutToken)
 
-        val (promo, discount) = promoService.validateAndCalculateDiscount(promoCode, checkout.subtotalAmount)
+        val promoItems =
+            checkout.items.map { item ->
+                val collectionIds =
+                    productCollectionRepository.findAllByIdProductId(item.product.id)
+                        .map { it.id.collectionId }
+                        .toSet()
+
+                com.gayakini.promo.api.PromoItemContext(
+                    productId = item.product.id,
+                    variantId = item.variant.id,
+                    categoryId = item.product.category?.id ?: UUID(0L, 0L),
+                    collectionIds = collectionIds,
+                    unitPriceAmount = item.unitPriceAmount,
+                    quantity = item.quantity,
+                )
+            }
+
+        val (promo, discount) =
+            promoService.validateAndCalculateDiscount(
+                code = promoCode,
+                orderSubtotal = checkout.subtotalAmount,
+                items = promoItems,
+            )
 
         checkout.promoCode = promo.code
         checkout.discountAmount = discount

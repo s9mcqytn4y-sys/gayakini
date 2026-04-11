@@ -40,7 +40,6 @@ class ProductController(private val productService: ProductService) {
                     size = size,
                     totalElements = resultPage.totalElements,
                     totalPages = resultPage.totalPages,
-                    requestId = UUID.randomUUID().toString(),
                 ),
         )
     }
@@ -54,7 +53,7 @@ class ProductController(private val productService: ProductService) {
         return StandardResponse(
             message = "Detail produk berhasil diambil.",
             data = mapToDetail(product),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -67,7 +66,7 @@ class ProductController(private val productService: ProductService) {
         return StandardResponse(
             message = "Variasi produk berhasil diambil.",
             data = product.variants.map { mapToVariantDto(it) },
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 

@@ -28,6 +28,7 @@ import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.finance.application.FinanceService
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.ApplicationEventPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -44,6 +45,7 @@ class PaymentService(
     private val orderRepository: OrderRepository,
     private val customerRepository: CustomerRepository,
     private val inventoryService: InventoryService,
+    private val promoService: com.gayakini.promo.application.PromoService,
     private val paymentProvider: PaymentProvider,
     private val idempotencyService: IdempotencyService,
     private val objectMapper: ObjectMapper,
@@ -51,6 +53,7 @@ class PaymentService(
     private val auditContext: AuditContext,
     private val storageService: StorageService,
     private val financeService: FinanceService,
+    private val meterRegistry: MeterRegistry,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -472,6 +475,13 @@ class PaymentService(
         if (reconciledStatus == PaymentStatus.PAID) {
             handlePaidOrder(payment, order)
         } else if (isFailedPaymentStatus(reconciledStatus)) {
+            meterRegistry.counter(
+                "gayakini_payment_failure_total",
+                "provider",
+                payment.provider,
+                "status",
+                reconciledStatus.name,
+            ).increment()
             handleFailedOrder(order, reconciledStatus)
         }
 
@@ -480,6 +490,13 @@ class PaymentService(
         val savedOrder = orderRepository.save(order)
 
         if (reconciledStatus == PaymentStatus.PAID) {
+            meterRegistry.counter(
+                "gayakini_payment_processed_total",
+                "provider",
+                payment.provider,
+                "status",
+                "PAID",
+            ).increment()
             eventPublisher.publishEvent(
                 PaymentSettledEvent(
                     orderId = savedOrder.id,
@@ -506,6 +523,11 @@ class PaymentService(
     ) {
         payment.paidAt = Instant.now()
         order.markAsPaid()
+
+        // Consume inventory reservations (Hard Requirement 12)
+        order.items.forEach { orderItem ->
+            inventoryService.consumeReservation(orderItem.id)
+        }
     }
 
     private fun handleFailedOrder(
@@ -519,6 +541,9 @@ class PaymentService(
 
         // Release inventory reservations (Hard Requirement 12)
         inventoryService.releaseReservations(order.id, "Payment failure state: $reconciledStatus")
+
+        // Revert promo usage if any
+        order.promoCode?.let { promoService.decrementUsage(it) }
     }
 
     private fun isFailedPaymentStatus(status: PaymentStatus): Boolean {

@@ -33,7 +33,7 @@ class AdminPaymentController(
         return StandardResponse(
             message = "Bukti pembayaran berhasil diunggah.",
             data = mapOf("proofUrl" to proofUrl),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 }

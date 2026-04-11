@@ -1,12 +1,9 @@
 package com.gayakini.catalog.application
 
-import com.gayakini.catalog.domain.Product
-import com.gayakini.catalog.domain.ProductMedia
-import com.gayakini.catalog.domain.ProductRepository
-import com.gayakini.catalog.domain.ProductVariant
-import com.gayakini.catalog.domain.ProductVariantRepository
-import com.gayakini.catalog.domain.PublicProductSummary
-import com.gayakini.catalog.domain.PublicProductSummaryRepository
+import com.gayakini.catalog.api.AdminCreateProductRequest
+import com.gayakini.catalog.api.AdminUpdateProductRequest
+import com.gayakini.catalog.domain.*
+import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
 import org.springframework.data.domain.Page
@@ -23,8 +20,55 @@ class ProductService(
     private val productRepository: ProductRepository,
     private val productVariantRepository: ProductVariantRepository,
     private val publicProductSummaryRepository: PublicProductSummaryRepository,
+    private val categoryRepository: CategoryRepository,
     private val storageService: StorageService,
 ) {
+    @Transactional
+    fun createProduct(request: AdminCreateProductRequest): Product {
+        val category =
+            categoryRepository.findBySlug(request.categorySlug)
+                .orElseThrow { NoSuchElementException("Kategori dengan slug ${request.categorySlug} tidak ditemukan.") }
+
+        val product =
+            Product(
+                id = UuidV7Generator.generate(),
+                slug = request.slug,
+                title = request.title,
+                subtitle = request.subtitle,
+                brandName = request.brandName,
+                category = category,
+                description = request.description,
+                status = request.status,
+            )
+
+        return productRepository.save(product)
+    }
+
+    @Transactional
+    fun updateProduct(
+        id: UUID,
+        request: AdminUpdateProductRequest,
+    ): Product {
+        val product = getProduct(id)
+
+        request.title?.let { product.title = it }
+        request.slug?.let { product.slug = it }
+        request.subtitle?.let { product.subtitle = it }
+        request.brandName?.let { product.brandName = it }
+        request.description?.let { product.description = it }
+        request.status?.let { product.status = it }
+
+        request.categorySlug?.let { slug ->
+            val category =
+                categoryRepository.findBySlug(slug)
+                    .orElseThrow { NoSuchElementException("Kategori dengan slug $slug tidak ditemukan.") }
+            product.category = category
+        }
+
+        product.updatedAt = Instant.now()
+        return productRepository.save(product)
+    }
+
     fun searchProducts(
         page: Int,
         size: Int,
@@ -62,23 +106,6 @@ class ProductService(
     fun getProduct(id: UUID): Product {
         return productRepository.findById(id)
             .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }
-    }
-
-    @Transactional
-    fun reserveStock(
-        variantId: UUID,
-        quantity: Int,
-    ): ProductVariant {
-        val variant =
-            productVariantRepository.findWithLockById(variantId)
-                .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
-
-        check(variant.stockAvailable >= quantity) {
-            "Stok tidak mencukupi untuk varian ${variant.sku}. Tersedia: ${variant.stockAvailable}"
-        }
-
-        variant.stockReserved += quantity
-        return productVariantRepository.save(variant)
     }
 
     @Transactional

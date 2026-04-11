@@ -1,6 +1,7 @@
 package com.gayakini.inventory.domain
 
 import com.gayakini.catalog.domain.ProductVariant
+import com.gayakini.common.util.UuidV7Generator
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -17,7 +18,8 @@ import java.util.UUID
 @Table(name = "inventory_reservations", schema = "commerce")
 class InventoryReservation(
     @Id
-    val id: UUID = UUID.randomUUID(),
+    @Column(name = "id", nullable = false, updatable = false)
+    val id: UUID = UuidV7Generator.generate(),
     @Column(name = "order_id", nullable = false)
     val orderId: UUID,
     @Column(name = "order_item_id", nullable = false, unique = true)

@@ -13,6 +13,8 @@ import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
+import org.springframework.retry.annotation.Backoff
+import org.springframework.retry.annotation.Retryable
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
@@ -30,6 +32,11 @@ class MidtransPaymentProvider(
     private val logger = LoggerFactory.getLogger(MidtransPaymentProvider::class.java)
     private val restTemplate = restTemplateBuilder.build()
 
+    @Retryable(
+        value = [RestClientException::class, PaymentGatewayException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 1000, multiplier = 2.0),
+    )
     override fun createPaymentSession(
         orderId: UUID,
         providerOrderId: String,
@@ -156,6 +163,11 @@ class MidtransPaymentProvider(
         return isValid
     }
 
+    @Retryable(
+        value = [RestClientException::class],
+        maxAttempts = 3,
+        backoff = Backoff(delay = 1000, multiplier = 2.0),
+    )
     override fun getPaymentStatus(providerOrderId: String): PaymentStatus {
         val statusUrl = "${properties.midtrans.apiUrl}/$providerOrderId/status"
 

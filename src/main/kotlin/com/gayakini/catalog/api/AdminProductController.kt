@@ -3,7 +3,8 @@ package com.gayakini.catalog.api
 import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.*
 import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.util.UuidV7Generator
+import com.gayakini.inventory.application.InventoryService
+import com.gayakini.inventory.domain.AdjustmentReason
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.prepost.PreAuthorize
@@ -14,9 +15,8 @@ import java.util.*
 @RestController
 @RequestMapping("/v1/admin")
 class AdminProductController(
-    private val productRepository: ProductRepository,
-    private val variantRepository: ProductVariantRepository,
     private val productService: ProductService,
+    private val inventoryService: InventoryService,
 ) {
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
@@ -24,22 +24,11 @@ class AdminProductController(
     fun createProduct(
         @Valid @RequestBody request: AdminCreateProductRequest,
     ): AdminProductResponse {
-        val product =
-            Product(
-                id = UuidV7Generator.generate(),
-                slug = request.slug,
-                title = request.title,
-                subtitle = request.subtitle,
-                brandName = request.brandName,
-                description = request.description,
-                status = request.status,
-            )
-        // TODO: Actually handle category, collections, media in a real service
-        val saved = productRepository.save(product)
+        val saved = productService.createProduct(request)
         return AdminProductResponse(
             message = "Produk berhasil dibuat.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -49,21 +38,11 @@ class AdminProductController(
         @PathVariable productId: UUID,
         @Valid @RequestBody request: AdminUpdateProductRequest,
     ): AdminProductResponse {
-        val product =
-            productRepository.findById(
-                productId,
-            ).orElseThrow { NoSuchElementException("Produk tidak ditemukan") }
-        request.title?.let { product.title = it }
-        request.status?.let { product.status = it }
-        request.subtitle?.let { product.subtitle = it }
-        request.brandName?.let { product.brandName = it }
-        request.description?.let { product.description = it }
-
-        val saved = productRepository.save(product)
+        val saved = productService.updateProduct(productId, request)
         return AdminProductResponse(
             message = "Produk berhasil diperbarui.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -71,28 +50,36 @@ class AdminProductController(
     @PreAuthorize("hasRole('ADMIN')")
     fun adjustStock(
         @PathVariable variantId: UUID,
-        @RequestHeader("Idempotency-Key") idempotencyKey: String,
+        @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
         @Valid @RequestBody request: StockAdjustmentRequest,
     ): StockAdjustmentResponse {
-        val variant =
-            variantRepository.findById(
-                variantId,
-            ).orElseThrow { NoSuchElementException("Varian tidak ditemukan") }
-        variant.stockOnHand += request.quantityDelta
-        variantRepository.save(variant)
+        val reason =
+            try {
+                AdjustmentReason.valueOf(request.reasonCode)
+            } catch (e: IllegalArgumentException) {
+                AdjustmentReason.MANUAL_CORRECTION
+            }
+
+        val adjustment =
+            inventoryService.adjustStock(
+                variantId = variantId,
+                quantityDelta = request.quantityDelta,
+                reason = reason,
+                note = request.note,
+                idempotencyKey = idempotencyKey,
+            )
 
         return StockAdjustmentResponse(
-            message = "Stok berhasil diperbarui. Key: $idempotencyKey",
+            message = "Stok berhasil diperbarui.",
             data =
                 StockAdjustmentData(
                     variantId = variantId,
-                    stockOnHand = variant.stockOnHand,
-                    stockReserved = variant.stockReserved,
-                    stockAvailable = variant.stockAvailable,
-                    // TODO: Record in adjustment table
-                    lastAdjustmentId = UUID.randomUUID(),
+                    stockOnHand = adjustment.stockOnHandAfter,
+                    stockReserved = adjustment.stockReservedAfter,
+                    stockAvailable = adjustment.stockOnHandAfter - adjustment.stockReservedAfter,
+                    lastAdjustmentId = adjustment.id,
                 ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
@@ -116,7 +103,7 @@ class AdminProductController(
         return AdminProductResponse(
             message = "Gambar produk berhasil diunggah.",
             data = mapToAdminData(media.product),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
+            meta = ApiMeta(),
         )
     }
 
