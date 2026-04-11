@@ -96,7 +96,6 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         freeCompilerArgs.add("-Xjsr305=strict")
         jvmTarget.set(JvmTarget.JVM_17)
-        // Kotlin 2.0 specific: useK2 is true by default, but we can be explicit if needed
     }
 }
 
@@ -106,17 +105,7 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("app.jar")
 }
 
-// --- ISOLATED LEGACY & AUXILIARY ---
-
-// Load environment for non-core tasks (e.g. bootRun)
-apply(from = "gradle/scripts/local-env.gradle.kts")
-apply(from = "gradle/scripts/legacy.gradle.kts")
-
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    val env = project.extra.get("localEnv") as? Map<*, *>
-    doFirst {
-        env?.forEach { (k, v) -> environment(k.toString(), v.toString()) }
-    }
     systemProperty("spring.profiles.active", "local")
 }
 
