@@ -1,5 +1,6 @@
 package com.gayakini.infrastructure.security
 
+import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.infrastructure.config.GayakiniProperties
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
@@ -55,7 +56,7 @@ class JwtService(private val properties: GayakiniProperties) {
             .subject(userId.toString())
             .issuedAt(now)
             .expiration(expiry)
-            .id(UUID.randomUUID().toString())
+            .id(UuidV7Generator.generateString())
             .signWith(signingKey)
             .compact()
     }

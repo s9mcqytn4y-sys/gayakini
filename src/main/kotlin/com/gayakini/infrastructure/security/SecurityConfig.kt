@@ -21,6 +21,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 class SecurityConfig(
     private val properties: GayakiniProperties,
     private val jwtService: JwtService,
+    private val requestIdFilter: RequestIdFilter,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
 ) {
@@ -65,6 +66,10 @@ class SecurityConfig(
                 it.authenticationEntryPoint(customAuthenticationEntryPoint)
                 it.accessDeniedHandler(customAccessDeniedHandler)
             }
+            .addFilterBefore(
+                requestIdFilter,
+                UsernamePasswordAuthenticationFilter::class.java,
+            )
             .addFilterBefore(
                 JwtAuthenticationFilter(jwtService),
                 UsernamePasswordAuthenticationFilter::class.java,

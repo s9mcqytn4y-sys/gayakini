@@ -1,12 +1,23 @@
 package com.gayakini.common.api
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import org.slf4j.MDC
 import java.net.URI
-import java.util.UUID
+
+/**
+ * Standardized API Response Baseline for the Gayakini application.
+ *
+ * All successful and error responses from the application must conform to this contract.
+ * Correlates with the trace context (RequestId) for observability.
+ */
+
+private const val MDC_REQUEST_ID = "requestId"
+
+private fun currentRequestId(): String? = MDC.get(MDC_REQUEST_ID)
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ApiMeta(
-    val requestId: String? = UUID.randomUUID().toString(),
+    val requestId: String? = currentRequestId(),
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -15,7 +26,7 @@ data class PageMeta(
     val size: Int,
     val totalElements: Long,
     val totalPages: Int,
-    val requestId: String? = UUID.randomUUID().toString(),
+    val requestId: String? = currentRequestId(),
 )
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -32,7 +43,7 @@ data class ProblemDetails(
     val detail: String? = null,
     val instance: URI? = null,
     val code: String? = null,
-    val requestId: String? = UUID.randomUUID().toString(),
+    val requestId: String? = currentRequestId(),
     val userMessage: String,
     val fieldErrors: List<ProblemFieldError>? = null,
 )
@@ -67,7 +78,7 @@ data class StandardResponse<T>(
             success = false,
             message = message,
             data = null,
-            meta = ApiMeta(requestId = code ?: UUID.randomUUID().toString()),
+            meta = ApiMeta(requestId = code ?: currentRequestId()),
         )
     }
 }
