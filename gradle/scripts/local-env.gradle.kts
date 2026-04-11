@@ -27,12 +27,12 @@ tasks.register("dbStart") {
     group = "database"
     description = "Starts local PostgreSQL if needed (Windows only auto-start)."
 
-    // Capture state to avoid Project serialization
     val dbPortValue = (env["DB_PORT"] ?: "5432").toInt()
     val isWindows = org.gradle.internal.os.OperatingSystem.current().isWindows
     val userProfile = System.getenv("USERPROFILE")
     val pgDataVal = env["PGDATA"] ?: "$userProfile\\scoop\\persist\\postgresql\\data"
     val pgDataFile = file(pgDataVal)
+    val execOps = project.serviceOf<ExecOperations>()
 
     doLast {
         val isUp = try {
@@ -42,16 +42,14 @@ tasks.register("dbStart") {
         }
 
         if (isUp) {
-            println("[\u2705] PostgreSQL is already running on port $dbPortValue.")
+            println("[✅] PostgreSQL is already running on port $dbPortValue.")
         } else if (isWindows && pgDataFile.exists()) {
-            println("[\uD83D\uDE80] Attempting to start PostgreSQL...")
-            // Avoid calling project.serviceOf in doLast for config cache
-            val execOps = project.serviceOf<ExecOperations>()
+            println("[🚀] Attempting to start PostgreSQL...")
             execOps.exec {
                 commandLine("cmd", "/c", "start", "/b", "pg_ctl", "-D", pgDataVal, "start")
                 isIgnoreExitValue = true
             }
-            Thread.sleep(3000)
+            Thread.sleep(5000)
         }
     }
 }
@@ -64,9 +62,9 @@ tasks.register("localSetup") {
     doLast {
         if (exampleFile.exists() && !targetFile.exists()) {
             exampleFile.copyTo(targetFile)
-            println("[\u2705] .env file created.")
+            println("[✅] .env file created.")
         } else if (targetFile.exists()) {
-            println("[\u2139] .env already exists.")
+            println("[ℹ️] .env already exists.")
         }
     }
 }

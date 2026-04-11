@@ -6,17 +6,6 @@ import org.gradle.process.ExecOperations
 import org.gradle.kotlin.dsl.support.serviceOf
 import java.sql.DriverManager
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.postgresql:postgresql:42.7.4")
-        classpath("org.flywaydb:flyway-core:10.20.1")
-        classpath("org.flywaydb:flyway-database-postgresql:10.20.1")
-    }
-}
-
 plugins {
     id("org.springframework.boot") version "3.4.0"
     id("io.spring.dependency-management") version "1.1.6"
@@ -41,11 +30,9 @@ repositories {
     mavenCentral()
 }
 
-// 1. Isolated configuration for Flyway Plugin Classpath
 val flywayMigration by configurations.creating
 
 dependencies {
-    // App Dependencies
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -60,16 +47,11 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.flywaydb:flyway-core:10.20.1")
     implementation("org.flywaydb:flyway-database-postgresql:10.20.1")
-
-    // PDF Generation
     implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24")
     implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
-
-    // Fix Flyway Plugin "No database found"
     flywayMigration("org.postgresql:postgresql:42.7.4")
     flywayMigration("org.flywaydb:flyway-core:10.20.1")
     flywayMigration("org.flywaydb:flyway-database-postgresql:10.20.1")
-
     implementation("com.github.f4b6a3:uuid-creator:6.0.0")
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
@@ -106,22 +88,20 @@ fun getLocalEnv(): Map<String, String> {
 
 tasks.register("dbVerify") {
     group = "database"
-    description = "Read-only diagnostics for database connectivity."
     val env = getLocalEnv()
     doLast {
         val host = env["DB_HOST"] ?: "localhost"
         val port = (env["DB_PORT"] ?: "5432").toInt()
         try {
-            Socket(host, port).use { println("[\u2705] Database connectivity OK: $host:$port") }
+            Socket(host, port).use { println("[✅] Database connectivity OK: $host:$port") }
         } catch (e: Exception) {
-            println("[\u274C] Database connectivity FAILED: $host:$port (${e.message})")
+            println("[❌] Database connectivity FAILED: $host:$port (${e.message})")
         }
     }
 }
 
 tasks.register("dbSeed") {
     group = "database"
-    description = "Explicitly seed the database with sandbox data."
     dependsOn("dbVerify")
     val env = getLocalEnv()
     doLast {
@@ -134,7 +114,7 @@ tasks.register("dbSeed") {
 
         DriverManager.getConnection(url, user, pass).use { conn ->
             val stmt = conn.createStatement()
-            println("[\uD83D\uDCE6] Seeding default admin...")
+            println("[📦] Seeding default admin...")
             stmt.execute(
                 """
                 INSERT INTO commerce.customers (id, email, password_hash, full_name, phone, created_at, updated_at)
@@ -144,18 +124,15 @@ tasks.register("dbSeed") {
                 ON CONFLICT (email) DO NOTHING
                 """.trimIndent(),
             )
-            println("[\u2705] Seeding complete.")
+            println("[✅] Seeding complete.")
         }
     }
 }
 
 tasks.register("dbDoctor") {
     group = "database"
-    description = "Combined DB health check: Start -> Migrate -> Verify -> Seed."
     dependsOn("dbStart", "flywayMigrateLocal", "dbVerify", "dbSeed")
 }
-
-// --- FLYWAY HELPERS ---
 
 fun createLocalFlyway(
     pDir: String,
@@ -183,42 +160,32 @@ tasks.register("flywayMigrateLocal") {
     val env = getLocalEnv()
     val pDir = project.rootDir.absolutePath
     doLast {
-        val result = createLocalFlyway(pDir, env).migrate()
-        println("[\u2705] Flyway migrate complete. Executed: ${result.migrationsExecuted}")
+        createLocalFlyway(pDir, env).migrate()
+        println("[✅] Flyway migrate complete.")
     }
 }
 
-// --- BOOTRUN HARDENING ---
-
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    // Decoupled from dbStart to avoid forced side-effects. Use dbDoctor if fresh DB needed.
     val env = getLocalEnv()
-    doFirst {
-        env.forEach { (k, v) -> environment(k, v) }
-    }
+    doFirst { env.forEach { (k, v) -> environment(k, v) } }
     systemProperty("spring.profiles.active", "local")
 }
 
-// --- RELEASE QUALITY GATES ---
-
 tasks.register("releaseCheck") {
     group = "verification"
-    description = "Full quality gate: Clean -> QualityCheck -> Assemble -> ValidateMcp."
     dependsOn("clean", "qualityCheck", "assemble", "validateMcp")
 }
 
 tasks.register("validateMcp") {
     group = "verification"
-    description = "Validates MCP launchers in -ValidateOnly mode."
     val pDir = project.rootDir.absolutePath
     val execOps = serviceOf<ExecOperations>()
     doLast {
         val cmd =
             "\u0024env:PROJECT_ROOT='$pDir'; " +
-                "\u0024env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_token'; " +
+                "\u0024env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy'; " +
                 "Get-ChildItem 'tooling/mcp/start-*.ps1' | ForEach-Object { " +
                 "& powershell.exe -NoProfile -ExecutionPolicy Bypass -File \u0024_.FullName -ValidateOnly }"
-
         execOps.exec {
             commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", cmd)
         }
