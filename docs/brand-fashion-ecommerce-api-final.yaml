@@ -1627,6 +1627,53 @@ paths:
       responses:
         '204':
           description: Promo berhasil dihapus.
+  /v1/admin/promos/{promoId}/exclusions:
+    post:
+      tags:
+      - Admin Promos
+      summary: Add promo exclusion
+      operationId: adminAddPromoExclusion
+      security:
+      - Admin: []
+      parameters:
+      - name: promoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddExclusionRequest'
+      responses:
+        '201':
+          description: Pengecualian promo berhasil ditambahkan.
+    delete:
+      tags:
+      - Admin Promos
+      summary: Remove promo exclusion
+      operationId: adminRemovePromoExclusion
+      security:
+      - Admin: []
+      parameters:
+      - name: promoId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddExclusionRequest'
+      responses:
+        '204':
+          description: Pengecualian promo berhasil dihapus.
   /v1/admin/audits:
     get:
       tags:
@@ -3556,6 +3603,10 @@ components:
           - LOST
           - FOUND
           - RETURN_RESTOCK
+          - RESERVATION
+          - RESERVATION_RELEASE
+          - SALE
+          - CANCELLATION_RESTOCK
         note:
           type: string
           maxLength: 500
@@ -3657,6 +3708,40 @@ components:
           format: date-time
         isActive:
           type: boolean
+        exclusions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExclusionResponse'
+    ExclusionType:
+      type: string
+      enum:
+      - CATEGORY
+      - COLLECTION
+      - PRODUCT
+    ExclusionResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - excludedEntityId
+      properties:
+        type:
+          $ref: '#/components/schemas/ExclusionType'
+        excludedEntityId:
+          type: string
+          format: uuid
+    AddExclusionRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - type
+      - excludedEntityId
+      properties:
+        type:
+          $ref: '#/components/schemas/ExclusionType'
+        excludedEntityId:
+          type: string
+          format: uuid
     CreatePromoRequest:
       type: object
       additionalProperties: false
