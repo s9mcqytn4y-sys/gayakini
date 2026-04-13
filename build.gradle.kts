@@ -93,11 +93,18 @@ tasks.named("check") {
     dependsOn("ktlintCheck", "detekt")
 }
 
-// Release Check Task: Aggregates all quality gates
+// qualityGate: Fast feedback loop for developers
+tasks.register("qualityGate") {
+    group = "verification"
+    description = "Runs essential quality checks: ktlint, detekt, and tests."
+    dependsOn("ktlintCheck", "detekt", "test")
+}
+
+// Release Check Task: Aggregates all quality gates and build artifacts
 tasks.register("releaseCheck") {
     group = "verification"
-    description = "Runs all quality gates: check (ktlint, detekt), test, and build."
-    dependsOn("check", "test", "bootJar")
+    description = "Full project validation before release: qualityGate and bootJar."
+    dependsOn("qualityGate", "bootJar")
 }
 
 // --- COMPILER CONFIGURATION ---
@@ -121,4 +128,9 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
