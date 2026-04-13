@@ -4,6 +4,9 @@ import com.gayakini.common.api.StandardResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.customer.application.CustomerService
 import com.gayakini.infrastructure.security.SecurityUtils
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -19,8 +22,13 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/v1/me/addresses")
+@Tag(name = "Customer Addresses", description = "Manajemen buku alamat pengiriman pelanggan.")
 class AddressController(private val customerService: CustomerService) {
     @GetMapping
+    @Operation(
+        summary = "Daftar alamat saya",
+        description = "Mengambil semua alamat pengiriman yang terdaftar untuk akun ini.",
+    )
     fun listMyAddresses(): StandardResponse<List<AddressResponse>> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
         val addresses = customerService.getAddresses(currentUser.id)
@@ -33,6 +41,7 @@ class AddressController(private val customerService: CustomerService) {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Tambah alamat baru", description = "Menambahkan alamat pengiriman baru ke buku alamat.")
     fun createAddress(
         @Valid @RequestBody request: AddressUpsertRequest,
     ): StandardResponse<AddressResponse> {
@@ -47,8 +56,9 @@ class AddressController(private val customerService: CustomerService) {
     }
 
     @PatchMapping("/{addressId}")
+    @Operation(summary = "Perbarui alamat", description = "Mengubah detail alamat pengiriman yang sudah ada.")
     fun updateAddress(
-        @PathVariable addressId: UUID,
+        @Parameter(description = "ID unik alamat") @PathVariable addressId: UUID,
         @Valid @RequestBody request: AddressUpsertRequest,
     ): StandardResponse<AddressResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
@@ -62,8 +72,9 @@ class AddressController(private val customerService: CustomerService) {
 
     @DeleteMapping("/{addressId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Hapus alamat", description = "Menghapus alamat dari buku alamat.")
     fun deleteAddress(
-        @PathVariable addressId: UUID,
+        @Parameter(description = "ID unik alamat") @PathVariable addressId: UUID,
     ) {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
         customerService.deleteAddress(currentUser.id, addressId)

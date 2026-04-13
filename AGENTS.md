@@ -19,26 +19,22 @@ Build a production-grade, local-first e-commerce backend with "honest REST" and 
 - **IDE Tools**: Use built-in specialized tools (`read_file`, `grep`, `find_declaration`) over shell commands whenever possible.
 
 ## 4. Documentation Strategy
-- **Source of Truth**: The code is the source of truth, but `docs/` must remain in sync.
+- **Source of Truth**: The code is the source of truth. Generated OpenAPI from `/api-docs` is the canonical HTTP contract, and `docs/` must remain in sync.
 - **ADRs**: Use `docs/adr/` for significant architectural decisions.
-- **API Specs**: `brand-fashion-ecommerce-api-final.yaml` is the contract.
+- **API Specs**: `docs/brand-fashion-ecommerce-api-final.yaml` is an archival snapshot, not the runtime contract.
 
 ## 5. Local Infrastructure
 - **PostgreSQL**: Version 18+ required for production-parity local dev.
 - **MCP Servers**: Use the provided PowerShell launchers in `tooling/mcp/` for automated workflows.
 
-## 6. Project Status (Phase 6: Midtrans/Biteship SDK & Stabilization)
-- [x] JWT Infrastructure (jjwt 0.12.6)
-- [x] Route Whitelisting (SecurityConfig.kt)
-- [x] Standardized 401/403 Responses
-- [x] Constant-Time Signature Validation
-- [x] Security Baseline Integration Tests
-- [x] Enabled JUnit 5 Platform
-- [x] H2 Test Profile Configuration
-- [x] Midtrans Java SDK Integration (3.2.2)
-- [x] Database Schema Alignment (Flyway V17)
-- [x] Order Lifecycle & Inventory Integrity Tests
-- [x] Quality Gates (ktlint/detekt) Passing
+## 6. Project Status (Phase 5: Generated OpenAPI Baseline)
+- [x] Centralized OpenAPI metadata + JWT bearer scheme
+- [x] Generated `/api-docs` and `/swagger-ui.html` promoted as canonical API contract
+- [x] Public, guest-token, and JWT-protected routes aligned for OpenAPI generation
+- [x] Global exception handler hardened for validation/binding error payloads
+- [x] Controller/DTO annotations hardened without using legacy Springfox
+- [x] Docs updated to point integrators to generated OpenAPI truth
+- [ ] Full runtime verification still depends on reachable PostgreSQL local environment
 
 ---
-*Last Updated: 2026-04-11*
+*Last Updated: 2026-04-13*

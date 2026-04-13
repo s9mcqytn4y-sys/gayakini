@@ -1,19 +1,20 @@
 # Security & Role-Based Access Control (RBAC)
 
-Gayakini uses a simplified, strict RBAC model designed for a single-admin architecture. This document outlines the two available roles and how resource access is enforced.
+Dokumen ini menjelaskan kontrak security untuk HTTP surface yang aktif dan dipublikasikan melalui generated OpenAPI.
+Jika ada drift antara dokumen ini dan runtime, `/api-docs` adalah sumber kebenaran utama.
 
-## Roles
+## Published Roles
 
-The system recognizes exactly two roles:
+Kontrak endpoint yang aktif saat ini dipublikasikan untuk dua role utama:
 
 1.  **`ADMIN`**:
     - **Scope**: Omnipotent system operator.
-    - **Access**: Full access to all administrative endpoints (`/v1/admin/**`) and management functions (Catalog, Orders, Inventory, Actuator).
+    - **Access**: Full access to administrative endpoints, finance, audit, dan actuator.
     - **Identity**: Usually assigned to the store owner or authorized staff.
 
 2.  **`CUSTOMER`**:
     - **Scope**: Authenticated end-user.
-    - **Access**: Restricted to personal resources (`/v1/me/**`).
+    - **Access**: Resource pribadi, upload proof tertentu, dan alur JWT customer.
     - **Identity**: Created via registration or social login.
 
 ## Access Control Matrix
@@ -22,11 +23,15 @@ The system recognizes exactly two roles:
 | :--- | :--- | :--- | :--- |
 | **Public API** | `/v1/products/**` | None (Guest) | `permitAll()` in SecurityConfig |
 | **Guest Flow** | `/v1/carts/**`, `/v1/checkouts/**` | None (Guest) | Token-based (X-Cart-Token) |
-| **Orders (Guest)** | `/v1/orders/{id}` | None (Guest) | Order Token matching |
+| **Guest Flow** | `POST /v1/checkouts/{checkoutId}/orders` | None (Guest) | Checkout token + idempotency |
+| **Orders (Guest)** | `GET /v1/orders/{orderId}`, `POST /v1/orders/{orderId}/cancellations` | None (Guest) | Order token matching |
+| **Payment Session** | `GET /v1/payments/config`, `POST /v1/payments/orders/{orderId}` | None (Guest) | Public config + order token matching in service |
 | **Profile** | `/v1/me/**` | `ROLE_CUSTOMER` | `hasRole('CUSTOMER')` & User ID filter |
 | **Admin Operations** | `/v1/admin/**` | `ROLE_ADMIN` | `hasRole('ADMIN')` |
+| **Payment Proof** | `/v1/admin/payments/**` | JWT (`ADMIN`/`CUSTOMER`) | `authenticated()` + `@PreAuthorize` |
+| **Secure Media** | `/v1/media/secure/**` | JWT (`ADMIN`/owner) | `authenticated()` + ownership predicate |
 | **Webhooks** | `/v1/webhooks/**` | None (Public) | Provider signature verification |
-| **System Health** | `/v1/actuator/**` | `ROLE_ADMIN` | `hasRole('ADMIN')` |
+| **System Health** | `/actuator/**` | `ROLE_ADMIN` | `hasRole('ADMIN')` |
 
 ## Resource Ownership (ID Matching)
 
@@ -47,4 +52,4 @@ For `CUSTOMER` endpoints, the system enforces strict resource ownership. Authent
 
 ## Secure Webhook Pattern
 
-While `/v1/webhooks/**` endpoints are marked as `permitAll()` in Spring Security to allow provider ingress, they are **not unprotected**. Each controller (e.g., `MidtransWebhookController`) performs a cryptographic signature check against the provider's public key or shared secret.
+While `/v1/webhooks/**` endpoints are marked as `permitAll()` in Spring Security to allow provider ingress, they are **not unprotected**. Each controller performs provider-specific signature or token validation before mutating state.

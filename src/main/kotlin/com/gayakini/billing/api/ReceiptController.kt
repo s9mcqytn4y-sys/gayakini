@@ -5,6 +5,9 @@ import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
 import com.gayakini.order.domain.OrderRepository
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
@@ -19,6 +22,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/v1/orders")
+@Tag(name = "Billing", description = "Layanan unduh invoice dan kuitansi pesanan.")
 class ReceiptController(
     private val orderRepository: OrderRepository,
     private val storageService: StorageService,
@@ -26,8 +30,12 @@ class ReceiptController(
     private val logger = LoggerFactory.getLogger(ReceiptController::class.java)
 
     @GetMapping("/{orderId}/invoice")
+    @Operation(
+        summary = "Unduh invoice PDF",
+        description = "Mengambil file invoice resmi untuk pesanan tertentu dalam format PDF.",
+    )
     fun downloadInvoice(
-        @PathVariable orderId: UUID,
+        @Parameter(description = "ID unik pesanan") @PathVariable orderId: UUID,
     ): ResponseEntity<Resource> {
         val order =
             orderRepository.findById(orderId)

@@ -1,5 +1,8 @@
 package com.gayakini.infrastructure.storage
 
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.core.io.Resource
 import org.springframework.core.io.UrlResource
 import org.springframework.http.HttpHeaders
@@ -13,13 +16,16 @@ import org.springframework.web.bind.annotation.RestController
 import java.nio.file.Files
 
 @RestController
-@RequestMapping("/api/v1/media/secure")
+@RequestMapping("/v1/media/secure")
+@Tag(name = "Media", description = "Akses file internal yang memerlukan autentikasi dan pemeriksaan ownership.")
 class MediaController(
     private val storageService: StorageService,
 ) {
     @GetMapping("/profiles/{filename}")
     @PreAuthorize("hasRole('ADMIN') or @securityService.isOwnerOfProfile(#filename)")
+    @Operation(summary = "Unduh foto profil aman", description = "Mengambil file foto profil milik user atau admin.")
     fun getProfilePicture(
+        @Parameter(description = "Nama file foto profil yang tersimpan")
         @PathVariable filename: String,
     ): ResponseEntity<Resource> {
         return serveFile(filename, StorageCategory.PROFILES)
@@ -27,10 +33,15 @@ class MediaController(
 
     @GetMapping("/proofs/{year}/{month}/{day}/{filename}")
     @PreAuthorize("hasRole('ADMIN') or @securityService.isOwnerOfProof(#year, #month, #day, #filename)")
+    @Operation(
+        summary = "Unduh bukti pembayaran aman",
+        description = "Mengambil file bukti pembayaran berdasarkan struktur penyimpanan tanggal.",
+    )
     fun getPaymentProof(
-        @PathVariable year: String,
-        @PathVariable month: String,
-        @PathVariable day: String,
+        @Parameter(description = "Tahun penyimpanan bukti") @PathVariable year: String,
+        @Parameter(description = "Bulan penyimpanan bukti") @PathVariable month: String,
+        @Parameter(description = "Tanggal penyimpanan bukti") @PathVariable day: String,
+        @Parameter(description = "Nama file bukti pembayaran")
         @PathVariable filename: String,
     ): ResponseEntity<Resource> {
         val relativePath = "$year/$month/$day/$filename"

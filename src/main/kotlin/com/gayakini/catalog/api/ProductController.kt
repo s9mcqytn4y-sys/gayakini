@@ -6,25 +6,54 @@ import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.PublicProductSummary
 import com.gayakini.catalog.domain.VariantStatus
 import com.gayakini.common.api.*
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
 @RequestMapping("/v1/products")
+@Tag(name = "Products", description = "Katalog produk publik untuk browsing dan pencarian.")
 class ProductController(private val productService: ProductService) {
     @GetMapping
+    @Operation(summary = "Mencari dan menampilkan daftar produk")
+    @SecurityRequirements
     fun listProducts(
-        @RequestParam(defaultValue = "1") page: Int,
-        @RequestParam(defaultValue = "20") size: Int,
-        @RequestParam(defaultValue = "newest") sort: String,
-        @RequestParam(required = false) q: String?,
-        @RequestParam(required = false) categorySlug: String?,
-        @RequestParam(required = false) collectionSlug: String?,
-        @RequestParam(required = false) color: String?,
-        @RequestParam(required = false) sizeCode: String?,
-        @RequestParam(required = false) minPrice: Long?,
-        @RequestParam(required = false) maxPrice: Long?,
-        @RequestParam(required = false) inStock: Boolean?,
+        @Parameter(description = "Halaman ke-n (mulai dari 1)")
+        @RequestParam(defaultValue = "1")
+        page: Int,
+        @Parameter(description = "Jumlah item per halaman")
+        @RequestParam(defaultValue = "20")
+        size: Int,
+        @Parameter(description = "Kriteria pengurutan (newest, price_asc, price_desc)")
+        @RequestParam(defaultValue = "newest")
+        sort: String,
+        @Parameter(description = "Kata kunci pencarian")
+        @RequestParam(required = false)
+        q: String?,
+        @Parameter(description = "Slug kategori")
+        @RequestParam(required = false)
+        categorySlug: String?,
+        @Parameter(description = "Slug koleksi")
+        @RequestParam(required = false)
+        collectionSlug: String?,
+        @Parameter(description = "Filter warna")
+        @RequestParam(required = false)
+        color: String?,
+        @Parameter(description = "Filter ukuran")
+        @RequestParam(required = false)
+        sizeCode: String?,
+        @Parameter(description = "Harga minimum")
+        @RequestParam(required = false)
+        minPrice: Long?,
+        @Parameter(description = "Harga maksimum")
+        @RequestParam(required = false)
+        maxPrice: Long?,
+        @Parameter(description = "Hanya tampilkan produk yang tersedia stoknya")
+        @RequestParam(required = false)
+        inStock: Boolean?,
     ): PaginatedResponse<ProductSummaryDto> {
         val resultPage =
             productService.searchProducts(
@@ -45,8 +74,10 @@ class ProductController(private val productService: ProductService) {
     }
 
     @GetMapping("/{productId}")
+    @Operation(summary = "Mendapatkan detail produk lengkap berdasarkan ID")
+    @SecurityRequirements
     fun getProductById(
-        @PathVariable productId: UUID,
+        @Parameter(description = "UUID unik produk") @PathVariable productId: UUID,
     ): StandardResponse<ProductDetailDto> {
         val product = productService.getProduct(productId)
 
@@ -58,8 +89,10 @@ class ProductController(private val productService: ProductService) {
     }
 
     @GetMapping("/{productId}/variants")
+    @Operation(summary = "Daftar semua varian (sku, warna, ukuran) dari sebuah produk")
+    @SecurityRequirements
     fun listProductVariants(
-        @PathVariable productId: UUID,
+        @Parameter(description = "UUID unik produk") @PathVariable productId: UUID,
     ): StandardResponse<List<ProductVariantDto>> {
         val product = productService.getProduct(productId)
 

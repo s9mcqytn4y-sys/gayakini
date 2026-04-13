@@ -1,12 +1,18 @@
 package com.gayakini.catalog.api
 
 import com.gayakini.catalog.application.ProductService
-import com.gayakini.catalog.domain.*
+import com.gayakini.catalog.domain.Product
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.inventory.domain.AdjustmentReason
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -14,6 +20,10 @@ import java.util.*
 
 @RestController
 @RequestMapping("/v1/admin")
+@Tag(
+    name = "Admin Products",
+    description = "Product catalog and inventory management for administrators (Internal/English).",
+)
 class AdminProductController(
     private val productService: ProductService,
     private val inventoryService: InventoryService,
@@ -21,12 +31,13 @@ class AdminProductController(
     @PostMapping("/products")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Create new product", description = "Add a new product to the catalog.")
     fun createProduct(
         @Valid @RequestBody request: AdminCreateProductRequest,
     ): AdminProductResponse {
         val saved = productService.createProduct(request)
         return AdminProductResponse(
-            message = "Produk berhasil dibuat.",
+            message = "Product created successfully.",
             data = mapToAdminData(saved),
             meta = ApiMeta(),
         )
@@ -34,13 +45,14 @@ class AdminProductController(
 
     @PatchMapping("/products/{productId}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update product", description = "Update details of an existing product.")
     fun updateProduct(
-        @PathVariable productId: UUID,
+        @Parameter(description = "Product UUID") @PathVariable productId: UUID,
         @Valid @RequestBody request: AdminUpdateProductRequest,
     ): AdminProductResponse {
         val saved = productService.updateProduct(productId, request)
         return AdminProductResponse(
-            message = "Produk berhasil diperbarui.",
+            message = "Product updated successfully.",
             data = mapToAdminData(saved),
             meta = ApiMeta(),
         )
@@ -48,8 +60,13 @@ class AdminProductController(
 
     @PostMapping("/variants/{variantId}/stock-adjustments")
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Stock adjustment",
+        description = "Increase or decrease stock for a specific product variant.",
+    )
     fun adjustStock(
-        @PathVariable variantId: UUID,
+        @Parameter(description = "Variant UUID") @PathVariable variantId: UUID,
+        @Parameter(description = "Idempotency token")
         @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
         @Valid @RequestBody request: StockAdjustmentRequest,
     ): StockAdjustmentResponse {
@@ -70,7 +87,7 @@ class AdminProductController(
             )
 
         return StockAdjustmentResponse(
-            message = "Stok berhasil diperbarui.",
+            message = "Stock updated successfully.",
             data =
                 StockAdjustmentData(
                     variantId = variantId,
@@ -83,12 +100,27 @@ class AdminProductController(
         )
     }
 
-    @PostMapping("/products/{productId}/image")
+    @PostMapping("/products/{productId}/image", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Upload product image",
+        description = "Upload an image file and link it to a product.",
+    )
     fun uploadProductImage(
-        @PathVariable productId: UUID,
+        @Parameter(description = "Product UUID") @PathVariable productId: UUID,
+        @Parameter(
+            description = "Image file (JPEG/PNG)",
+            content = [
+                Content(
+                    mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                    schema = Schema(type = "string", format = "binary"),
+                ),
+            ],
+        )
         @RequestParam("file") file: MultipartFile,
+        @Parameter(description = "Alt text for accessibility")
         @RequestParam(defaultValue = "Product image") altText: String,
+        @Parameter(description = "Set as primary image")
         @RequestParam(defaultValue = "false") isPrimary: Boolean,
     ): AdminProductResponse {
         val media =
@@ -101,7 +133,7 @@ class AdminProductController(
             )
 
         return AdminProductResponse(
-            message = "Gambar produk berhasil diunggah.",
+            message = "Product image uploaded successfully.",
             data = mapToAdminData(media.product),
             meta = ApiMeta(),
         )

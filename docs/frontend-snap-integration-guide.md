@@ -2,6 +2,8 @@
 
 This guide outlines how to integrate the Gayakini Payment API with the Midtrans Snap frontend SDK.
 
+Use `GET /api-docs` or `GET /swagger-ui.html` as the canonical contract if this guide and runtime ever differ.
+
 ## 1. Get Midtrans Client Key
 Before initializing Snap, you need the `Client Key`. Fetch it from the backend:
 

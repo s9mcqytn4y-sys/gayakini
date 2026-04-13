@@ -5,6 +5,7 @@ import com.gayakini.infrastructure.security.exception.CustomAccessDeniedHandler
 import com.gayakini.infrastructure.security.exception.CustomAuthenticationEntryPoint
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -47,9 +48,16 @@ class SecurityConfig(
                     // Cart & Checkout (Guest usage permitted, but ownership verified in service)
                     .requestMatchers("/v1/carts/**").permitAll()
                     .requestMatchers("/v1/checkouts/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/checkouts/*/orders").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/orders/*").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/orders/*/cancellations").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/v1/payments/config").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/payments/orders/*").permitAll()
                     // Restricted - No broad permitAll()
                     .requestMatchers("/v1/orders/**").authenticated()
+                    .requestMatchers("/v1/admin/payments/**").authenticated()
                     .requestMatchers("/v1/payments/**").authenticated()
+                    .requestMatchers("/v1/media/secure/**").authenticated()
                     // RBAC - Specific roles
                     .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
                     .requestMatchers("/v1/admin/**").hasRole("ADMIN")

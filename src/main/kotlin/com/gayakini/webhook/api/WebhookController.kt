@@ -1,17 +1,29 @@
 package com.gayakini.webhook.api
 
-import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
 import com.gayakini.shipping.application.ShippingService
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.*
-import java.util.*
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/v1/webhooks")
+@Tag(
+    name = "Webhooks",
+    description = "Endpoints for receiving notifications from third-party providers (Payment, Shipping).",
+)
 class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
@@ -20,8 +32,14 @@ class WebhookController(
     private val logger = LoggerFactory.getLogger(WebhookController::class.java)
 
     @PostMapping("/midtrans")
+    @Operation(
+        summary = "Midtrans Webhook",
+        description = "Receive transaction status notifications from Midtrans. Security is verified via signature key.",
+    )
+    @SecurityRequirements
     fun handleMidtransWebhook(
         @Valid @RequestBody payload: MidtransWebhookPayload,
+        @Parameter(description = "Midtrans signature key (X-Signature-Key)")
         @RequestHeader("X-Signature-Key", required = false) signature: String?,
     ): WebhookAckResponse {
         logger.info("Webhook received for Midtrans Order: {}, status: {}", payload.orderId, payload.transactionStatus)
@@ -52,11 +70,17 @@ class WebhookController(
     }
 
     @PostMapping("/biteship")
+    @Operation(
+        summary = "Biteship Webhook",
+        description = "Receive shipping status notifications from Biteship.",
+    )
+    @SecurityRequirements
     fun handleBiteshipWebhook(
         @Valid @RequestBody payload: BiteshipWebhookPayload,
+        @Parameter(description = "Biteship signature for integrity validation")
         @RequestHeader("X-Biteship-Signature", required = false) signature: String?,
     ): WebhookAckResponse {
-        logger.info("Menerima webhook Biteship Event: {} untuk Order: {}", payload.event, payload.orderId)
+        logger.info("Biteship webhook event received: {} for Order: {}", payload.event, payload.orderId)
 
         // Verify Biteship signature if webhook secret is configured
         val webhookSecret = properties.biteship.webhookSecret

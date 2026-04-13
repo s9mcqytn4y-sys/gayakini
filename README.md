@@ -7,11 +7,11 @@ Backend e-commerce berbasis Spring Boot 3.4 + Kotlin 2.0 dengan arsitektur modul
 ### 1. Prasyarat
 - JDK 17
 - PostgreSQL 18+ lokal
-- Node.js 18+ (untuk MCP launcher)
+- Docker Desktop opsional untuk menjalankan PostgreSQL via `docker compose`
 
 ### 2. Setup environment
 ```bash
-./gradlew localSetup
+copy .env.example .env
 ```
 
 Default lokal pada `.env.example`:
@@ -22,9 +22,9 @@ Default lokal pada `.env.example`:
 - `DB_PASSWORD=password`
 - `DB_SCHEMA=commerce`
 
-### 3. Preflight lokal
+### 3. Jalankan PostgreSQL
 ```bash
-./gradlew doctor
+docker compose up -d postgres
 ```
 
 ### 4. Run server
@@ -38,17 +38,19 @@ Endpoint utama:
 - OpenAPI JSON: `http://localhost:8080/api-docs`
 - Health: `http://localhost:8080/actuator/health`
 
+Kontrak HTTP resmi dihasilkan otomatis dari runtime SpringDoc.
+Gunakan Swagger UI dan `/api-docs` sebagai source of truth untuk integrasi frontend, QA, dan smoke manual.
+
 ## Workflow Gradle
 
 | Command | Fungsi |
 |---|---|
 | `./gradlew clean` | Bersihkan output build |
-| `./gradlew doctor` | Cek Java, `.env`, dan PostgreSQL lokal |
+| `./gradlew compileKotlin` | Validasi compile Kotlin utama |
+| `./gradlew ktlintCheck detekt` | Jalankan gate style dan static analysis |
 | `./gradlew test` | Jalankan suite unit/integration |
 | `./gradlew build` | Build aplikasi |
-| `./gradlew validateMcp` | Verifikasi 7 launcher MCP lokal |
-| `./gradlew smokeTest` | Quick HTTP smoke terhadap server yang sedang running |
-| `./gradlew releaseCheck` | **Release Gate**: doctor + ktlint + detekt + test + flywayValidateLocal + validateMcp |
+| `./gradlew releaseCheck` | **Release Gate**: `check + test + bootJar` |
 
 **Catatan Quality Gate:** `ktlintCheck` dan `detekt` bersifat **blocking** dalam task `releaseCheck`. Pastikan semua issue diselesaikan atau dimasukkan ke baseline sebelum push.
 
@@ -87,17 +89,8 @@ Launcher tersedia di `tooling/mcp/start-*.ps1`. Dokumentasi lengkap ada di [docs
 
 ## Testing dan HTTP Assets
 
-Asset manual test ada di `http/` dan sudah memakai prefix canonical `/v1`.
-
-File utama:
-- `http/01-smoke.http`
-- `http/10-auth.http`
-- `http/20-catalog.http`
-- `http/30-cart.http`
-- `http/40-checkout.http`
-- `http/50-order.http`
-- `http/90-webhooks.http` (Midtrans & Biteship)
-- `http/80-admin.http`
+Asset manual test ada di `http/` dan memakai prefix canonical `/v1`.
+Untuk daftar endpoint penuh, parameter, dan payload terbaru, selalu rujuk ke Swagger UI atau `/api-docs`.
 
 ## Webhook Security & Idempotency
 

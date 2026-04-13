@@ -6,6 +6,10 @@ import com.gayakini.checkout.application.CheckoutService
 import com.gayakini.common.api.ApiMeta
 import com.gayakini.common.api.MoneyDto
 import com.gayakini.infrastructure.security.SecurityUtils
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.security.SecurityRequirements
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -13,11 +17,18 @@ import java.util.*
 
 @RestController
 @RequestMapping("/v1/checkouts")
+@Tag(name = "Checkout", description = "Proses konversi keranjang menjadi pesanan.")
 class CheckoutController(private val checkoutService: CheckoutService) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Buat checkout baru",
+        description = "Menginisialisasi sesi checkout dari keranjang yang ada.",
+    )
+    @SecurityRequirements
     fun createCheckout(
         @Valid @RequestBody request: CreateCheckoutRequest,
+        @Parameter(description = "Token akses keranjang (jika tamu)")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
     ): CheckoutResponse {
         val checkout =
@@ -30,8 +41,15 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @GetMapping("/{checkoutId}")
+    @Operation(
+        summary = "Ambil data checkout",
+        description = "Mendapatkan status dan rincian sesi checkout saat ini.",
+    )
+    @SecurityRequirements
     fun getCheckout(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
+        @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
     ): CheckoutResponse {
         val checkout = checkoutService.getValidatedCheckout(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken)
@@ -39,8 +57,15 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @PutMapping("/{checkoutId}/shipping-address")
+    @Operation(
+        summary = "Set alamat pengiriman",
+        description = "Menentukan alamat pengiriman untuk sesi checkout ini.",
+    )
+    @SecurityRequirements
     fun upsertShippingAddress(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
+        @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: CheckoutShippingAddressRequest,
     ): CheckoutResponse {
@@ -55,10 +80,16 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @PostMapping("/{checkoutId}/shipping-quotes")
+    @Operation(
+        summary = "Hitung opsi pengiriman",
+        description = "Mengambil daftar pilihan kurir dan biaya kirim yang tersedia berdasarkan alamat.",
+    )
+    @SecurityRequirements
     fun createShippingQuotes(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
-        @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
-        @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
+        @Parameter(description = "Token akses checkout (jika tamu)")
+        @RequestHeader(value = "X-Cart-Token", required = false) checkoutToken: String?,
     ): CheckoutResponse {
         val checkout =
             checkoutService.calculateShippingQuotes(
@@ -70,8 +101,15 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @PostMapping("/{checkoutId}/promo")
+    @Operation(
+        summary = "Gunakan kode promo",
+        description = "Menerapkan potongan harga ke sesi checkout menggunakan kode voucher.",
+    )
+    @SecurityRequirements
     fun applyPromo(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
+        @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: ApplyPromoRequest,
     ): CheckoutResponse {
@@ -86,8 +124,15 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @DeleteMapping("/{checkoutId}/promo")
+    @Operation(
+        summary = "Hapus kode promo",
+        description = "Menghapus potongan harga yang sebelumnya telah diterapkan.",
+    )
+    @SecurityRequirements
     fun removePromo(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
+        @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
     ): CheckoutResponse {
         val checkout =
@@ -100,8 +145,15 @@ class CheckoutController(private val checkoutService: CheckoutService) {
     }
 
     @PutMapping("/{checkoutId}/shipping-selection")
+    @Operation(
+        summary = "Pilih opsi pengiriman",
+        description = "Mengunci pilihan kurir tertentu untuk sesi checkout.",
+    )
+    @SecurityRequirements
     fun setShippingSelection(
+        @Parameter(description = "ID Checkout (UUID)")
         @PathVariable checkoutId: UUID,
+        @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: SelectShippingQuoteRequest,
     ): CheckoutResponse {
