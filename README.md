@@ -38,4 +38,5 @@ The build lifecycle is designed to be explicit and strictly enforced.
 ## Documentation
 - [Local Development Guide](docs/LOCAL_DEVELOPMENT.md)
 - [Testing Strategy](docs/TESTING.md)
+- [Security & RBAC Model](docs/security-rbac.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)

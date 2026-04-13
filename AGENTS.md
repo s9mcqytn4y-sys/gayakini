@@ -15,11 +15,12 @@ When writing, refactoring, or reviewing code, strictly adhere to the following s
 
 *Do not suggest downgrading versions or introducing libraries outside of this core stack without explicit instruction.*
 
-## 🏢 Domain Knowledge & Data Standards
-The system handles complex data management and standardization for business entities, specifically focusing on Indonesian industrial suppliers (e.g., textile, carpet, and label manufacturing companies).
+## 🏢 Domain Knowledge & RBAC
+The system handles complex data management and standardization for Indonesian industrial suppliers.
+* **Roles:** The system implements a 4-role RBAC model: `CUSTOMER`, `ADMIN`, `FINANCE`, and `OPERATOR`.
 * **Data Processing:** Interactions with structured JSON objects and Excel data formats.
-* **Standardization:** When dealing with physical dimensions in the codebase or data structures, use centimeter (cm) standards unless specified otherwise.
-* **Entity Validation:** Maintain strict validation for business entity names and related metadata.
+* **Standardization:** Use centimeter (cm) standards unless specified otherwise.
+* **Security:** All `/v1/admin/**` routes require `ADMIN` role. Finance and Operations have dedicated scopes.
 
 ## 📝 Coding Guidelines
 1. **Kotlin Idioms:** Utilize Kotlin's modern features (null safety, extension functions, data classes) to keep the code concise and safe.
