@@ -1,22 +1,98 @@
 {
-  "java.configuration.updateBuildConfiguration": "automatic",
-  "kotlin.formatting.ktlint.enabled": true,
+  // ==========================================
+  // Editor & Workspace
+  // ==========================================
   "editor.formatOnSave": true,
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
+  "editor.rulers": [
+    120
+  ],
+  "editor.fontLigatures": true,
+  "editor.inlineSuggest.enabled": true,
+  // ==========================================
+  // UI, Themes & Icons
+  // ==========================================
+  "workbench.colorTheme": "One Dark Pro",
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.startupEditor": "none",
+  "window.autoDetectColorScheme": false,
+  // ==========================================
+  // Performance Optimization
+  // ==========================================
+  "search.exclude": {
+    "**/build": true,
+    "**/.gradle": true
+  },
+  "files.watcherExclude": {
+    "**/build/**": true,
+    "**/.gradle/**": true
+  },
+  // ==========================================
+  // Kotlin Configuration
+  // ==========================================
+  "kotlin.formatting.ktlint.enabled": true,
+  "kotlin.compiler.jvmTarget": "17",
+  "[kotlin]": {
+    "editor.defaultFormatter": "rnoro.vscode-ktlint-formatter"
+  },
+  // ==========================================
+  // Java, Gradle & Spring Boot
+  // ==========================================
+  "java.configuration.updateBuildConfiguration": "automatic",
   "java.compile.nullAnalysis.mode": "automatic",
-  "spring-boot.ls.symbols.enabled": false,
   "gradle.nestedProjects": true,
   "java.import.gradle.enabled": true,
   "java.import.gradle.wrapper.enabled": true,
-  "java.import.gradle.java.home": "",
-  "java.configuration.runtimes": [],
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-17",
+      "path": "C:\\Program Files\\Java\\jdk-17",
+      "default": true
+    }
+  ],
+  "spring-boot.ls.symbols.enabled": false,
+  // ==========================================
+  // Terminal & PowerShell
+  // ==========================================
   "terminal.integrated.defaultProfile.windows": "PowerShell",
   "terminal.integrated.cwd": "${workspaceFolder}",
+  "terminal.integrated.scrollback": 5000,
+  "terminal.integrated.profiles.windows": {
+    "PowerShell": {
+      "source": "PowerShell",
+      "icon": "terminal-powershell"
+    }
+  },
+  "powershell.powerShellDefaultVersion": "PowerShell (x64)",
+  "powershell.integratedConsole.showOnStartup": false,
+  "powershell.codeFormatting.Preset": "OTBS",
+  "[powershell]": {
+    "editor.defaultFormatter": "ms-vscode.powershell"
+  },
+  // ==========================================
+  // AI Agents & Codex (ChatGPT / Copilot)
+  // ==========================================
   "chatgpt.localeOverride": "id",
   "chatgpt.runCodexInWindowsSubsystemForLinux": false,
-  "powershell.powerShellDefaultVersion": "PowerShell (x64)"
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": true,
+    "properties": false
+  },
+  "github.copilot.editor.enableAutoCompletions": true,
+  "github.copilot.advanced": {
+    "length": 4000,
+    "inlineSuggestCount": 3
+  },
+  // ==========================================
+  // Extensions Integration (GitLens & ErrorLens)
+  // ==========================================
+  "errorLens.fontStyleItalic": true,
+  "errorLens.messageBackgroundMode": "message",
+  "gitlens.hovers.currentLine.over": "line"
 }

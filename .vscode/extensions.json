@@ -1,6 +1,19 @@
 {
     "recommendations": [
         "openai.chatgpt",
-        "ms-vscode.powershell"
+        "ms-vscode.powershell",
+        "fwcd.kotlin",
+        "mathiasfrohlich.kotlin-formatter",
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-gradle",
+        "vmware.vscode-spring-boot",
+        "vmware.vscode-boot-dev-pack",
+        "42crunch.vscode-openapi",
+        "humao.rest-client",
+        "eamodio.gitlens",
+        "usernamehw.errorlens",
+        "pkief.material-icon-theme",
+        "zhuangtongfa.material-theme",
+        "beardedbear.beardedtheme"
     ]
 }
