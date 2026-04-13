@@ -36,54 +36,6 @@
       "problemMatcher": []
     },
     {
-      "label": "MCP: Validate launchers (Gradle)",
-      "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        ".\\gradlew.bat validateMcp --console=plain"
-      ],
-      "problemMatcher": []
-    },
-    {
-      "label": "MCP: Validate launchers (PowerShell)",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$env:PROJECT_ROOT='${workspaceFolder}'; if (-not $env:GITHUB_PERSONAL_ACCESS_TOKEN) { $env:GITHUB_PERSONAL_ACCESS_TOKEN='dummy_local_token' }; Get-ChildItem '${workspaceFolder}\\tooling\\mcp\\start-*.ps1' | Sort-Object Name | ForEach-Object { Write-Host \"`n--- Validating $($_.Name) ---\" -ForegroundColor Cyan; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $_.FullName -ValidateOnly }"
-      ],
-      "problemMatcher": []
-    },
-    {
-      "label": "MCP: Docs parity check",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-Command",
-        "$docsWithLaunchers=@('AGENTS.md','docs\\tooling\\mcp-servers.md'); $providerDocs=@('gemini.md','CLAUDE.md','CODEX.md','docs\\agents\\codex-mcp-prompts.md','docs\\agents\\codex.md'); $launcherTerms=@('ValidateOnly','start-filesystem.ps1','start-postgres.ps1','start-github.ps1','start-git.ps1','start-terminal.ps1','start-http.ps1','start-browser.ps1'); foreach($doc in $docsWithLaunchers){ if (Test-Path $doc) { $content=Get-Content $doc -Raw; foreach($term in $launcherTerms){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } } }; foreach($doc in $providerDocs){ if (Test-Path $doc) { $content=Get-Content $doc -Raw; foreach($term in @('AGENTS.md','ValidateOnly')){ if($content -notmatch [regex]::Escape($term)){ throw \"Missing $term in $doc\" } } } }"
-      ],
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "MCP: Hardening preflight",
-      "dependsOn": [
-        "MCP: Validate launchers (Gradle)",
-        "MCP: Docs parity check",
-        "Workspace: JSON sanity"
-      ],
-      "problemMatcher": []
-    },
-    {
       "label": "Workspace: JSON sanity",
       "type": "shell",
       "command": "powershell.exe",
