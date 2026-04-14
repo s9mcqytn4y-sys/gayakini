@@ -1,5 +1,7 @@
 package com.gayakini.shipping.application
 
+import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.customer.domain.CustomerRepository
@@ -28,6 +30,8 @@ class ShippingService(
     private val shippingProvider: ShippingProvider,
     private val customerRepository: CustomerRepository,
     private val idempotencyService: IdempotencyService,
+    private val auditContext: AuditContext,
+    private val eventPublisher: org.springframework.context.ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(ShippingService::class.java)
 
@@ -119,7 +123,28 @@ class ShippingService(
                 )
 
             updateOrderAfterBooking(order)
-            shipmentRepository.save(shipment)
+            val savedShipment = shipmentRepository.save(shipment)
+
+            val (actorId, actorRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = actorId,
+                    actorRole = actorRole,
+                    entityType = "SHIPMENT",
+                    entityId = savedShipment.id.toString(),
+                    eventType = "SHIPMENT_BOOKED",
+                    newState =
+                        mapOf(
+                            "orderId" to order.id,
+                            "provider" to savedShipment.provider,
+                            "courier" to savedShipment.courierCode,
+                            "trackingNumber" to savedShipment.trackingNumber,
+                        ),
+                    reason = "Shipment booked for order ${order.orderNumber}",
+                ),
+            )
+
+            savedShipment
         }
     }
 
