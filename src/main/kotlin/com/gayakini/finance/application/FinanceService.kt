@@ -1,5 +1,7 @@
 package com.gayakini.finance.application
 
+import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.finance.domain.LedgerAccountRepository
 import com.gayakini.finance.domain.LedgerEntry
 import com.gayakini.finance.domain.LedgerEntryRepository
@@ -10,6 +12,7 @@ import com.gayakini.finance.domain.WithdrawalRequestRepository
 import com.gayakini.finance.domain.WithdrawalStatus
 import com.gayakini.infrastructure.security.SecurityUtils
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,6 +25,8 @@ class FinanceService(
     private val entryRepository: LedgerEntryRepository,
     private val payoutDestinationRepository: PayoutDestinationRepository,
     private val withdrawalRepository: WithdrawalRequestRepository,
+    private val auditContext: AuditContext,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(FinanceService::class.java)
 
@@ -119,6 +124,24 @@ class FinanceService(
         // Commit balance to liability
         postWithdrawalCommit(savedRequest)
 
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "FINANCE",
+                entityId = savedRequest.id.toString(),
+                eventType = "WITHDRAWAL_REQUESTED",
+                newState =
+                    mapOf(
+                        "amount" to savedRequest.amount,
+                        "destinationId" to savedRequest.payoutDestination.id,
+                        "status" to savedRequest.status,
+                    ),
+                reason = "Withdrawal request created",
+            ),
+        )
+
         return savedRequest
     }
 
@@ -176,7 +199,26 @@ class FinanceService(
         request.adminNotes = notes
         request.updatedAt = Instant.now()
 
-        return withdrawalRepository.save(request)
+        val savedRequest = withdrawalRepository.save(request)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "FINANCE",
+                entityId = savedRequest.id.toString(),
+                eventType = "WITHDRAWAL_APPROVED",
+                newState =
+                    mapOf(
+                        "status" to savedRequest.status,
+                        "approvedAt" to (savedRequest.approvedAt ?: Instant.now()),
+                    ),
+                reason = notes ?: "Withdrawal approved",
+            ),
+        )
+
+        return savedRequest
     }
 
     @Transactional
@@ -196,7 +238,94 @@ class FinanceService(
         // Finalize ledger: Clear liability
         postWithdrawalFinalize(request)
 
-        return withdrawalRepository.save(request)
+        val savedRequest = withdrawalRepository.save(request)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "FINANCE",
+                entityId = savedRequest.id.toString(),
+                eventType = "WITHDRAWAL_PROCESSED",
+                newState =
+                    mapOf(
+                        "status" to savedRequest.status,
+                        "processedAt" to (savedRequest.processedAt ?: Instant.now()),
+                    ),
+                reason = "Withdrawal processed and finalized",
+            ),
+        )
+
+        return savedRequest
+    }
+
+    @Transactional
+    fun rejectWithdrawal(
+        id: UUID,
+        reason: String,
+    ): WithdrawalRequest {
+        val request = withdrawalRepository.findById(id).orElseThrow()
+        require(request.status == WithdrawalStatus.PENDING) { "Hanya request pending yang dapat ditolak." }
+
+        val adminId = SecurityUtils.getCurrentUserId() ?: throw AccessDeniedException("Sesi tidak valid.")
+
+        request.status = WithdrawalStatus.REJECTED
+        request.rejectionReason = reason
+        request.approvedBy = adminId // Rejection by admin
+        request.updatedAt = Instant.now()
+
+        // Revert ledger commit: Credit Revenue, Debit Liability
+        revertWithdrawalCommit(request)
+
+        val savedRequest = withdrawalRepository.save(request)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "FINANCE",
+                entityId = savedRequest.id.toString(),
+                eventType = "WITHDRAWAL_REJECTED",
+                newState =
+                    mapOf(
+                        "status" to savedRequest.status,
+                        "reason" to reason,
+                    ),
+                reason = reason,
+            ),
+        )
+
+        return savedRequest
+    }
+
+    private fun revertWithdrawalCommit(request: WithdrawalRequest) {
+        val revenueAcc = accountRepository.findByCode(ACC_REVENUE).orElseThrow()
+        val liabilityAcc = accountRepository.findByCode(ACC_LIABILITY).orElseThrow()
+
+        // Credit Revenue (Revenue back up), Debit Liability (Liability back down)
+        entryRepository.save(
+            LedgerEntry(
+                account = revenueAcc,
+                transactionId = request.id,
+                transactionType = "WITHDRAWAL_REVERT",
+                referenceId = request.id.toString(),
+                creditAmount = request.amount,
+                description = "Withdrawal rejection: Reverting revenue debit for request ${request.id}",
+            ),
+        )
+
+        entryRepository.save(
+            LedgerEntry(
+                account = liabilityAcc,
+                transactionId = request.id,
+                transactionType = "WITHDRAWAL_REVERT",
+                referenceId = request.id.toString(),
+                debitAmount = request.amount,
+                description = "Withdrawal rejection: Reverting liability credit for request ${request.id}",
+            ),
+        )
     }
 
     private fun postWithdrawalFinalize(request: WithdrawalRequest) {
