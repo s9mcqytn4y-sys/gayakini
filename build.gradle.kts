@@ -9,6 +9,7 @@ plugins {
     kotlin("plugin.jpa") version "2.0.21"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
+    id("org.jetbrains.kotlinx.kover") version "0.9.0"
 }
 
 group = "com.gayakini"
@@ -65,17 +66,19 @@ dependencies {
     implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
 
     // Payment & Shipping SDKs
-    implementation("com.midtrans:java-library:3.2.2") {
-        exclude(group = "org.json", module = "json")
-    }
+    implementation("com.midtrans:java-library:3.2.2")
 
     // Test Baseline
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         exclude(group = "com.vaadin.external.google", module = "android-json")
     }
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.wiremock:wiremock-standalone:3.9.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testRuntimeOnly("com.h2database:h2")
 }
 
 // --- CORE QUALITY GUARDRAILS ---
@@ -114,10 +117,22 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        if (project.hasProperty("excludeIntegration")) {
+            excludeTags("integration")
+        }
+    }
     testLogging {
         events("passed", "skipped", "failed")
-        showStandardStreams = true
+        showStandardStreams = false
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
     }
+}
+
+// --- CI PIPELINE ORCHESTRATION ---
+
+tasks.register("ciBuild") {
+    group = "verification"
+    description = "Runs all checks required for CI/CD pipeline"
+    dependsOn("ktlintCheck", "detekt", "koverHtmlReport", "test")
 }

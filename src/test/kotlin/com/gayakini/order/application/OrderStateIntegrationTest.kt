@@ -1,5 +1,6 @@
 package com.gayakini.order.application
 
+import com.gayakini.BaseIntegrationTest
 import com.gayakini.catalog.domain.*
 import com.gayakini.inventory.domain.InventoryAdjustmentRepository
 import com.gayakini.inventory.domain.InventoryReservationRepository
@@ -9,15 +10,11 @@ import com.gayakini.order.domain.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
-@SpringBootTest
-@ActiveProfiles("test")
 @Transactional
-class OrderStateIntegrationTest {
+class OrderStateIntegrationTest : BaseIntegrationTest() {
     @Autowired
     private lateinit var orderRepository: OrderRepository
 

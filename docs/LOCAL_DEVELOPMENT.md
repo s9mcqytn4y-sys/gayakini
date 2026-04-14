@@ -20,9 +20,16 @@ Before pushing any changes, ensure all checks pass:
 
 ### Verification
 ```bash
-./gradlew check
+./gradlew ciBuild
 ```
-This runs `ktlintCheck`, `detekt`, and all tests.
+This runs `ktlintCheck`, `detekt`, and all tests with coverage analysis.
+
+### Test Coverage
+To view the coverage report:
+```bash
+./gradlew koverHtmlReport
+```
+Open `build/reports/kover/html/index.html` in your browser.
 
 ## Database Migrations
 We use Flyway for database migrations. New migrations should be placed in `src/main/resources/db/migration/`.

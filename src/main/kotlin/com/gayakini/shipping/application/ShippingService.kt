@@ -257,6 +257,13 @@ class ShippingService(
                 shipment.deliveredAt = shipment.deliveredAt ?: Instant.now()
                 order.markAsCompleted()
             }
+            "returned" -> {
+                shipment.status = FulfillmentStatus.RETURNED
+                order.markAsReturned()
+            }
+            "cancelled" -> {
+                shipment.status = FulfillmentStatus.CANCELLED
+            }
         }
         orderRepository.save(order)
     }

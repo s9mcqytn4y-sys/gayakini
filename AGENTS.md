@@ -26,4 +26,9 @@ The system handles complex data management and standardization for Indonesian in
 1. **Kotlin Idioms:** Utilize Kotlin's modern features (null safety, extension functions, data classes) to keep the code concise and safe.
 2. **Immutability:** Prefer `val` over `var` and immutable collections by default.
 3. **Clean Architecture:** Keep business logic decoupled from framework-specific configurations.
-4. **Quality Tools:** ktlint (12.1.1) and detekt (1.23.8) are enforced via Gradle.
+4. **Quality Tools:** ktlint (12.1.1), detekt (1.23.8), and Kover (0.9.0) are enforced via Gradle.
+5. **Testing Pyramid:**
+   - Use `MockK` for unit tests.
+   - Use `@WebMvcTest` for controller/security slices.
+   - Use `Testcontainers` (PostgreSQL 16) for integration tests. **Never use H2.**
+   - All PRs must pass `./gradlew ciBuild`.

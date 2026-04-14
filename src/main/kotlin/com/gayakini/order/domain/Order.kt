@@ -161,6 +161,13 @@ class Order(
         this.updatedAt = Instant.now()
     }
 
+    fun markAsReturned() {
+        // Return can happen from SHIPPED or COMPLETED (if post-delivery return)
+        // For simplicity in Phase 7, we allow from SHIPPED/COMPLETED
+        this.fulfillmentStatus = FulfillmentStatus.RETURNED
+        this.updatedAt = Instant.now()
+    }
+
     fun cancel(
         reason: String?,
         paymentStatus: PaymentStatus? = null,
@@ -200,7 +207,7 @@ enum class OrderStatus {
             PAID -> target in listOf(READY_TO_SHIP, CANCELLED)
             READY_TO_SHIP -> target in listOf(SHIPPED, CANCELLED)
             SHIPPED -> target in listOf(COMPLETED, CANCELLED)
-            COMPLETED -> false
+            COMPLETED -> target == CANCELLED
             CANCELLED -> false
         }
     }

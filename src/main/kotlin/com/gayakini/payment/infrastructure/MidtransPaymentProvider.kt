@@ -35,16 +35,18 @@ class MidtransPaymentProvider(
 
     @PostConstruct
     fun init() {
-        val config =
-            Config.builder()
-                .setServerKey(properties.midtrans.serverKey)
-                .setClientKey(properties.midtrans.clientKey)
-                .setIsProduction(properties.midtrans.isProduction)
-                .build()
+        if (!::snapApi.isInitialized || !::coreApi.isInitialized) {
+            val config =
+                Config.builder()
+                    .setServerKey(properties.midtrans.serverKey)
+                    .setClientKey(properties.midtrans.clientKey)
+                    .setIsProduction(properties.midtrans.isProduction)
+                    .build()
 
-        val factory = ConfigFactory(config)
-        snapApi = factory.getSnapApi()
-        coreApi = factory.getCoreApi()
+            val factory = ConfigFactory(config)
+            snapApi = factory.getSnapApi()
+            coreApi = factory.getCoreApi()
+        }
     }
 
     @Retryable(

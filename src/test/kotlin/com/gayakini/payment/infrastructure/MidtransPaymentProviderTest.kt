@@ -3,12 +3,14 @@ package com.gayakini.payment.infrastructure
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.PaymentItemDetail
 import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
+@Tag("integration")
 @SpringBootTest
 @ActiveProfiles("test")
 class MidtransPaymentProviderTest {

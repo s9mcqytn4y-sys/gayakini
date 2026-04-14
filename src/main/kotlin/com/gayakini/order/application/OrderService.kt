@@ -316,7 +316,7 @@ class OrderService(
 
             // Restock if order was already paid/processed
             if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
-                order.status == OrderStatus.SHIPPED
+                order.status == OrderStatus.SHIPPED || order.status == OrderStatus.COMPLETED
             ) {
                 inventoryService.restockOrder(
                     orderId = order.id,
@@ -359,7 +359,7 @@ class OrderService(
 
             // Restock if order was already paid/processed
             if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
-                order.status == OrderStatus.SHIPPED
+                order.status == OrderStatus.SHIPPED || order.status == OrderStatus.COMPLETED
             ) {
                 inventoryService.restockOrder(
                     orderId = order.id,
