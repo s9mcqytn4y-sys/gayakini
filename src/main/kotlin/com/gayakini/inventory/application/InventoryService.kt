@@ -1,6 +1,7 @@
 package com.gayakini.inventory.application
 
 import com.gayakini.audit.application.AuditContext
+import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.catalog.domain.ProductVariantRepository
 import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.inventory.domain.InventoryAdjustment
@@ -20,6 +21,7 @@ class InventoryService(
     private val reservationRepository: InventoryReservationRepository,
     private val adjustmentRepository: InventoryAdjustmentRepository,
     private val auditContext: AuditContext,
+    private val eventPublisher: org.springframework.context.ApplicationEventPublisher,
 ) {
     @Transactional
     fun adjustStock(
@@ -56,7 +58,28 @@ class InventoryService(
                 stockReservedAfter = variant.stockReserved,
             )
 
-        return adjustmentRepository.save(adjustment)
+        val savedAdjustment = adjustmentRepository.save(adjustment)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "INVENTORY",
+                entityId = variant.sku,
+                eventType = "STOCK_ADJUSTED",
+                newState =
+                    mapOf(
+                        "delta" to quantityDelta,
+                        "reason" to reason,
+                        "onHand" to variant.stockOnHand,
+                        "reserved" to variant.stockReserved,
+                    ),
+                reason = note,
+            ),
+        )
+
+        return savedAdjustment
     }
 
     @Transactional
@@ -103,6 +126,26 @@ class InventoryService(
                 stockReservedAfter = variant.stockReserved,
             )
         adjustmentRepository.save(adjustment)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "INVENTORY",
+                entityId = variant.sku,
+                eventType = "STOCK_RESERVED",
+                newState =
+                    mapOf(
+                        "orderId" to orderId,
+                        "orderItemId" to orderItemId,
+                        "quantity" to quantity,
+                        "onHand" to variant.stockOnHand,
+                        "reserved" to variant.stockReserved,
+                    ),
+                reason = "Reservation for order $orderId",
+            ),
+        )
 
         return reservation
     }
