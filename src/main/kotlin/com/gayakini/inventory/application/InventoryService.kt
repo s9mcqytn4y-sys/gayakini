@@ -374,4 +374,62 @@ class InventoryService(
             )
         }
     }
+
+    @Transactional
+    fun restockOrderItemAfterQC(
+        orderId: UUID,
+        orderItemId: UUID,
+        note: String? = null,
+    ) {
+        val reservation =
+            reservationRepository.findByOrderItemId(orderItemId)
+                .orElseThrow { NoSuchElementException("Reservasi tidak ditemukan.") }
+
+        check(reservation.orderId == orderId) { "Item tidak cocok dengan pesanan." }
+        check(reservation.status == ReservationStatus.CONSUMED) { "Hanya item yang sudah dikonsumsi (paid/shipped) yang dapat di-restock melalui QC." }
+
+        val variant =
+            variantRepository.findWithLockById(reservation.variant.id)
+                .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
+
+        variant.stockOnHand += reservation.quantity
+        variant.updatedAt = Instant.now()
+        variantRepository.save(variant)
+
+        val (actorId, _) = auditContext.getCurrentActor()
+        val adjustment =
+            InventoryAdjustment(
+                variant = variant,
+                quantityDelta = reservation.quantity,
+                reasonCode = AdjustmentReason.RETURN_RESTOCK_QC,
+                note = note ?: "QC Restock for order $orderId item $orderItemId",
+                actorSubject = actorId,
+                stockOnHandAfter = variant.stockOnHand,
+                stockReservedAfter = variant.stockReserved,
+            )
+        adjustmentRepository.save(adjustment)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "INVENTORY",
+                entityId = variant.sku,
+                eventType = "STOCK_RESTOCKED_QC",
+                newState =
+                    mapOf(
+                        "orderId" to orderId,
+                        "orderItemId" to orderItemId,
+                        "quantity" to reservation.quantity,
+                        "onHand" to variant.stockOnHand,
+                        "reserved" to variant.stockReserved,
+                    ),
+                reason = note ?: "QC Restock for order $orderId item $orderItemId",
+            ),
+        )
+
+        // Optionally mark the reservation as RESTOCKED or similar if needed for future tracking
+        // For now, keeping it as CONSUMED is fine since the adjustment records the fact it was returned to stock
+    }
 }

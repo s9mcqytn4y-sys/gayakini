@@ -136,4 +136,34 @@ class InventoryServiceUnitTest {
         assertEquals(ReservationStatus.RELEASED, reservation.status)
         assertEquals("Cancelled", reservation.releaseReason)
     }
+
+    @Test
+    fun `restockOrderItemAfterQC should increase onHand and create QC adjustment`() {
+        val variant = createVariant(onHand = 10, reserved = 0)
+        val orderId = UUID.randomUUID()
+        val orderItemId = UUID.randomUUID()
+        val reservation = InventoryReservation(
+            orderId = orderId,
+            orderItemId = orderItemId,
+            variant = variant,
+            quantity = 3,
+            status = ReservationStatus.CONSUMED
+        )
+
+        every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
+        every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
+        every { variantRepository.save(any()) } returns variant
+        every { adjustmentRepository.save(any()) } returns mockk()
+        every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "ADMIN")
+        every { eventPublisher.publishEvent(any<com.gayakini.audit.domain.AuditEvent>()) } returns Unit
+
+        inventoryService.restockOrderItemAfterQC(orderId, orderItemId, "Item passed inspection")
+
+        assertEquals(13, variant.stockOnHand)
+        verify {
+            adjustmentRepository.save(match {
+                it.reasonCode == AdjustmentReason.RETURN_RESTOCK_QC && it.quantityDelta == 3
+            })
+        }
+    }
 }

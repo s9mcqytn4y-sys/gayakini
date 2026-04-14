@@ -53,4 +53,5 @@ enum class AdjustmentReason {
     RESERVATION_RELEASE,
     SALE,
     CANCELLATION_RESTOCK,
+    RETURN_RESTOCK_QC,
 }
