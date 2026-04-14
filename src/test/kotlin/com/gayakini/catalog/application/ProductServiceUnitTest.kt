@@ -11,34 +11,35 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 class ProductServiceUnitTest {
-
     private val productRepository = mockk<ProductRepository>()
     private val publicProductSummaryRepository = mockk<PublicProductSummaryRepository>()
     private val categoryRepository = mockk<CategoryRepository>()
     private val collectionRepository = mockk<CollectionRepository>()
     private val storageService = mockk<StorageService>()
 
-    private val productService = ProductService(
-        productRepository,
-        publicProductSummaryRepository,
-        categoryRepository,
-        collectionRepository,
-        storageService
-    )
+    private val productService =
+        ProductService(
+            productRepository,
+            publicProductSummaryRepository,
+            categoryRepository,
+            collectionRepository,
+            storageService,
+        )
 
     @Test
     fun `createProduct should correctly map request and save`() {
         val category = Category(id = UUID.randomUUID(), name = "Shoes", slug = "shoes", description = "Shoes category")
-        val request = AdminCreateProductRequest(
-            slug = "cool-shoes",
-            title = "Cool Shoes",
-            subtitle = "Very cool",
-            brandName = "Gaya",
-            categorySlug = "shoes",
-            collections = emptyList(),
-            description = "Best shoes",
-            status = ProductStatus.DRAFT
-        )
+        val request =
+            AdminCreateProductRequest(
+                slug = "cool-shoes",
+                title = "Cool Shoes",
+                subtitle = "Very cool",
+                brandName = "Gaya",
+                categorySlug = "shoes",
+                collections = emptyList(),
+                description = "Best shoes",
+                status = ProductStatus.DRAFT,
+            )
 
         every { categoryRepository.findBySlug("shoes") } returns Optional.of(category)
         every { productRepository.save(any()) } answers { it.invocation.args[0] as Product }
@@ -54,21 +55,23 @@ class ProductServiceUnitTest {
     @Test
     fun `updateProduct should update fields correctly`() {
         val productId = UUID.randomUUID()
-        val existingProduct = Product(
-            id = productId,
-            slug = "old-slug",
-            title = "Old Title",
-            subtitle = "Old Sub",
-            brandName = "Old Brand",
-            description = "Old Desc",
-            status = ProductStatus.DRAFT
-        )
+        val existingProduct =
+            Product(
+                id = productId,
+                slug = "old-slug",
+                title = "Old Title",
+                subtitle = "Old Sub",
+                brandName = "Old Brand",
+                description = "Old Desc",
+                status = ProductStatus.DRAFT,
+            )
 
-        val request = com.gayakini.catalog.api.AdminUpdateProductRequest(
-            title = "New Title",
-            slug = "new-slug",
-            status = ProductStatus.PUBLISHED
-        )
+        val request =
+            com.gayakini.catalog.api.AdminUpdateProductRequest(
+                title = "New Title",
+                slug = "new-slug",
+                status = ProductStatus.PUBLISHED,
+            )
 
         every { productRepository.findById(productId) } returns Optional.of(existingProduct)
         every { productRepository.save(any()) } answers { it.invocation.args[0] as Product }

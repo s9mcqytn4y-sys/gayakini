@@ -172,6 +172,8 @@ data class OrderItemDto(
 
 @Schema(description = "Respons detail pesanan.")
 data class OrderResponse(
+    @Schema(description = "Indikator keberhasilan", example = "true")
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Pesanan berhasil dibuat.")
     val message: String,
     val data: OrderDto,
@@ -180,6 +182,8 @@ data class OrderResponse(
 
 @Schema(description = "Respons daftar pesanan (paginasi).")
 data class OrderPageResponse(
+    @Schema(description = "Indikator keberhasilan", example = "true")
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Daftar pesanan berhasil diambil.")
     val message: String,
     val data: List<OrderDto>,

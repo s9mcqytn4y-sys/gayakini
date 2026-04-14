@@ -7,6 +7,7 @@ import java.util.UUID
 
 @Schema(description = "Respons saldo akun keuangan.")
 data class BalanceResponse(
+    val success: Boolean = true,
     @Schema(description = "Jumlah saldo tersedia", example = "5000000")
     val availableBalance: Long,
     @Schema(description = "Kode mata uang", example = "IDR")
@@ -23,6 +24,7 @@ data class WithdrawalRequestInput(
 
 @Schema(description = "Informasi detail permintaan penarikan.")
 data class WithdrawalResponse(
+    val success: Boolean = true,
     @Schema(description = "ID unik penarikan")
     val id: UUID,
     @Schema(description = "Jumlah dana", example = "1000000")

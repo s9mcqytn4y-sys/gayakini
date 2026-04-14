@@ -1,17 +1,14 @@
 package com.gayakini.shipping.infrastructure
 
+import com.gayakini.BaseIntegrationTest
 import com.gayakini.shipping.domain.ShippingItem
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 
 @Tag("integration")
-@SpringBootTest
-@ActiveProfiles("test")
-class BiteshipShippingProviderTest {
+class BiteshipShippingProviderTest : BaseIntegrationTest() {
     @Autowired
     private lateinit var shippingProvider: BiteshipShippingProvider
 

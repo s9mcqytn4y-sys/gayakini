@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 
 class UuidV7GeneratorTest {
-
     @Test
     fun `generate should return a valid UUID`() {
         val uuid = UuidV7Generator.generate()

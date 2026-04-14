@@ -105,6 +105,7 @@ data class ProductVariantAttributeDto(
 
 @Schema(description = "Respons operasi keranjang belanja.")
 data class CartResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Item berhasil ditambahkan ke keranjang.")
     val message: String,
     val data: CartDto,

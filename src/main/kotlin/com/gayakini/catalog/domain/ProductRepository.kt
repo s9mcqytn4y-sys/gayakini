@@ -22,4 +22,6 @@ interface ProductVariantRepository : JpaRepository<ProductVariant, UUID> {
     fun findWithLockById(id: UUID): Optional<ProductVariant>
 
     fun findAllByIdIn(ids: List<UUID>): List<ProductVariant>
+
+    fun countByStockOnHandLessThan(threshold: Int): Int
 }

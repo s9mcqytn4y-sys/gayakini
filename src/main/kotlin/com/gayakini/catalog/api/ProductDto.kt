@@ -9,6 +9,7 @@ import java.util.UUID
 
 @Schema(description = "Respons halaman daftar produk.")
 data class ProductPageResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Daftar produk berhasil diambil.")
     val message: String,
     val data: List<ProductSummaryDto>,
@@ -56,6 +57,7 @@ data class CollectionDto(
 
 @Schema(description = "Respons detail produk.")
 data class ProductDetailResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Detail produk berhasil diambil.")
     val message: String,
     val data: ProductDetailDto,
@@ -146,6 +148,7 @@ data class ProductVariantAttributeDto(
 
 @Schema(description = "Respons daftar varian produk.")
 data class ProductVariantListResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Daftar varian berhasil diambil.")
     val message: String,
     val data: List<ProductVariantDto>,

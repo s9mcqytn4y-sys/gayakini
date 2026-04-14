@@ -26,7 +26,6 @@ import org.junit.jupiter.api.assertThrows
 import java.util.*
 
 class CheckoutServiceUnitTest {
-
     private val checkoutRepository = mockk<CheckoutRepository>()
     private val cartRepository = mockk<CartRepository>()
     private val cartService = mockk<CartService>(relaxed = true)
@@ -37,48 +36,52 @@ class CheckoutServiceUnitTest {
     private val promoService = mockk<PromoService>()
     private val productCollectionRepository = mockk<ProductCollectionRepository>()
 
-    private val checkoutService = CheckoutService(
-        checkoutRepository,
-        cartRepository,
-        cartService,
-        shippingProvider,
-        shippingQuoteRepository,
-        customerAddressRepository,
-        merchantOriginRepository,
-        promoService,
-        productCollectionRepository
-    )
+    private val checkoutService =
+        CheckoutService(
+            checkoutRepository,
+            cartRepository,
+            cartService,
+            shippingProvider,
+            shippingQuoteRepository,
+            customerAddressRepository,
+            merchantOriginRepository,
+            promoService,
+            productCollectionRepository,
+        )
 
     private fun createPopulatedCart(cartId: UUID): Cart {
-        val product = mockk<Product> {
-            every { status } returns ProductStatus.PUBLISHED
-            every { title } returns "Test Product"
-            every { id } returns UUID.randomUUID()
-        }
-        val variant = mockk<ProductVariant> {
-            every { status } returns VariantStatus.ACTIVE
-            every { stockAvailable } returns 10
-            every { this@mockk.product } returns product
-            every { id } returns UUID.randomUUID()
-            every { sku } returns "SKU-1"
-            every { color } returns "Red"
-            every { sizeCode } returns "XL"
-            every { priceAmount } returns 50000L
-            every { compareAtAmount } returns null
-        }
+        val product =
+            mockk<Product> {
+                every { status } returns ProductStatus.PUBLISHED
+                every { title } returns "Test Product"
+                every { id } returns UUID.randomUUID()
+            }
+        val variant =
+            mockk<ProductVariant> {
+                every { status } returns VariantStatus.ACTIVE
+                every { stockAvailable } returns 10
+                every { this@mockk.product } returns product
+                every { id } returns UUID.randomUUID()
+                every { sku } returns "SKU-1"
+                every { color } returns "Red"
+                every { sizeCode } returns "XL"
+                every { priceAmount } returns 50000L
+                every { compareAtAmount } returns null
+            }
 
         val cart = Cart(id = cartId, status = CartStatus.ACTIVE)
-        val cartItem = CartItem(
-            cart = cart,
-            product = product,
-            variant = variant,
-            productTitleSnapshot = "Test Product",
-            skuSnapshot = "SKU-1",
-            color = "Red",
-            sizeCode = "XL",
-            quantity = 2,
-            unitPriceAmount = 50000L
-        )
+        val cartItem =
+            CartItem(
+                cart = cart,
+                product = product,
+                variant = variant,
+                productTitleSnapshot = "Test Product",
+                skuSnapshot = "SKU-1",
+                color = "Red",
+                sizeCode = "XL",
+                quantity = 2,
+                unitPriceAmount = 50000L,
+            )
         cart.items.add(cartItem)
         cart.subtotalAmount = 100000L
         return cart
@@ -110,9 +113,10 @@ class CheckoutServiceUnitTest {
     @Test
     fun `createCheckout should throw exception if guest token is missing`() {
         val cartId = UUID.randomUUID()
-        val cart = createPopulatedCart(cartId).apply {
-            accessTokenHash = HashUtils.sha256("secret")
-        }
+        val cart =
+            createPopulatedCart(cartId).apply {
+                accessTokenHash = HashUtils.sha256("secret")
+            }
 
         every { cartRepository.findById(cartId) } returns Optional.of(cart)
 
@@ -124,9 +128,10 @@ class CheckoutServiceUnitTest {
     @Test
     fun `createCheckout should throw exception if guest token is invalid`() {
         val cartId = UUID.randomUUID()
-        val cart = createPopulatedCart(cartId).apply {
-            accessTokenHash = HashUtils.sha256("correct-token")
-        }
+        val cart =
+            createPopulatedCart(cartId).apply {
+                accessTokenHash = HashUtils.sha256("correct-token")
+            }
 
         every { cartRepository.findById(cartId) } returns Optional.of(cart)
 

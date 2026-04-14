@@ -8,22 +8,40 @@ import com.gayakini.finance.application.FinanceService
 import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.infrastructure.storage.StorageService
 import com.gayakini.inventory.application.InventoryService
-import com.gayakini.order.domain.*
+import com.gayakini.order.domain.Order
+import com.gayakini.order.domain.OrderItem
+import com.gayakini.order.domain.OrderRepository
+import com.gayakini.order.domain.OrderStatus
 import com.gayakini.audit.domain.AuditEvent
-import com.gayakini.payment.domain.*
+import com.gayakini.order.domain.PaymentStatus
+import com.gayakini.payment.domain.Payment
+import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentReceipt
+import com.gayakini.payment.domain.PaymentReceiptRepository
+import com.gayakini.payment.domain.PaymentRepository
+import com.gayakini.payment.domain.PaymentSession
 import com.gayakini.payment.domain.PaymentSettledEvent
+import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.promo.application.PromoService
+import com.gayakini.common.util.HashUtils
+import com.gayakini.common.api.ForbiddenException
 import io.micrometer.core.instrument.MeterRegistry
-import io.mockk.*
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.runs
+import io.mockk.unmockkObject
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.context.ApplicationEventPublisher
 import java.util.*
 
 class PaymentServiceUnitTest {
-
     private val paymentRepository = mockk<PaymentRepository>()
     private val paymentReceiptRepository = mockk<PaymentReceiptRepository>()
     private val orderRepository = mockk<OrderRepository>()
@@ -39,22 +57,23 @@ class PaymentServiceUnitTest {
     private val financeService = mockk<FinanceService>()
     private val meterRegistry = mockk<MeterRegistry>(relaxed = true)
 
-    private val paymentService = PaymentService(
-        paymentRepository,
-        paymentReceiptRepository,
-        orderRepository,
-        customerRepository,
-        inventoryService,
-        promoService,
-        paymentProvider,
-        idempotencyService,
-        objectMapper,
-        eventPublisher,
-        auditContext,
-        storageService,
-        financeService,
-        meterRegistry
-    )
+    private val paymentService =
+        PaymentService(
+            paymentRepository,
+            paymentReceiptRepository,
+            orderRepository,
+            customerRepository,
+            inventoryService,
+            promoService,
+            paymentProvider,
+            idempotencyService,
+            objectMapper,
+            eventPublisher,
+            auditContext,
+            storageService,
+            financeService,
+            meterRegistry,
+        )
 
     @BeforeEach
     fun setup() {
@@ -80,7 +99,7 @@ class PaymentServiceUnitTest {
     @Test
     fun `validateOrderAccess should allow guest with valid token`() {
         val orderToken = "valid-token"
-        val tokenHash = com.gayakini.common.util.HashUtils.sha256(orderToken)
+        val tokenHash = HashUtils.sha256(orderToken)
         val order = mockk<Order>()
         every { order.customerId } returns null
         every { order.accessTokenHash } returns tokenHash
@@ -155,7 +174,7 @@ class PaymentServiceUnitTest {
         every { paymentReceiptRepository.save(any()) } answers { it.invocation.args[0] as PaymentReceipt }
         every { paymentProvider.verifyWebhook(payload, signature) } returns false
 
-        org.junit.jupiter.api.assertThrows<com.gayakini.common.api.ForbiddenException> {
+        assertThrows<ForbiddenException> {
             paymentService.processMidtransWebhook(payload, signature)
         }
 
@@ -165,25 +184,29 @@ class PaymentServiceUnitTest {
     @Test
     fun `processMidtransWebhook should return early if payment already processed`() {
         val providerOrderId = "ORD-123-hash"
-        val payload = mapOf(
-            "order_id" to providerOrderId,
-            "transaction_status" to "settlement",
-            "transaction_id" to "mid-123"
-        )
+        val payload =
+            mapOf(
+                "order_id" to providerOrderId,
+                "transaction_status" to "settlement",
+                "transaction_id" to "mid-123",
+            )
         val signature = "valid"
 
-        val payment = Payment(
-            transactionNumber = "PAY-OLD",
-            orderId = UUID.randomUUID(),
-            providerOrderId = providerOrderId,
-            grossAmount = 100000L,
-            status = PaymentStatus.PAID // Already paid
-        )
+        val payment =
+            Payment(
+                transactionNumber = "PAY-OLD",
+                orderId = UUID.randomUUID(),
+                providerOrderId = providerOrderId,
+                grossAmount = 100000L,
+                status = PaymentStatus.PAID,
+            ) // Already paid
 
         every { paymentReceiptRepository.save(any()) } answers { it.invocation.args[0] as PaymentReceipt }
         every { paymentProvider.verifyWebhook(payload, signature) } returns true
         every { paymentProvider.getPaymentStatus(providerOrderId) } returns PaymentStatus.PAID
-        every { paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(any(), any(), any()) } returns listOf(mockk())
+        every {
+            paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(any(), any(), any())
+        } returns listOf(mockk())
         every { paymentRepository.findByProviderOrderId(providerOrderId) } returns Optional.of(payment)
 
         paymentService.processMidtransWebhook(payload, signature)
@@ -195,41 +218,46 @@ class PaymentServiceUnitTest {
     @Test
     fun `processMidtransWebhook should reconcile with provider and update order to paid`() {
         val providerOrderId = "ORD-123-hash"
-        val payload = mapOf(
-            "order_id" to providerOrderId,
-            "transaction_status" to "settlement",
-            "transaction_id" to "mid-123"
-        )
+        val payload =
+            mapOf(
+                "order_id" to providerOrderId,
+                "transaction_status" to "settlement",
+                "transaction_id" to "mid-123",
+            )
         val signature = "valid"
         val paymentId = UUID.randomUUID()
         val orderId = UUID.randomUUID()
 
-        val payment = Payment(
-            id = paymentId,
-            orderId = orderId,
-            transactionNumber = "PAY-123",
-            providerOrderId = providerOrderId,
-            grossAmount = 100000L,
-            status = PaymentStatus.PENDING
-        )
-        val order = Order(
-            id = orderId,
-            orderNumber = "ORD-123",
-            checkoutId = UUID.randomUUID(),
-            cartId = UUID.randomUUID(),
-            customerId = UUID.randomUUID(),
-            accessTokenHash = null,
-            status = OrderStatus.PENDING_PAYMENT,
-            subtotalAmount = 100000L,
-            shippingCostAmount = 0L,
-            discountAmount = 0L
-        )
+        val payment =
+            Payment(
+                id = paymentId,
+                orderId = orderId,
+                transactionNumber = "PAY-123",
+                providerOrderId = providerOrderId,
+                grossAmount = 100000L,
+                status = PaymentStatus.PENDING,
+            )
+        val order =
+            Order(
+                id = orderId,
+                orderNumber = "ORD-123",
+                checkoutId = UUID.randomUUID(),
+                cartId = UUID.randomUUID(),
+                customerId = UUID.randomUUID(),
+                accessTokenHash = null,
+                status = OrderStatus.PENDING_PAYMENT,
+                subtotalAmount = 100000L,
+                shippingCostAmount = 0L,
+                discountAmount = 0L,
+            )
         val item = mockk<OrderItem>()
         order.items.add(item)
 
         every { paymentReceiptRepository.save(any()) } answers { it.invocation.args[0] as PaymentReceipt }
         every { paymentProvider.verifyWebhook(payload, signature) } returns true
-        every { paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(any(), any(), any()) } returns emptyList()
+        every {
+            paymentReceiptRepository.findByProviderOrderIdAndTransactionStatusAndProcessingStatus(any(), any(), any())
+        } returns emptyList()
         every { paymentProvider.getPaymentStatus(providerOrderId) } returns PaymentStatus.PAID
         every { paymentRepository.findByProviderOrderId(providerOrderId) } returns Optional.of(payment)
         every { orderRepository.findById(orderId) } returns Optional.of(order)

@@ -93,6 +93,7 @@ data class AdminProductData(
 
 @Schema(description = "Respons detail produk untuk admin.")
 data class AdminProductResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Produk berhasil dibuat.")
     val message: String,
     val data: AdminProductData,
@@ -125,6 +126,7 @@ data class StockAdjustmentData(
 
 @Schema(description = "Respons hasil penyesuaian stok.")
 data class StockAdjustmentResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Stok berhasil diperbarui.")
     val message: String,
     val data: StockAdjustmentData,

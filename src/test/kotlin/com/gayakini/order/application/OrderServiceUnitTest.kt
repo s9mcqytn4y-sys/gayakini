@@ -8,8 +8,17 @@ import com.gayakini.common.util.HashUtils
 import com.gayakini.infrastructure.security.SecurityUtils
 import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.inventory.domain.AdjustmentReason
-import com.gayakini.order.domain.*
-import io.mockk.*
+import com.gayakini.order.domain.Order
+import com.gayakini.order.domain.OrderRepository
+import com.gayakini.order.domain.OrderStatus
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.mockkObject
+import io.mockk.slot
+import io.mockk.unmockkObject
+import io.mockk.verify
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,7 +26,6 @@ import org.junit.jupiter.api.assertThrows
 import java.util.*
 
 class OrderServiceUnitTest {
-
     private val orderRepository = mockk<OrderRepository>()
     private val checkoutRepository = mockk<CheckoutRepository>()
     private val cartRepository = mockk<CartRepository>()
@@ -28,17 +36,18 @@ class OrderServiceUnitTest {
     private val eventPublisher = mockk<org.springframework.context.ApplicationEventPublisher>()
     private val auditContext = mockk<com.gayakini.audit.application.AuditContext>()
 
-    private val orderService = OrderService(
-        orderRepository,
-        checkoutRepository,
-        cartRepository,
-        cartService,
-        inventoryService,
-        promoService,
-        idempotencyService,
-        eventPublisher,
-        auditContext
-    )
+    private val orderService =
+        OrderService(
+            orderRepository,
+            checkoutRepository,
+            cartRepository,
+            cartService,
+            inventoryService,
+            promoService,
+            idempotencyService,
+            eventPublisher,
+            auditContext,
+        )
 
     @BeforeEach
     fun setUp() {
@@ -114,7 +123,7 @@ class OrderServiceUnitTest {
             inventoryService.restockOrder(
                 orderId = orderId,
                 reason = AdjustmentReason.CANCELLATION_RESTOCK,
-                note = match { it.contains("Customer changed mind") }
+                note = match { it.contains("Customer changed mind") },
             )
         }
         verify { orderRepository.save(order) }
@@ -135,12 +144,16 @@ class OrderServiceUnitTest {
             inventoryService.restockOrder(
                 orderId = orderId,
                 reason = AdjustmentReason.CANCELLATION_RESTOCK,
-                note = match { it.contains("Defective product") }
+                note = match { it.contains("Defective product") },
             )
         }
     }
 
-    private fun createTestOrder(id: UUID, customerId: UUID?, status: OrderStatus): Order {
+    private fun createTestOrder(
+        id: UUID,
+        customerId: UUID?,
+        status: OrderStatus,
+    ): Order {
         val order = mockk<Order>(relaxed = true)
         every { order.id } returns id
         every { order.customerId } returns customerId
@@ -149,11 +162,16 @@ class OrderServiceUnitTest {
         return order
     }
 
-    private fun setupCancelMocks(order: Order, customerId: UUID?) {
+    private fun setupCancelMocks(
+        order: Order,
+        customerId: UUID?,
+    ) {
         val orderId = order.id
         every { orderRepository.findById(orderId) } returns Optional.of(order)
         every { SecurityUtils.getCurrentUserId() } returns customerId
-        every { SecurityUtils.getCurrentUser() } returns UserPrincipal(customerId ?: UUID.randomUUID(), "test@test.com", "CUSTOMER")
+        every {
+            SecurityUtils.getCurrentUser()
+        } returns UserPrincipal(customerId ?: UUID.randomUUID(), "test@test.com", "CUSTOMER")
 
         // Mock idempotencyService to just execute the block
         val slot = slot<() -> Order>()
@@ -165,7 +183,7 @@ class OrderServiceUnitTest {
                 requesterType = any(),
                 requesterId = any(),
                 ttlSeconds = any(),
-                action = capture(slot)
+                action = capture(slot),
             )
         } answers { slot.captured() }
 

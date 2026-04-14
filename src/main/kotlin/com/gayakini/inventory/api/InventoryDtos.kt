@@ -24,6 +24,7 @@ data class InventoryAdjustmentRequest(
 
 @Schema(description = "Response containing details of a recorded inventory adjustment.")
 data class InventoryAdjustmentResponse(
+    val success: Boolean = true,
     @Schema(description = "Unique ID of the adjustment", example = "550e8400-e29b-41d4-a716-446655440001")
     val id: UUID,
     @Schema(description = "UUID of the product variant")

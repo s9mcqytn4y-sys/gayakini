@@ -7,23 +7,23 @@ import org.junit.jupiter.api.Test
 import java.util.*
 
 class CartTest {
-
     @Test
     fun `CartItem lineTotalAmount should be calculated correctly`() {
         val cart = mockk<Cart>()
         val variant = mockk<ProductVariant>()
 
-        val item = CartItem(
-            cart = cart,
-            product = mockk(),
-            variant = variant,
-            productTitleSnapshot = "Test Product",
-            skuSnapshot = "SKU-123",
-            color = "Red",
-            sizeCode = "XL",
-            quantity = 3,
-            unitPriceAmount = 50000
-        )
+        val item =
+            CartItem(
+                cart = cart,
+                product = mockk(),
+                variant = variant,
+                productTitleSnapshot = "Test Product",
+                skuSnapshot = "SKU-123",
+                color = "Red",
+                sizeCode = "XL",
+                quantity = 3,
+                unitPriceAmount = 50000,
+            )
 
         assertEquals(150000L, item.lineTotalAmount)
     }

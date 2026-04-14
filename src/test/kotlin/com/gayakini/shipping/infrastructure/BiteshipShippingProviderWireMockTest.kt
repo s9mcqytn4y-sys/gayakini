@@ -17,7 +17,6 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.web.client.RestTemplate
-import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
@@ -28,7 +27,6 @@ import org.springframework.context.annotation.Import
 @WireMockTest(httpPort = 8089)
 @Import(BiteshipShippingProviderWireMockTest.TestConfig::class)
 class BiteshipShippingProviderWireMockTest {
-
     @Autowired
     private lateinit var shippingProvider: BiteshipShippingProvider
 
@@ -60,30 +58,37 @@ class BiteshipShippingProviderWireMockTest {
     @Test
     fun `should get rates successfully from biteship via wiremock`() {
         // Given
-        stubFor(post(urlEqualTo("/rates/couriers"))
-            .willReturn(aResponse()
-                .withStatus(200)
-                .withHeader("Content-Type", "application/json")
-                .withBody("""
-                    {
-                      "success": true,
-                      "pricing": [
-                        {
-                          "company": "jne",
-                          "type": "reg",
-                          "courier_name": "JNE",
-                          "courier_service_name": "Regular",
-                          "description": "Regular Service",
-                          "duration": "2-3",
-                          "price": 10000
-                        }
-                      ]
-                    }
-                """.trimIndent())))
-
-        val items = listOf(
-            ShippingItem(name = "T-Shirt", weightGrams = 200, quantity = 1, valueIdr = 100000)
+        stubFor(
+            post(urlEqualTo("/rates/couriers"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "success": true,
+                              "pricing": [
+                                {
+                                  "company": "jne",
+                                  "type": "reg",
+                                  "courier_name": "JNE",
+                                  "courier_service_name": "Regular",
+                                  "description": "Regular Service",
+                                  "duration": "2-3",
+                                  "price": 10000
+                                }
+                              ]
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
         )
+
+        val items =
+            listOf(
+                ShippingItem(name = "T-Shirt", weightGrams = 200, quantity = 1, valueIdr = 100000),
+            )
 
         // When
         val rates = shippingProvider.getRates("origin", "dest", items)

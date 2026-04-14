@@ -21,7 +21,6 @@ import org.mockito.ArgumentMatchers.anyMap
 @ActiveProfiles("test")
 @EnableConfigurationProperties(GayakiniProperties::class)
 class MidtransPaymentProviderWireMockTest {
-
     @Autowired
     private lateinit var paymentProvider: MidtransPaymentProvider
 
@@ -45,22 +44,25 @@ class MidtransPaymentProviderWireMockTest {
         val orderId = UUID.randomUUID()
         val providerOrderId = "TEST-${System.currentTimeMillis()}"
         val amount = 10000L
-        val customerDetails = CustomerPaymentDetails(
-            email = "test@example.com",
-            fullName = "Test User",
-            phone = "08123456789"
-        )
-        val itemDetails = listOf(
-            PaymentItemDetail(id = "item1", price = 10000L, quantity = 1, name = "Test Item")
-        )
+        val customerDetails =
+            CustomerPaymentDetails(
+                email = "test@example.com",
+                fullName = "Test User",
+                phone = "08123456789",
+            )
+        val itemDetails =
+            listOf(
+                PaymentItemDetail(id = "item1", price = 10000L, quantity = 1, name = "Test Item"),
+            )
 
-        val session = paymentProvider.createPaymentSession(
-            orderId = orderId,
-            providerOrderId = providerOrderId,
-            amount = amount,
-            customerDetails = customerDetails,
-            itemDetails = itemDetails
-        )
+        val session =
+            paymentProvider.createPaymentSession(
+                orderId = orderId,
+                providerOrderId = providerOrderId,
+                amount = amount,
+                customerDetails = customerDetails,
+                itemDetails = itemDetails,
+            )
 
         assertNotNull(session.token)
         assertNotNull(session.redirectUrl)

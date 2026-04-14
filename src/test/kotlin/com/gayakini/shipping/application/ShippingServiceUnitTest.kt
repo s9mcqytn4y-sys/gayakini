@@ -6,16 +6,25 @@ import com.gayakini.common.infrastructure.IdempotencyService
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.customer.domain.CustomerRepository
 import com.gayakini.order.api.AdminCreateShipmentRequest
-import com.gayakini.order.domain.*
-import com.gayakini.shipping.domain.*
-import io.mockk.*
+import com.gayakini.order.domain.FulfillmentStatus
+import com.gayakini.order.domain.Order
+import com.gayakini.order.domain.OrderRepository
+import com.gayakini.order.domain.OrderShippingAddress
+import com.gayakini.order.domain.OrderShippingSelection
+import com.gayakini.order.domain.OrderStatus
+import com.gayakini.shipping.domain.MerchantShippingOrigin
+import com.gayakini.shipping.domain.MerchantShippingOriginRepository
+import com.gayakini.shipping.domain.ShipmentBooking
+import com.gayakini.shipping.domain.ShippingProvider
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.util.*
 
 class ShippingServiceUnitTest {
-
     private val orderRepository = mockk<OrderRepository>()
     private val shipmentRepository = mockk<ShipmentRepository>()
     private val merchantOriginRepository = mockk<MerchantShippingOriginRepository>()
@@ -25,61 +34,65 @@ class ShippingServiceUnitTest {
     private val auditContext = mockk<AuditContext>()
     private val eventPublisher = mockk<ApplicationEventPublisher>()
 
-    private val shippingService = ShippingService(
-        orderRepository,
-        shipmentRepository,
-        merchantOriginRepository,
-        shippingProvider,
-        customerRepository,
-        idempotencyService,
-        auditContext,
-        eventPublisher
-    )
+    private val shippingService =
+        ShippingService(
+            orderRepository,
+            shipmentRepository,
+            merchantOriginRepository,
+            shippingProvider,
+            customerRepository,
+            idempotencyService,
+            auditContext,
+            eventPublisher,
+        )
 
     private fun createOrder(status: OrderStatus = OrderStatus.PAID): Order {
         val orderId = UuidV7Generator.generate()
-        val order = Order(
-            id = orderId,
-            orderNumber = "ORD-TEST-123",
-            checkoutId = UUID.randomUUID(),
-            cartId = UUID.randomUUID(),
-            customerId = null,
-            accessTokenHash = null,
-            status = status,
-            subtotalAmount = 100000L,
-            shippingCostAmount = 10000L
-        )
-        order.shippingAddress = OrderShippingAddress(
-            orderId = orderId,
-            order = order,
-            recipientName = "Recipient",
-            phone = "+62812345678",
-            email = "recipient@test.com",
-            line1 = "Jl. Test No. 1",
-            line2 = null,
-            notes = null,
-            areaId = "area_123",
-            district = "District",
-            city = "City",
-            province = "Province",
-            postalCode = "12345",
-            countryCode = "ID"
-        )
-        order.shippingSelection = OrderShippingSelection(
-            orderId = orderId,
-            order = order,
-            provider = "BITESHIP",
-            providerReference = "rate_123",
-            courierCode = "jne",
-            courierName = "JNE",
-            serviceCode = "reg",
-            serviceName = "Regular",
-            description = "Regular",
-            costAmount = 10000L,
-            estimatedDaysMin = 1,
-            estimatedDaysMax = 3,
-            rawQuotePayload = "{}"
-        )
+        val order =
+            Order(
+                id = orderId,
+                orderNumber = "ORD-TEST-123",
+                checkoutId = UUID.randomUUID(),
+                cartId = UUID.randomUUID(),
+                customerId = null,
+                accessTokenHash = null,
+                status = status,
+                subtotalAmount = 100000L,
+                shippingCostAmount = 10000L,
+            )
+        order.shippingAddress =
+            OrderShippingAddress(
+                orderId = orderId,
+                order = order,
+                recipientName = "Recipient",
+                phone = "+62812345678",
+                email = "recipient@test.com",
+                line1 = "Jl. Test No. 1",
+                line2 = null,
+                notes = null,
+                areaId = "area_123",
+                district = "District",
+                city = "City",
+                province = "Province",
+                postalCode = "12345",
+                countryCode = "ID",
+            )
+        order.shippingSelection =
+            OrderShippingSelection(
+                orderId = orderId,
+                order = order,
+                provider = "BITESHIP",
+                providerReference = "rate_123",
+                courierCode = "jne",
+                courierName = "JNE",
+                serviceCode = "reg",
+                serviceName = "Regular",
+                description = "Regular",
+                costAmount = 10000L,
+                estimatedDaysMin = 1,
+                estimatedDaysMax = 3,
+                rawQuotePayload = "{}",
+            )
         return order
     }
 
@@ -136,11 +149,12 @@ class ShippingServiceUnitTest {
         val orderId = order.id
         val shipment = Shipment(orderId = orderId, status = FulfillmentStatus.IN_TRANSIT)
 
-        val payload = mapOf(
-            "event" to "order.status",
-            "order_id" to orderId.toString(),
-            "status" to "delivered"
-        )
+        val payload =
+            mapOf(
+                "event" to "order.status",
+                "order_id" to orderId.toString(),
+                "status" to "delivered",
+            )
 
         every { shipmentRepository.findByProviderOrderId(orderId.toString()) } returns Optional.empty()
         every { shipmentRepository.findByOrderId(orderId) } returns Optional.of(shipment)
@@ -165,11 +179,12 @@ class ShippingServiceUnitTest {
         val orderId = order.id
         val shipment = Shipment(orderId = orderId, status = FulfillmentStatus.IN_TRANSIT)
 
-        val payload = mapOf(
-            "event" to "order.status",
-            "order_id" to orderId.toString(),
-            "status" to "returned"
-        )
+        val payload =
+            mapOf(
+                "event" to "order.status",
+                "order_id" to orderId.toString(),
+                "status" to "returned",
+            )
 
         every { shipmentRepository.findByProviderOrderId(orderId.toString()) } returns Optional.empty()
         every { shipmentRepository.findByOrderId(orderId) } returns Optional.of(shipment)

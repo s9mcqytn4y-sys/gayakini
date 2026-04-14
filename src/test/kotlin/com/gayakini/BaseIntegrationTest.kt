@@ -13,7 +13,6 @@ import org.testcontainers.junit.jupiter.Testcontainers
 @ActiveProfiles("test")
 @Testcontainers
 abstract class BaseIntegrationTest {
-
     protected fun someCommonIntegrationHelper() {
         // This is here to avoid Detekt's UtilityClassWithPublicConstructor
         // which triggers if a class only has companion objects / static content.
@@ -22,10 +21,11 @@ abstract class BaseIntegrationTest {
     companion object {
         @Container
         @ServiceConnection
-        val postgres = PostgreSQLContainer("postgres:16-alpine").apply {
-            withDatabaseName("testdb")
-            withUsername("test")
-            withPassword("test")
-        }
+        val postgres =
+            PostgreSQLContainer("postgres:16-alpine").apply {
+                withDatabaseName("testdb")
+                withUsername("test")
+                withPassword("test")
+            }
     }
 }

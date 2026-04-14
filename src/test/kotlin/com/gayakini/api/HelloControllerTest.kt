@@ -1,7 +1,6 @@
 package com.gayakini.api
 
 import com.gayakini.BaseWebMvcTest
-import com.gayakini.infrastructure.security.SecurityConfig
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -11,9 +10,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(HelloController::class)
-@Import(SecurityConfig::class, BaseWebMvcTest.SecurityTestConfig::class)
+@Import(BaseWebMvcTest.SecurityTestConfig::class)
 class HelloControllerTest : BaseWebMvcTest() {
-
     @Autowired
     private lateinit var mockMvc: MockMvc
 

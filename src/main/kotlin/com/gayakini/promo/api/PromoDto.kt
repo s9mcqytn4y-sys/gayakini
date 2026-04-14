@@ -13,6 +13,7 @@ import java.util.UUID
 
 @Schema(description = "Detailed information about a promotion.")
 data class PromoResponse(
+    val success: Boolean = true,
     @Schema(description = "Unique promo ID", example = "550e8400-e29b-41d4-a716-446655440200")
     val id: UUID,
     @Schema(description = "Unique promo code", example = "LEBARAN_SALE")

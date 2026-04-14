@@ -10,7 +10,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 
 @WebMvcTest(HelloController::class)
-@Import(SecurityConfig::class, BaseWebMvcTest.SecurityTestConfig::class)
+@Import(BaseWebMvcTest.SecurityTestConfig::class)
 class SecurityBaselineTest : BaseWebMvcTest() {
     @Autowired
     private lateinit var mockMvc: MockMvc

@@ -7,7 +7,6 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class PromoTest {
-
     private fun createTestPromo(
         type: PromoType = PromoType.PERCENTAGE,
         value: BigDecimal = BigDecimal("10"),
@@ -15,7 +14,7 @@ class PromoTest {
         maxDiscount: BigDecimal? = null,
         usageLimit: Int? = null,
         currentUsage: Int = 0,
-        active: Boolean = true
+        active: Boolean = true,
     ): Promo {
         return Promo(
             code = "TESTPROMO",
@@ -27,7 +26,7 @@ class PromoTest {
             currentUsage = currentUsage,
             isActive = active,
             startDate = Instant.now().minus(1, ChronoUnit.DAYS),
-            endDate = Instant.now().plus(1, ChronoUnit.DAYS)
+            endDate = Instant.now().plus(1, ChronoUnit.DAYS),
         )
     }
 
@@ -42,11 +41,12 @@ class PromoTest {
 
     @Test
     fun `calculateDiscount should respect maxDiscountAmount for PERCENTAGE`() {
-        val promo = createTestPromo(
-            type = PromoType.PERCENTAGE,
-            value = BigDecimal("10"),
-            maxDiscount = BigDecimal("5000")
-        )
+        val promo =
+            createTestPromo(
+                type = PromoType.PERCENTAGE,
+                value = BigDecimal("10"),
+                maxDiscount = BigDecimal("5000"),
+            )
         val subtotal = BigDecimal("100000")
 
         val discount = promo.calculateDiscount(subtotal)

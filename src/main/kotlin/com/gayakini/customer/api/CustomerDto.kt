@@ -67,6 +67,7 @@ data class RefreshTokenRequest(
 
 @Schema(description = "Respons berisi token autentikasi.")
 data class AuthTokensResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Login berhasil.")
     val message: String,
     val data: AuthTokensData,
@@ -108,6 +109,7 @@ data class CustomerProfileResponse(
 
 @Schema(description = "Respons data alamat.")
 data class AddressResponse(
+    val success: Boolean = true,
     @Schema(description = "ID unik alamat", example = "550e8400-e29b-41d4-a716-446655440011")
     val id: UUID,
     @Schema(description = "Nama penerima", example = "Budi Santoso")

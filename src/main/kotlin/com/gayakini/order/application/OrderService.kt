@@ -315,9 +315,13 @@ class OrderService(
             inventoryService.releaseReservations(order.id, "Order cancelled by user: $reason")
 
             // Restock if order was already paid/processed
-            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
-                order.status == OrderStatus.SHIPPED || order.status == OrderStatus.COMPLETED
-            ) {
+            val isRestockable =
+                order.status == OrderStatus.PAID ||
+                    order.status == OrderStatus.READY_TO_SHIP ||
+                    order.status == OrderStatus.SHIPPED ||
+                    order.status == OrderStatus.COMPLETED
+
+            if (isRestockable) {
                 inventoryService.restockOrder(
                     orderId = order.id,
                     reason = AdjustmentReason.CANCELLATION_RESTOCK,
@@ -358,9 +362,13 @@ class OrderService(
             inventoryService.releaseReservations(order.id, "Order cancelled by admin: $reason")
 
             // Restock if order was already paid/processed
-            if (order.status == OrderStatus.PAID || order.status == OrderStatus.READY_TO_SHIP ||
-                order.status == OrderStatus.SHIPPED || order.status == OrderStatus.COMPLETED
-            ) {
+            val isRestockable =
+                order.status == OrderStatus.PAID ||
+                    order.status == OrderStatus.READY_TO_SHIP ||
+                    order.status == OrderStatus.SHIPPED ||
+                    order.status == OrderStatus.COMPLETED
+
+            if (isRestockable) {
                 inventoryService.restockOrder(
                     orderId = order.id,
                     reason = AdjustmentReason.CANCELLATION_RESTOCK,

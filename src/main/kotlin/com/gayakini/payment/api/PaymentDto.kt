@@ -69,6 +69,7 @@ data class PaymentSessionDto(
 
 @Schema(description = "Konfigurasi client-side untuk payment gateway.")
 data class PaymentConfigResponse(
+    val success: Boolean = true,
     @Schema(description = "Client Key dari penyedia", example = "SB-Mid-client-123")
     val clientKey: String,
     @Schema(description = "Apakah mode produksi", example = "false")

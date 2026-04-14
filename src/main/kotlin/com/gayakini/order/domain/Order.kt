@@ -207,7 +207,7 @@ enum class OrderStatus {
             PAID -> target in listOf(READY_TO_SHIP, CANCELLED)
             READY_TO_SHIP -> target in listOf(SHIPPED, CANCELLED)
             SHIPPED -> target in listOf(COMPLETED, CANCELLED)
-            COMPLETED -> target == CANCELLED
+            COMPLETED -> false
             CANCELLED -> false
         }
     }

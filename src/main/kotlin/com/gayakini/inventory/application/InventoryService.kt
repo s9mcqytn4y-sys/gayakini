@@ -386,7 +386,9 @@ class InventoryService(
                 .orElseThrow { NoSuchElementException("Reservasi tidak ditemukan.") }
 
         check(reservation.orderId == orderId) { "Item tidak cocok dengan pesanan." }
-        check(reservation.status == ReservationStatus.CONSUMED) { "Hanya item yang sudah dikonsumsi (paid/shipped) yang dapat di-restock melalui QC." }
+        check(reservation.status == ReservationStatus.CONSUMED) {
+            "Hanya item yang sudah dikonsumsi (paid/shipped) yang dapat di-restock melalui QC."
+        }
 
         val variant =
             variantRepository.findWithLockById(reservation.variant.id)

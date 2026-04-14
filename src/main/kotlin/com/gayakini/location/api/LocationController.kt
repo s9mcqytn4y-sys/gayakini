@@ -77,6 +77,7 @@ data class LocationAreaDto(
 
 @Schema(description = "Respons daftar area lokasi.")
 data class LocationAreaListResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Area tujuan berhasil ditemukan.")
     val message: String,
     val data: List<LocationAreaDto>,

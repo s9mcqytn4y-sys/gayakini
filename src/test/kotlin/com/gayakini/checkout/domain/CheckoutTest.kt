@@ -7,18 +7,17 @@ import io.mockk.mockk
 import java.util.*
 
 class CheckoutTest {
-
     private fun createTestCheckout(
         subtotal: Long = 100000,
         shipping: Long = 10000,
-        discount: Long = 0
+        discount: Long = 0,
     ): Checkout {
         return Checkout(
             id = UUID.randomUUID(),
             cart = mockk<Cart>(),
             subtotalAmount = subtotal,
             shippingCostAmount = shipping,
-            discountAmount = discount
+            discountAmount = discount,
         )
     }
 

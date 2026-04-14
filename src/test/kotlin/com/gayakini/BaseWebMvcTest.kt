@@ -2,6 +2,7 @@ package com.gayakini
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.infrastructure.config.GayakiniProperties
+import com.gayakini.infrastructure.security.JwtAuthenticationFilter
 import com.gayakini.infrastructure.security.JwtService
 import com.gayakini.infrastructure.security.RequestIdFilter
 import com.gayakini.infrastructure.security.UserPrincipal
@@ -13,18 +14,52 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.web.servlet.ResultActionsDsl
+import java.util.UUID
 
 @ActiveProfiles("test")
 @EnableConfigurationProperties(GayakiniProperties::class)
 abstract class BaseWebMvcTest {
+    fun ResultActionsDsl.andExpectStandardResponse(
+        expectedStatus: Int = 200,
+        success: Boolean = true,
+        message: String? = null,
+    ): ResultActionsDsl {
+        return andExpect {
+            status { isEqualTo(expectedStatus) }
+            jsonPath("$.success") { value(success) }
+            if (message != null) {
+                jsonPath("$.message") { value(message) }
+            }
+        }
+    }
 
     @TestConfiguration
     class SecurityTestConfig {
         @Bean
-        fun jwtService(): JwtService = mockk(relaxed = true) {
-            every { parseToken(any()) } returns null
-            every { parseToken("invalid-token") } returns null
-        }
+        fun jwtService(): JwtService =
+            mockk(relaxed = true) {
+                val adminId = UUID.fromString("00000000-0000-0000-0000-000000000001")
+                val customerId = UUID.fromString("00000000-0000-0000-0000-000000000002")
+
+                every { parseToken(any()) } returns null
+                every { parseToken("valid-admin-token") } returns
+                    UserPrincipal(
+                        id = adminId,
+                        email = "admin@gayakini.com",
+                        role = "ADMIN",
+                    )
+                every { parseToken("valid-customer-token") } returns
+                    UserPrincipal(
+                        id = customerId,
+                        email = "customer@gayakini.com",
+                        role = "CUSTOMER",
+                    )
+            }
+
+        @Bean
+        fun jwtAuthenticationFilter(jwtService: JwtService): JwtAuthenticationFilter =
+            JwtAuthenticationFilter(jwtService)
 
         @Bean
         fun requestIdFilter(): RequestIdFilter = RequestIdFilter()
@@ -36,5 +71,42 @@ abstract class BaseWebMvcTest {
         @Bean
         fun customAccessDeniedHandler(objectMapper: ObjectMapper): CustomAccessDeniedHandler =
             CustomAccessDeniedHandler(objectMapper)
+
+        @Bean
+        fun securityFilterChain(
+            http: org.springframework.security.config.annotation.web.builders.HttpSecurity,
+            jwtAuthenticationFilter: JwtAuthenticationFilter,
+            requestIdFilter: RequestIdFilter,
+            customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
+            customAccessDeniedHandler: CustomAccessDeniedHandler,
+        ): org.springframework.security.web.SecurityFilterChain {
+            http
+                .csrf { it.disable() }
+                .formLogin { it.disable() }
+                .httpBasic { it.disable() }
+                .sessionManagement {
+                    it.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS)
+                }
+                .authorizeHttpRequests { auth ->
+                    auth
+                        .requestMatchers("/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
+                        .anyRequest().permitAll()
+                }
+                .exceptionHandling {
+                    it.authenticationEntryPoint(customAuthenticationEntryPoint)
+                    it.accessDeniedHandler(customAccessDeniedHandler)
+                }
+                .addFilterBefore(
+                    requestIdFilter,
+                    org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java,
+                )
+                .addFilterBefore(
+                    jwtAuthenticationFilter,
+                    org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java,
+                )
+
+            return http.build()
+        }
     }
 }

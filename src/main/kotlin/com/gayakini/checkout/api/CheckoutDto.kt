@@ -122,6 +122,7 @@ data class ShippingQuoteDto(
 
 @Schema(description = "Respons detail checkout.")
 data class CheckoutResponse(
+    val success: Boolean = true,
     @Schema(description = "Pesan status", example = "Checkout berhasil diperbarui.")
     val message: String,
     val data: CheckoutDto,

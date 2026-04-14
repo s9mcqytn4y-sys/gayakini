@@ -21,11 +21,13 @@ Located in `src/test/kotlin/**/domain/` or `src/test/kotlin/**/util/`.
 - **Example**: `OrderTest.kt`, `HashUtilsTest.kt`.
 
 ### 2. Web Slice Tests
-Located in `src/test/kotlin/**/web/`.
-- **Scope**: API endpoints, security annotations, request/response validation.
-- **Execution**: Moderate speed (boots a minimal Spring context).
-- **Frameworks**: `@WebMvcTest`, MockMvc.
-- **Example**: `HelloControllerTest.kt`.
+Located in `src/test/kotlin/**/api/`.
+- **Scope**: API endpoints, security annotations (RBAC), request/response validation, and JSON mapping.
+- **Execution**: Moderate speed (boots a minimal Spring context with `@WebMvcTest`).
+- **Standard**: All web slice tests should extend `BaseWebMvcTest` and use `MockMvc`.
+- **Mocking**: Mocks are used for all underlying services to keep tests focused on the web layer and avoid requiring a database.
+- **Security**: Security behavior is verified using mock JWT tokens (e.g., `valid-admin-token`, `valid-customer-token`) configured in `BaseWebMvcTest.SecurityTestConfig`.
+- **Example**: `ProductControllerTest.kt`, `AdminProductControllerTest.kt`.
 
 ### 3. Integration Tests
 Located in `src/test/kotlin/**/integration/`.

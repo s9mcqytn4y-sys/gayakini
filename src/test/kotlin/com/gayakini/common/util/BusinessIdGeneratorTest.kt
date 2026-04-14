@@ -6,7 +6,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class BusinessIdGeneratorTest {
-
     @Test
     fun `generateOrderNumber should start with ORD-`() {
         val orderNumber = BusinessIdGenerator.generateOrderNumber()

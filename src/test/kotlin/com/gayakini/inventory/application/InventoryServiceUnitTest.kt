@@ -4,7 +4,12 @@ import com.gayakini.audit.application.AuditContext
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.ProductVariantRepository
-import com.gayakini.inventory.domain.*
+import com.gayakini.inventory.domain.AdjustmentReason
+import com.gayakini.inventory.domain.InventoryAdjustmentRepository
+import com.gayakini.inventory.domain.InventoryReservation
+import com.gayakini.inventory.domain.InventoryReservationRepository
+import com.gayakini.inventory.domain.ReservationStatus
+import com.gayakini.audit.domain.AuditEvent
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -15,22 +20,25 @@ import org.springframework.context.ApplicationEventPublisher
 import java.util.*
 
 class InventoryServiceUnitTest {
-
     private val variantRepository = mockk<ProductVariantRepository>()
     private val reservationRepository = mockk<InventoryReservationRepository>()
     private val adjustmentRepository = mockk<InventoryAdjustmentRepository>()
     private val auditContext = mockk<AuditContext>()
     private val eventPublisher = mockk<ApplicationEventPublisher>()
 
-    private val inventoryService = InventoryService(
-        variantRepository,
-        reservationRepository,
-        adjustmentRepository,
-        auditContext,
-        eventPublisher
-    )
+    private val inventoryService =
+        InventoryService(
+            variantRepository,
+            reservationRepository,
+            adjustmentRepository,
+            auditContext,
+            eventPublisher,
+        )
 
-    private fun createVariant(onHand: Int, reserved: Int): ProductVariant {
+    private fun createVariant(
+        onHand: Int,
+        reserved: Int,
+    ): ProductVariant {
         return ProductVariant(
             id = UUID.randomUUID(),
             product = mockk<Product>(),
@@ -39,7 +47,7 @@ class InventoryServiceUnitTest {
             sizeCode = "L",
             priceAmount = 50000L,
             stockOnHand = onHand,
-            stockReserved = reserved
+            stockReserved = reserved,
         )
     }
 
@@ -55,7 +63,7 @@ class InventoryServiceUnitTest {
         every { reservationRepository.save(any()) } returns mockk()
         every { adjustmentRepository.save(any()) } returns mockk()
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "USER")
-        every { eventPublisher.publishEvent(any<com.gayakini.audit.domain.AuditEvent>()) } returns Unit
+        every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
         val reservation = inventoryService.reserveStock(orderId, orderItemId, variantId, 3)
 
@@ -84,13 +92,14 @@ class InventoryServiceUnitTest {
     fun `consumeReservation should decrease onHand and reserved stock`() {
         val variant = createVariant(onHand = 10, reserved = 3)
         val orderItemId = UUID.randomUUID()
-        val reservation = InventoryReservation(
-            orderId = UUID.randomUUID(),
-            orderItemId = orderItemId,
-            variant = variant,
-            quantity = 3,
-            status = ReservationStatus.ACTIVE
-        )
+        val reservation =
+            InventoryReservation(
+                orderId = UUID.randomUUID(),
+                orderItemId = orderItemId,
+                variant = variant,
+                quantity = 3,
+                status = ReservationStatus.ACTIVE,
+            )
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
@@ -98,7 +107,7 @@ class InventoryServiceUnitTest {
         every { reservationRepository.save(any()) } returns reservation
         every { adjustmentRepository.save(any()) } returns mockk()
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "USER")
-        every { eventPublisher.publishEvent(any<com.gayakini.audit.domain.AuditEvent>()) } returns Unit
+        every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
         inventoryService.consumeReservation(orderItemId)
 
@@ -113,13 +122,14 @@ class InventoryServiceUnitTest {
     fun `releaseReservation should decrease reserved stock and keep onHand`() {
         val variant = createVariant(onHand = 10, reserved = 3)
         val orderItemId = UUID.randomUUID()
-        val reservation = InventoryReservation(
-            orderId = UUID.randomUUID(),
-            orderItemId = orderItemId,
-            variant = variant,
-            quantity = 3,
-            status = ReservationStatus.ACTIVE
-        )
+        val reservation =
+            InventoryReservation(
+                orderId = UUID.randomUUID(),
+                orderItemId = orderItemId,
+                variant = variant,
+                quantity = 3,
+                status = ReservationStatus.ACTIVE,
+            )
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
@@ -127,7 +137,7 @@ class InventoryServiceUnitTest {
         every { reservationRepository.save(any()) } returns reservation
         every { adjustmentRepository.save(any()) } returns mockk()
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "USER")
-        every { eventPublisher.publishEvent(any<com.gayakini.audit.domain.AuditEvent>()) } returns Unit
+        every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
         inventoryService.releaseReservation(orderItemId, "Cancelled")
 
@@ -142,28 +152,31 @@ class InventoryServiceUnitTest {
         val variant = createVariant(onHand = 10, reserved = 0)
         val orderId = UUID.randomUUID()
         val orderItemId = UUID.randomUUID()
-        val reservation = InventoryReservation(
-            orderId = orderId,
-            orderItemId = orderItemId,
-            variant = variant,
-            quantity = 3,
-            status = ReservationStatus.CONSUMED
-        )
+        val reservation =
+            InventoryReservation(
+                orderId = orderId,
+                orderItemId = orderItemId,
+                variant = variant,
+                quantity = 3,
+                status = ReservationStatus.CONSUMED,
+            )
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
         every { variantRepository.save(any()) } returns variant
         every { adjustmentRepository.save(any()) } returns mockk()
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "ADMIN")
-        every { eventPublisher.publishEvent(any<com.gayakini.audit.domain.AuditEvent>()) } returns Unit
+        every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
         inventoryService.restockOrderItemAfterQC(orderId, orderItemId, "Item passed inspection")
 
         assertEquals(13, variant.stockOnHand)
         verify {
-            adjustmentRepository.save(match {
-                it.reasonCode == AdjustmentReason.RETURN_RESTOCK_QC && it.quantityDelta == 3
-            })
+            adjustmentRepository.save(
+                match {
+                    it.reasonCode == AdjustmentReason.RETURN_RESTOCK_QC && it.quantityDelta == 3
+                },
+            )
         }
     }
 }

@@ -1,18 +1,16 @@
 package com.gayakini.order.domain
 
-import com.gayakini.common.util.UuidV7Generator
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.*
 
 class OrderTest {
-
     private fun createTestOrder(
         status: OrderStatus = OrderStatus.PENDING_PAYMENT,
         subtotal: Long = 100000,
         shipping: Long = 10000,
-        discount: Long = 0
+        discount: Long = 0,
     ): Order {
         return Order(
             orderNumber = "ORD-123",
@@ -23,7 +21,7 @@ class OrderTest {
             status = status,
             subtotalAmount = subtotal,
             shippingCostAmount = shipping,
-            discountAmount = discount
+            discountAmount = discount,
         )
     }
 
@@ -46,9 +44,10 @@ class OrderTest {
     @Test
     fun `markAsPaid should throw if current status is not PENDING_PAYMENT`() {
         val order = createTestOrder(status = OrderStatus.SHIPPED)
-        val exception = assertThrows<IllegalStateException> {
-            order.markAsPaid()
-        }
+        val exception =
+            assertThrows<IllegalStateException> {
+                order.markAsPaid()
+            }
         assertTrue(exception.message!!.contains("Transisi status pesanan tidak valid"))
     }
 
