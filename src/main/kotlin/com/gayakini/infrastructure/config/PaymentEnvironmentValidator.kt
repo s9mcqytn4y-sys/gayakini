@@ -38,7 +38,10 @@ class PaymentEnvironmentValidator(
             val apiUrl = properties.midtrans.apiUrl.lowercase()
             val snapUrl = properties.midtrans.snapUrl.lowercase()
 
-            if (!apiUrl.contains("sandbox") || !snapUrl.contains("sandbox")) {
+            val isLocalUrl = apiUrl.contains("localhost") || apiUrl.contains("127.0.0.1") ||
+                             snapUrl.contains("localhost") || snapUrl.contains("127.0.0.1")
+
+            if (!isLocalUrl && (!apiUrl.contains("sandbox") || !snapUrl.contains("sandbox"))) {
                 val errorMessage =
                     "SECURITY CRITICAL: Midtrans Production URLs detected in sandbox/local mode. " +
                         "API URL: $apiUrl, SNAP URL: $snapUrl. Shutdown immediately."

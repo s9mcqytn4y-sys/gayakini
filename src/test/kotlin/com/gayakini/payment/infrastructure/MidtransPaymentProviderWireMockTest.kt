@@ -1,45 +1,41 @@
 package com.gayakini.payment.infrastructure
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.gayakini.infrastructure.config.GayakiniProperties
+import com.gayakini.BaseIntegrationTest
+import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.PaymentItemDetail
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.junit5.WireMockTest
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.mockito.Mockito.`when`
-import com.midtrans.service.MidtransSnapApi
 import java.util.*
-import org.springframework.test.util.ReflectionTestUtils
-import org.mockito.ArgumentMatchers.anyMap
 
-@SpringBootTest(classes = [MidtransPaymentProvider::class, ObjectMapper::class])
-@ActiveProfiles("test")
-@EnableConfigurationProperties(GayakiniProperties::class)
-class MidtransPaymentProviderWireMockTest {
+@WireMockTest(httpPort = 8089)
+class MidtransPaymentProviderWireMockTest : BaseIntegrationTest() {
     @Autowired
     private lateinit var paymentProvider: MidtransPaymentProvider
 
-    @MockitoBean
-    private lateinit var snapApi: MidtransSnapApi
-
     @Test
-    fun `should create payment session successfully (mocked SDK)`() {
-        // We use Map to mock the response if we can't use JSONObject directly due to classloader/dependency issues
-        // However, Midtrans SDK returns a JSONObject (from org.json).
-        // Let's try to mock it without explicit import if it's transitive.
-
-        val mockResponse = org.json.JSONObject()
-        mockResponse.put("token", "test-token-123")
-        mockResponse.put("redirect_url", "https://app.sandbox.midtrans.com/snap/v2/vtweb/test-token-123")
-
-        ReflectionTestUtils.setField(paymentProvider, "snapApi", snapApi)
-
-        `when`(snapApi.createTransaction(anyMap())).thenReturn(mockResponse)
+    fun `should create payment session successfully (wiremocked)`() {
+        // Given
+        stubFor(
+            post(urlEqualTo("/snap/v1/transactions"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "token": "test-token-123",
+                              "redirect_url": "https://app.sandbox.midtrans.com/snap/v2/vtweb/test-token-123"
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
 
         val orderId = UUID.randomUUID()
         val providerOrderId = "TEST-${System.currentTimeMillis()}"
@@ -55,6 +51,7 @@ class MidtransPaymentProviderWireMockTest {
                 PaymentItemDetail(id = "item1", price = 10000L, quantity = 1, name = "Test Item"),
             )
 
+        // When
         val session =
             paymentProvider.createPaymentSession(
                 orderId = orderId,
@@ -64,7 +61,65 @@ class MidtransPaymentProviderWireMockTest {
                 itemDetails = itemDetails,
             )
 
+        // Then
         assertNotNull(session.token)
+        assertEquals("test-token-123", session.token)
         assertNotNull(session.redirectUrl)
+    }
+
+    @Test
+    fun `should get payment status successfully (wiremocked)`() {
+        // Given
+        val providerOrderId = "ORDER-123"
+        stubFor(
+            get(urlEqualTo("/v2/$providerOrderId/status"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "transaction_status": "settlement",
+                              "status_code": "200"
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+
+        // When
+        val status = paymentProvider.getPaymentStatus(providerOrderId)
+
+        // Then
+        assertEquals(PaymentStatus.PAID, status)
+    }
+
+    @Test
+    fun `should return PENDING when Midtrans returns 404 (wiremocked)`() {
+        // Given
+        val providerOrderId = "NON-EXISTENT"
+        stubFor(
+            get(urlEqualTo("/v2/$providerOrderId/status"))
+                .willReturn(
+                    aResponse()
+                        .withStatus(404)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(
+                            """
+                            {
+                              "status_code": "404",
+                              "status_message": "Transaction not found"
+                            }
+                            """.trimIndent(),
+                        ),
+                ),
+        )
+
+        // When
+        val status = paymentProvider.getPaymentStatus(providerOrderId)
+
+        // Then
+        assertEquals(PaymentStatus.PENDING, status)
     }
 }

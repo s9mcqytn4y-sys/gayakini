@@ -42,10 +42,10 @@ class GayakiniProperties {
         var isProduction: Boolean = false
 
         @field:NotBlank
-        var serverKey: String = "dummy-server-key"
+        var serverKey: String = ""
 
         @field:NotBlank
-        var clientKey: String = "dummy-client-key"
+        var clientKey: String = ""
 
         @field:NotBlank
         var snapUrl: String = "https://app.sandbox.midtrans.com/snap/v1/transactions"
@@ -56,12 +56,12 @@ class GayakiniProperties {
 
     class BiteshipProperties {
         @field:NotBlank
-        var apiKey: String = "dummy-api-key"
+        var apiKey: String = ""
 
         @field:NotBlank
         var apiUrl: String = "https://api.biteship.com/v1"
 
         @field:NotBlank
-        var webhookSecret: String = "dummy-webhook-secret"
+        var webhookSecret: String = ""
     }
 }

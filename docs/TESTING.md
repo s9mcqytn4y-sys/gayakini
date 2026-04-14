@@ -46,7 +46,7 @@ Located in `src/test/kotlin/**/integration/`.
 ## Key Technologies
 - **Testcontainers**: Provides a real PostgreSQL 16 instance for integration tests via `@Tag("integration")`. **Requirement**: Local Docker daemon must be running for these tests to pass.
 - **MockK**: Idiomatic Kotlin mocking library.
-- **WireMock**: Mocks external HTTP services (Midtrans, Biteship) for isolated provider testing.
+- **WireMock**: Mocks external HTTP services (Midtrans, Biteship) for isolated provider testing. External providers like `MidtransPaymentProvider` and `BiteshipShippingProvider` use `RestTemplate` to allow transparent redirection to WireMock during tests.
 - **ServiceConnection**: Automatically configures Spring Boot to use containerized services.
 
 ## Best Practices

@@ -3,7 +3,7 @@ package com.gayakini.checkout.api
 import com.gayakini.cart.api.CartItemDto
 import com.gayakini.cart.api.ProductVariantAttributeDto
 import com.gayakini.checkout.application.CheckoutService
-import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.MoneyDto
 import com.gayakini.infrastructure.security.SecurityUtils
 import io.swagger.v3.oas.annotations.Operation
@@ -30,7 +30,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @Valid @RequestBody request: CreateCheckoutRequest,
         @Parameter(description = "Token akses keranjang (jika tamu)")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.createCheckout(
                 request.cartId,
@@ -51,7 +51,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @PathVariable checkoutId: UUID,
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout = checkoutService.getValidatedCheckout(checkoutId, SecurityUtils.getCurrentUserId(), checkoutToken)
         return mapToResponse(checkout, "Checkout berhasil diambil.", checkoutToken)
     }
@@ -68,7 +68,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: CheckoutShippingAddressRequest,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.updateShippingAddress(
                 checkoutId,
@@ -90,7 +90,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @PathVariable checkoutId: UUID,
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Cart-Token", required = false) checkoutToken: String?,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.calculateShippingQuotes(
                 checkoutId,
@@ -112,7 +112,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: ApplyPromoRequest,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.applyPromo(
                 checkoutId,
@@ -134,7 +134,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @PathVariable checkoutId: UUID,
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.removePromo(
                 checkoutId,
@@ -156,7 +156,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         @Parameter(description = "Token akses checkout (jika tamu)")
         @RequestHeader(value = "X-Checkout-Token", required = false) checkoutToken: String?,
         @Valid @RequestBody request: SelectShippingQuoteRequest,
-    ): CheckoutResponse {
+    ): ApiResponse<CheckoutDto> {
         val checkout =
             checkoutService.selectShippingQuote(
                 checkoutId,
@@ -171,8 +171,8 @@ class CheckoutController(private val checkoutService: CheckoutService) {
         checkout: com.gayakini.checkout.domain.Checkout,
         message: String,
         accessToken: String? = null,
-    ): CheckoutResponse {
-        return CheckoutResponse(
+    ): ApiResponse<CheckoutDto> {
+        return ApiResponse.success(
             message = message,
             data =
                 CheckoutDto(
@@ -261,7 +261,7 @@ class CheckoutController(private val checkoutService: CheckoutService) {
                             )
                         },
                 ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
+
 }
