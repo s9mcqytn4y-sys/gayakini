@@ -38,6 +38,14 @@ class Product(
     var variants: MutableList<ProductVariant> = mutableListOf(),
     @OneToMany(mappedBy = "product", cascade = [CascadeType.ALL], orphanRemoval = true)
     var media: MutableList<ProductMedia> = mutableListOf(),
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "product_collections",
+        schema = "commerce",
+        joinColumns = [JoinColumn(name = "product_id")],
+        inverseJoinColumns = [JoinColumn(name = "collection_id")],
+    )
+    var collections: MutableSet<Collection> = mutableSetOf(),
     @Column(name = "created_at", updatable = false)
     val createdAt: Instant = Instant.now(),
     @Column(name = "updated_at")

@@ -138,8 +138,14 @@ class ProductController(private val productService: ProductService) {
                 ),
             inStock = activeVariants.any { it.stockAvailable > 0 },
             description = product.description,
-            // TODO: Map collections relationship if available in Product entity
-            collections = listOf(),
+            collections =
+                product.collections.map {
+                    CollectionDto(
+                        id = it.id,
+                        slug = it.slug,
+                        name = it.name,
+                    )
+                },
             media =
                 product.media.map {
                     ProductMediaDto(

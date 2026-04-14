@@ -44,6 +44,16 @@ data class PriceRangeDto(
     val max: MoneyDto,
 )
 
+@Schema(description = "Ringkasan informasi koleksi.")
+data class CollectionDto(
+    @Schema(description = "ID unik koleksi", example = "550e8400-e29b-41d4-a716-446655440003")
+    val id: UUID,
+    @Schema(description = "Slug koleksi untuk URL", example = "summer-sale")
+    val slug: String,
+    @Schema(description = "Nama koleksi", example = "Summer Sale")
+    val name: String,
+)
+
 @Schema(description = "Respons detail produk.")
 data class ProductDetailResponse(
     @Schema(description = "Pesan status", example = "Detail produk berhasil diambil.")
@@ -73,8 +83,8 @@ data class ProductDetailDto(
     val inStock: Boolean,
     @Schema(description = "Deskripsi lengkap produk", example = "Kaos polos hitam dengan bahan katun 30s...")
     val description: String,
-    @Schema(description = "Daftar koleksi terkait", example = "[\"summer-sale\", \"essentials\"]")
-    val collections: List<String>,
+    @Schema(description = "Daftar koleksi terkait")
+    val collections: List<CollectionDto>,
     @Schema(description = "Daftar media (gambar/video) produk")
     val media: List<ProductMediaDto>,
     @Schema(description = "Daftar varian produk")
