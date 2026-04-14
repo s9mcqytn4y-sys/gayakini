@@ -8,12 +8,7 @@
 
 ## Running the Application
 
-### 1. Start Infrastructure
-```bash
-docker-compose up -d
-```
-
-### 2. Run with Gradle
+### 1. Run with Gradle
 ```bash
 ./gradlew bootRun
 ```
@@ -21,19 +16,13 @@ The application will start with the `local` profile enabled.
 
 ## Code Quality & Verification
 
-Before pushing any changes, ensure all quality gates pass:
+Before pushing any changes, ensure all checks pass:
 
-### Fast Feedback Loop
+### Verification
 ```bash
-./gradlew qualityGate
+./gradlew check
 ```
 This runs `ktlintCheck`, `detekt`, and all tests.
-
-### Full Pre-release Check
-```bash
-./gradlew releaseCheck
-```
-This runs `qualityGate` and verifies the artifact can be built (`bootJar`).
 
 ## Database Migrations
 We use Flyway for database migrations. New migrations should be placed in `src/main/resources/db/migration/`.

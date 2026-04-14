@@ -59,14 +59,20 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus")
 
     // PDF Generation
-    implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24")
+    implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24") {
+        exclude(group = "commons-logging", module = "commons-logging")
+    }
     implementation("io.github.openhtmltopdf:openhtmltopdf-slf4j:1.1.24")
 
     // Payment & Shipping SDKs
-    implementation("com.midtrans:java-library:3.2.2")
+    implementation("com.midtrans:java-library:3.2.2") {
+        exclude(group = "org.json", module = "json")
+    }
 
     // Test Baseline
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-test") {
+        exclude(group = "com.vaadin.external.google", module = "android-json")
+    }
     testImplementation("org.springframework.security:spring-security-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testRuntimeOnly("com.h2database:h2")
@@ -86,25 +92,6 @@ detekt {
     config.setFrom(file("${project.rootDir}/config/detekt/detekt.yml"))
     baseline = file("${project.rootDir}/config/detekt/baseline.xml")
     ignoreFailures = false
-}
-
-// Wire quality gates to check
-tasks.named("check") {
-    dependsOn("ktlintCheck", "detekt")
-}
-
-// qualityGate: Fast feedback loop for developers
-tasks.register("qualityGate") {
-    group = "verification"
-    description = "Runs essential quality checks: ktlint, detekt, and tests."
-    dependsOn("ktlintCheck", "detekt", "test")
-}
-
-// Release Check Task: Aggregates all quality gates and build artifacts
-tasks.register("releaseCheck") {
-    group = "verification"
-    description = "Full project validation before release: qualityGate and bootJar."
-    dependsOn("qualityGate", "bootJar")
 }
 
 // --- COMPILER CONFIGURATION ---

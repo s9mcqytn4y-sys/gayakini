@@ -2,37 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Gradle: releaseCheck (CI simulate)",
+      "label": "Gradle: check",
       "type": "shell",
       "command": "cmd.exe",
       "args": [
         "/c",
-        ".\\gradlew.bat releaseCheck --console=plain"
+        ".\\gradlew.bat check --console=plain"
       ],
       "group": {
         "kind": "test",
         "isDefault": true
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "Gradle: releaseCheckLocal (Full gate)",
-      "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        ".\\gradlew.bat releaseCheckLocal --console=plain"
-      ],
-      "problemMatcher": []
-    },
-    {
-      "label": "Gradle: qualityCheck",
-      "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        ".\\gradlew.bat qualityCheck --console=plain"
-      ],
       "problemMatcher": []
     },
     {
@@ -49,16 +29,6 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": []
-    },
-    {
-      "label": "Database: dbDoctor",
-      "type": "shell",
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        ".\\gradlew.bat dbDoctor --console=plain"
-      ],
       "problemMatcher": []
     }
   ]

@@ -6,9 +6,11 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.ActiveProfiles
 import java.util.*
 
 @SpringBootTest
+@ActiveProfiles("test")
 class MidtransPaymentProviderTest {
     @Autowired
     private lateinit var paymentProvider: MidtransPaymentProvider

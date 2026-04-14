@@ -150,7 +150,9 @@ class OpenApiConfig {
             path.startsWith("/v1/admin/") -> true
             path.startsWith("/v1/finance/") -> true
             path.startsWith("/v1/operations/") -> true
-            path.startsWith("/v1/payments/") && path != "/v1/payments/config" && !path.startsWith("/v1/payments/orders/") -> true
+            path.startsWith("/v1/payments/") &&
+                path != "/v1/payments/config" &&
+                !path.startsWith("/v1/payments/orders/") -> true
             path.startsWith("/v1/media/secure/") -> true
             // Orders: Some are public (GET by ID, Cancel), some are private (list)
             path == "/v1/orders" || path.startsWith("/v1/orders/") && !isPublicOrderEndpoint(path) -> true

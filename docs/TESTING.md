@@ -10,7 +10,7 @@ We prioritize a stable and reliable test suite using JUnit 5. All tests are exec
 ## Running Tests
 - **All Tests**: `./gradlew test`
 - **Single Test Class**: `./gradlew test --tests "com.gayakini.package.ClassName"`
-- **Quality Gate**: `./gradlew qualityGate` (includes tests and static analysis)
+- **Quality Gate**: `./gradlew check` (includes tests and static analysis)
 
 ## Test Configuration
 - **JUnit Platform**: All tests use the JUnit Platform.
