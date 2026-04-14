@@ -186,6 +186,25 @@ class InventoryService(
                     stockReservedAfter = variant.stockReserved,
                 )
             adjustmentRepository.save(adjustment)
+
+            val (auditId, auditRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = auditId,
+                    actorRole = auditRole,
+                    entityType = "INVENTORY",
+                    entityId = variant.sku,
+                    eventType = "STOCK_RELEASED",
+                    newState =
+                        mapOf(
+                            "orderId" to orderId,
+                            "quantity" to reservation.quantity,
+                            "onHand" to variant.stockOnHand,
+                            "reserved" to variant.stockReserved,
+                        ),
+                    reason = reason,
+                ),
+            )
         }
     }
 
@@ -226,6 +245,25 @@ class InventoryService(
                 stockReservedAfter = variant.stockReserved,
             )
         adjustmentRepository.save(adjustment)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "INVENTORY",
+                entityId = variant.sku,
+                eventType = "STOCK_RELEASED",
+                newState =
+                    mapOf(
+                        "orderItemId" to orderItemId,
+                        "quantity" to reservation.quantity,
+                        "onHand" to variant.stockOnHand,
+                        "reserved" to variant.stockReserved,
+                    ),
+                reason = reason,
+            ),
+        )
     }
 
     @Transactional
@@ -263,6 +301,25 @@ class InventoryService(
                 stockReservedAfter = variant.stockReserved,
             )
         adjustmentRepository.save(adjustment)
+
+        val (auditId, auditRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = auditId,
+                actorRole = auditRole,
+                entityType = "INVENTORY",
+                entityId = variant.sku,
+                eventType = "STOCK_CONSUMED",
+                newState =
+                    mapOf(
+                        "orderItemId" to orderItemId,
+                        "quantity" to reservation.quantity,
+                        "onHand" to variant.stockOnHand,
+                        "reserved" to variant.stockReserved,
+                    ),
+                reason = "Sale/Consumption for item $orderItemId",
+            ),
+        )
     }
 
     @Transactional
@@ -296,6 +353,25 @@ class InventoryService(
                     stockReservedAfter = variant.stockReserved,
                 )
             adjustmentRepository.save(adjustment)
+
+            val (auditId, auditRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = auditId,
+                    actorRole = auditRole,
+                    entityType = "INVENTORY",
+                    entityId = variant.sku,
+                    eventType = "STOCK_RESTOCKED",
+                    newState =
+                        mapOf(
+                            "orderId" to orderId,
+                            "quantity" to reservation.quantity,
+                            "onHand" to variant.stockOnHand,
+                            "reserved" to variant.stockReserved,
+                        ),
+                    reason = note ?: "Restock for order $orderId",
+                ),
+            )
         }
     }
 }

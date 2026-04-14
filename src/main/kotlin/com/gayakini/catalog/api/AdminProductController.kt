@@ -148,8 +148,7 @@ class AdminProductController(
             brandName = product.brandName,
             categorySlug = product.category?.slug,
             description = product.description,
-            // TODO: Map collections
-            collections = listOf(),
+            collections = product.collections.map { it.slug },
             media =
                 product.media.map {
                     ProductMediaDto(

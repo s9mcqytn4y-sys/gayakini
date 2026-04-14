@@ -20,6 +20,7 @@ class ProductService(
     private val productRepository: ProductRepository,
     private val publicProductSummaryRepository: PublicProductSummaryRepository,
     private val categoryRepository: CategoryRepository,
+    private val collectionRepository: CollectionRepository,
     private val storageService: StorageService,
 ) {
     @Transactional
@@ -27,6 +28,12 @@ class ProductService(
         val category =
             categoryRepository.findBySlug(request.categorySlug)
                 .orElseThrow { NoSuchElementException("Kategori dengan slug ${request.categorySlug} tidak ditemukan.") }
+
+        val collections =
+            request.collections.map { slug ->
+                collectionRepository.findBySlug(slug)
+                    .orElseThrow { NoSuchElementException("Koleksi dengan slug $slug tidak ditemukan.") }
+            }
 
         val product =
             Product(
@@ -38,7 +45,9 @@ class ProductService(
                 category = category,
                 description = request.description,
                 status = request.status,
-            )
+            ).apply {
+                this.collections.addAll(collections)
+            }
 
         return productRepository.save(product)
     }
@@ -62,6 +71,16 @@ class ProductService(
                 categoryRepository.findBySlug(slug)
                     .orElseThrow { NoSuchElementException("Kategori dengan slug $slug tidak ditemukan.") }
             product.category = category
+        }
+
+        request.collections?.let { slugs ->
+            val collections =
+                slugs.map { slug ->
+                    collectionRepository.findBySlug(slug)
+                        .orElseThrow { NoSuchElementException("Koleksi dengan slug $slug tidak ditemukan.") }
+                }
+            product.collections.clear()
+            product.collections.addAll(collections)
         }
 
         product.updatedAt = Instant.now()

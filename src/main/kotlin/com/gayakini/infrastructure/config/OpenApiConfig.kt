@@ -53,6 +53,13 @@ private const val AUTH_SCHEME_NAME = "Bearer Authentication"
     bearerFormat = "JWT",
     description = "Masukkan access token JWT untuk mengakses endpoint yang memerlukan autentikasi.",
 )
+@SecurityScheme(
+    name = "Admin Role",
+    type = SecuritySchemeType.HTTP,
+    scheme = "bearer",
+    bearerFormat = "JWT",
+    description = "JWT Token dengan ROLE_ADMIN diperlukan untuk mengakses endpoint ini.",
+)
 class OpenApiConfig {
     @Bean
     fun gayakiniOpenApi(): OpenAPI = OpenAPI()
@@ -65,12 +72,16 @@ class OpenApiConfig {
 
             openApi.paths.orEmpty().forEach { (path, pathItem) ->
                 pathItem.readOperations().forEach { operation ->
-                    operation.security =
-                        if (requiresJwtSecurity(path)) {
-                            mutableListOf(SecurityRequirement().addList(AUTH_SCHEME_NAME))
-                        } else {
-                            mutableListOf()
+                    val securityRequirement = SecurityRequirement()
+                    if (requiresJwtSecurity(path)) {
+                        securityRequirement.addList(AUTH_SCHEME_NAME)
+                        if (isAdminPath(path)) {
+                            securityRequirement.addList("Admin Role")
                         }
+                        operation.security = mutableListOf(securityRequirement)
+                    } else {
+                        operation.security = mutableListOf()
+                    }
 
                     attachStandardErrorResponses(operation.responses)
                 }
@@ -144,20 +155,33 @@ class OpenApiConfig {
 
     private fun referencedResponse(name: String): ApiResponse = ApiResponse().`$ref`("#/components/responses/$name")
 
-    private fun requiresJwtSecurity(path: String): Boolean =
-        when {
-            path.startsWith("/v1/me/") || path == "/v1/me" -> true
-            path.startsWith("/v1/admin/") -> true
-            path.startsWith("/v1/finance/") -> true
-            path.startsWith("/v1/operations/") -> true
-            path.startsWith("/v1/payments/") &&
-                path != "/v1/payments/config" &&
-                !path.startsWith("/v1/payments/orders/") -> true
-            path.startsWith("/v1/media/secure/") -> true
-            // Orders: Some are public (GET by ID, Cancel), some are private (list)
-            path == "/v1/orders" || path.startsWith("/v1/orders/") && !isPublicOrderEndpoint(path) -> true
-            else -> false
-        }
+    private fun requiresJwtSecurity(path: String): Boolean {
+        val matchesSecurePrefix =
+            isAdminPath(path) ||
+                path.startsWith("/v1/me/") ||
+                path == "/v1/me" ||
+                path.startsWith("/v1/finance/") ||
+                path.startsWith("/v1/operations/") ||
+                path.startsWith("/v1/media/secure/")
+
+        return matchesSecurePrefix ||
+            isActuatorSecure(path) ||
+            isPaymentSecure(path) ||
+            isOrderSecure(path)
+    }
+
+    private fun isActuatorSecure(path: String): Boolean =
+        path.startsWith("/actuator/") && path != "/actuator/health" && path != "/actuator/info"
+
+    private fun isPaymentSecure(path: String): Boolean =
+        path.startsWith("/v1/payments/") &&
+            path != "/v1/payments/config" &&
+            !path.startsWith("/v1/payments/orders/")
+
+    private fun isOrderSecure(path: String): Boolean =
+        path == "/v1/orders" || (path.startsWith("/v1/orders/") && !isPublicOrderEndpoint(path))
+
+    private fun isAdminPath(path: String): Boolean = path.startsWith("/v1/admin/") || path == "/v1/admin"
 
     private fun isPublicOrderEndpoint(path: String): Boolean {
         // Matches GET /v1/orders/{orderId} and POST /v1/orders/{orderId}/cancellations

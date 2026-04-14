@@ -44,13 +44,34 @@ class ShippingService(
 
         val shipment = findShipmentByExternalId(orderIdStr) ?: return
 
+        val oldStatus = shipment.status
         when (event) {
             "order.status" -> handleStatusUpdate(shipment, payload)
             "order.waybill_id" -> handleWaybillUpdate(shipment, payload)
         }
 
         shipment.updatedAt = Instant.now()
-        shipmentRepository.save(shipment)
+        val savedShipment = shipmentRepository.save(shipment)
+
+        if (oldStatus != savedShipment.status || event == "order.waybill_id") {
+            val (actorId, actorRole) = auditContext.getCurrentActor()
+            eventPublisher.publishEvent(
+                AuditEvent(
+                    actorId = actorId,
+                    actorRole = actorRole,
+                    entityType = "SHIPMENT",
+                    entityId = savedShipment.id.toString(),
+                    eventType = if (event == "order.waybill_id") "WAYBILL_UPDATED" else "SHIPMENT_STATUS_UPDATED",
+                    newState =
+                        mapOf(
+                            "status" to savedShipment.status,
+                            "rawStatus" to savedShipment.rawProviderStatus,
+                            "trackingNumber" to savedShipment.trackingNumber,
+                        ),
+                    reason = "Webhook update: $event",
+                ),
+            )
+        }
     }
 
     private fun findShipmentByExternalId(externalId: String): Shipment? {

@@ -61,6 +61,8 @@ data class AdminUpdateProductRequest(
     val categorySlug: String? = null,
     @field:Schema(description = "Deskripsi produk", example = "Kaos polos kualitas tinggi dengan jahitan rapi...")
     val description: String? = null,
+    @field:Schema(description = "Daftar slug koleksi")
+    val collections: List<String>? = null,
     @field:Schema(description = "Status publikasi produk", example = "ACTIVE")
     val status: ProductStatus? = null,
 )
