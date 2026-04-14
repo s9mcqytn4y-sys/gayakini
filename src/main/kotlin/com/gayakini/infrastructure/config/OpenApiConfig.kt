@@ -146,11 +146,19 @@ class OpenApiConfig {
 
     private fun requiresJwtSecurity(path: String): Boolean =
         when {
-            path == "/v1/me" -> true
-            path.startsWith("/v1/me/") -> true
+            path.startsWith("/v1/me/") || path == "/v1/me" -> true
             path.startsWith("/v1/admin/") -> true
-            path == "/v1/orders/{orderId}/invoice" -> true
+            path.startsWith("/v1/finance/") -> true
+            path.startsWith("/v1/operations/") -> true
+            path.startsWith("/v1/payments/") && path != "/v1/payments/config" && !path.startsWith("/v1/payments/orders/") -> true
             path.startsWith("/v1/media/secure/") -> true
+            // Orders: Some are public (GET by ID, Cancel), some are private (list)
+            path == "/v1/orders" || path.startsWith("/v1/orders/") && !isPublicOrderEndpoint(path) -> true
             else -> false
         }
+
+    private fun isPublicOrderEndpoint(path: String): Boolean {
+        // Matches GET /v1/orders/{orderId} and POST /v1/orders/{orderId}/cancellations
+        return path.matches(Regex("/v1/orders/[^/]+")) || path.matches(Regex("/v1/orders/[^/]+/cancellations"))
+    }
 }
