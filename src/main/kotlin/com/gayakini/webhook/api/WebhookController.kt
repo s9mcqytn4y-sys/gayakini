@@ -1,6 +1,6 @@
 package com.gayakini.webhook.api
 
-import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService
@@ -11,12 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestHeader
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
-import java.util.UUID
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/v1/webhooks")
@@ -64,9 +59,7 @@ class WebhookController(
 
         paymentService.processMidtransWebhook(payloadMap, effectiveSignature)
 
-        return WebhookAckResponse(
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
-        )
+        return WebhookAckResponse()
     }
 
     @PostMapping("/biteship")
@@ -99,8 +92,6 @@ class WebhookController(
 
         shippingService.processBiteshipWebhook(payloadMap)
 
-        return WebhookAckResponse(
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
-        )
+        return WebhookAckResponse()
     }
 }
