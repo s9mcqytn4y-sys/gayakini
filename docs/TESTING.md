@@ -30,11 +30,13 @@ Located in `src/test/kotlin/**/api/`.
 - **Example**: `ProductControllerTest.kt`, `AdminProductControllerTest.kt`.
 
 ### 3. Integration Tests
-Located in `src/test/kotlin/**/integration/`.
+Located in `src/test/kotlin/**/integration/` or specifically named as `*IntegrationTest.kt`.
 - **Scope**: Persistence, transaction boundaries, end-to-end flows.
-- **Execution**: Slower (requires Docker).
-- **Frameworks**: `@SpringBootTest`, Testcontainers.
-- **Example**: `OrderStateIntegrationTest.kt`.
+- **Base Classes**:
+  - `BaseDbIntegrationTest`: Requires **Testcontainers (PostgreSQL)**. Use this for tests that need a real database.
+  - `BaseWireMockTest`: Mocks external services (Midtrans, Biteship) without requiring a database. Use `application-test-no-db.yml` to skip Docker dependency where possible.
+- **Execution**: Slower (especially `BaseDbIntegrationTest`).
+- **Example**: `OrderStateIntegrationTest.kt`, `BiteshipShippingProviderTest.kt`.
 
 ## Running Tests
 - **All Tests**: `./gradlew test` (Requires Docker)
@@ -50,7 +52,9 @@ Located in `src/test/kotlin/**/integration/`.
 - **ServiceConnection**: Automatically configures Spring Boot to use containerized services.
 
 ## Best Practices
-- **Database Parity**: Never use H2 for integration tests. Always extend `BaseIntegrationTest`.
+- **Standardized Responses**: All controllers must return `ApiResponse<T>` (for single objects) or `PaginatedResponse<T>` (for lists/pages). These are aliases for `StandardResponse<T>` defined in `ApiResponse.kt`.
+- **Database Parity**: Never use H2 for integration tests. Always extend `BaseDbIntegrationTest` if a database is needed.
+- **WireMock for External APIs**: Use `BaseWireMockTest` for testing components that interact with external REST APIs (like Midtrans or Biteship). This avoids `GOAWAY` errors by forcing HTTP/1.1 via `JdkClientHttpRequestFactory`.
 - **Isolation**: Use `@WebMvcTest` for API verification to avoid starting the full database context where not needed.
 - **Mocks**: Prefer `relaxed = true` for MockK only when the specific behavior isn't the focus of the test.
-- **Environment Isolation**: The CI environment may not have Docker available. Ensure unit and web-layer tests are prioritized and verified locally before integration tests.
+- **Environment Isolation**: The CI environment may not have Docker available. Ensure unit and web-layer tests are prioritized. Integration tests requiring Docker should be tagged or handled accordingly in CI.
