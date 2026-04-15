@@ -1,6 +1,6 @@
 package com.gayakini.inventory.api
 
-import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.inventory.application.InventoryService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -31,7 +31,7 @@ class AdminInventoryController(
         @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
         @Valid @RequestBody
         request: InventoryAdjustmentRequest,
-    ): InventoryAdjustmentResponseWrapper {
+    ): ApiResponse<InventoryAdjustmentResponse> {
         val adjustment =
             inventoryService.adjustStock(
                 variantId = request.variantId,
@@ -41,18 +41,9 @@ class AdminInventoryController(
                 idempotencyKey = idempotencyKey ?: request.idempotencyKey,
             )
 
-        return InventoryAdjustmentResponseWrapper(
+        return ApiResponse(
             message = "Stock adjustment recorded successfully.",
             data = InventoryAdjustmentResponse.fromEntity(adjustment),
-            meta = ApiMeta(),
         )
     }
 }
-
-@Schema(description = "Wrapper for inventory adjustment responses.")
-data class InventoryAdjustmentResponseWrapper(
-    @Schema(description = "Status message", example = "Stock adjustment recorded successfully.")
-    val message: String,
-    val data: InventoryAdjustmentResponse,
-    val meta: ApiMeta,
-)
