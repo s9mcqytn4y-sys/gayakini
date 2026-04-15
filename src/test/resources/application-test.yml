@@ -1,7 +1,6 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/testdb
-    driver-class-name: org.postgresql.Driver
+  # DataSource is managed by @ServiceConnection in BaseDbIntegrationTest
+  # or disabled in BaseWireMockTest via the 'test-no-db' profile.
   jpa:
     hibernate:
       ddl-auto: validate
