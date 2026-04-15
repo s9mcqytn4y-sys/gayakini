@@ -1,12 +1,22 @@
 package com.gayakini.order.application
 
-import com.gayakini.BaseIntegrationTest
-import com.gayakini.catalog.domain.*
+import com.gayakini.BaseDbIntegrationTest
+import com.gayakini.catalog.domain.Product
+import com.gayakini.catalog.domain.ProductRepository
+import com.gayakini.catalog.domain.ProductStatus
+import com.gayakini.catalog.domain.ProductVariant
+import com.gayakini.catalog.domain.ProductVariantRepository
+import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.inventory.domain.InventoryAdjustmentRepository
 import com.gayakini.inventory.domain.InventoryReservationRepository
 import com.gayakini.inventory.domain.ReservationStatus
-import com.gayakini.inventory.domain.AdjustmentReason
-import com.gayakini.order.domain.*
+import com.gayakini.order.domain.FulfillmentStatus
+import com.gayakini.order.domain.Order
+import com.gayakini.order.domain.OrderItem
+import com.gayakini.order.domain.OrderRepository
+import com.gayakini.order.domain.OrderShippingAddress
+import com.gayakini.order.domain.OrderShippingSelection
+import com.gayakini.order.domain.OrderStatus
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -14,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 @Transactional
-class OrderStateIntegrationTest : BaseIntegrationTest() {
+class OrderStateIntegrationTest : BaseDbIntegrationTest() {
     @Autowired
     private lateinit var orderRepository: OrderRepository
 

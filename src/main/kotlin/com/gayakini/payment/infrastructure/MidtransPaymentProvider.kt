@@ -3,7 +3,11 @@ package com.gayakini.payment.infrastructure
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.gayakini.infrastructure.config.GayakiniProperties
 import com.gayakini.order.domain.PaymentStatus
-import com.gayakini.payment.domain.*
+import com.gayakini.payment.domain.CustomerPaymentDetails
+import com.gayakini.payment.domain.PaymentGatewayException
+import com.gayakini.payment.domain.PaymentItemDetail
+import com.gayakini.payment.domain.PaymentProvider
+import com.gayakini.payment.domain.PaymentSession
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
@@ -80,7 +84,12 @@ class MidtransPaymentProvider(
 
         return try {
             val headers = createHeaders()
-            val response = restTemplate.postForEntity(properties.midtrans.snapUrl, HttpEntity(params, headers), Map::class.java)
+            val response =
+                restTemplate.postForEntity(
+                    properties.midtrans.snapUrl,
+                    HttpEntity(params, headers),
+                    Map::class.java,
+                )
             val body = response.body
 
             if (response.statusCode.is2xxSuccessful && body != null) {

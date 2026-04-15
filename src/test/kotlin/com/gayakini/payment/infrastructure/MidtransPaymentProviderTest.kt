@@ -1,16 +1,14 @@
 package com.gayakini.payment.infrastructure
 
-import com.gayakini.BaseIntegrationTest
+import com.gayakini.BaseWireMockTest
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.PaymentItemDetail
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import java.util.*
+import java.util.UUID
 
-@Tag("integration")
-class MidtransPaymentProviderTest : BaseIntegrationTest() {
+class MidtransPaymentProviderTest : BaseWireMockTest() {
     @Autowired
     private lateinit var paymentProvider: MidtransPaymentProvider
 

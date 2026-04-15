@@ -1,26 +1,40 @@
 package com.gayakini.payment.infrastructure
 
-import com.gayakini.BaseIntegrationTest
+import com.gayakini.BaseWireMockTest
 import com.gayakini.order.domain.PaymentStatus
 import com.gayakini.payment.domain.CustomerPaymentDetails
 import com.gayakini.payment.domain.PaymentItemDetail
-import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.client.WireMock
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.*
 
 @WireMockTest(httpPort = 8089)
-class MidtransPaymentProviderWireMockTest : BaseIntegrationTest() {
+class MidtransPaymentProviderWireMockTest : BaseWireMockTest() {
     @Autowired
     private lateinit var paymentProvider: MidtransPaymentProvider
+
+    @BeforeEach
+    fun setup() {
+        WireMock.configureFor("localhost", 8089)
+    }
 
     @Test
     fun `should create payment session successfully (wiremocked)`() {
         // Given
-        stubFor(
+        val orderId = UUID.randomUUID()
+        val providerOrderId = "TEST-${System.currentTimeMillis()}"
+
+        WireMock.stubFor(
             post(urlEqualTo("/snap/v1/transactions"))
                 .willReturn(
                     aResponse()
@@ -37,8 +51,6 @@ class MidtransPaymentProviderWireMockTest : BaseIntegrationTest() {
                 ),
         )
 
-        val orderId = UUID.randomUUID()
-        val providerOrderId = "TEST-${System.currentTimeMillis()}"
         val amount = 10000L
         val customerDetails =
             CustomerPaymentDetails(
@@ -71,7 +83,7 @@ class MidtransPaymentProviderWireMockTest : BaseIntegrationTest() {
     fun `should get payment status successfully (wiremocked)`() {
         // Given
         val providerOrderId = "ORDER-123"
-        stubFor(
+        WireMock.stubFor(
             get(urlEqualTo("/v2/$providerOrderId/status"))
                 .willReturn(
                     aResponse()
@@ -99,7 +111,7 @@ class MidtransPaymentProviderWireMockTest : BaseIntegrationTest() {
     fun `should return PENDING when Midtrans returns 404 (wiremocked)`() {
         // Given
         val providerOrderId = "NON-EXISTENT"
-        stubFor(
+        WireMock.stubFor(
             get(urlEqualTo("/v2/$providerOrderId/status"))
                 .willReturn(
                     aResponse()

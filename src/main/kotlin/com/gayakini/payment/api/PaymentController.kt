@@ -1,7 +1,6 @@
 package com.gayakini.payment.api
 
-import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.payment.application.PaymentService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -33,10 +32,10 @@ class PaymentController(
         @Parameter(description = "Token akses pesanan untuk tamu")
         @RequestHeader(value = "X-Order-Token", required = false) orderToken: String?,
         @Valid @RequestBody(required = false) request: CreatePaymentRequest?,
-    ): StandardResponse<PaymentSessionDto> {
+    ): ApiResponse<PaymentSessionDto> {
         val payment = paymentService.createPaymentSession(orderId, idempotencyKey, orderToken, request)
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Pembayaran siap dilanjutkan.",
             data =
                 PaymentSessionDto(
@@ -52,7 +51,6 @@ class PaymentController(
                     snapRedirectUrl = payment.snapRedirectUrl,
                     expiresAt = payment.expiresAt,
                 ),
-            meta = ApiMeta(),
         )
     }
 
@@ -62,8 +60,8 @@ class PaymentController(
         description = "Mendapatkan kunci publik provider (misal: Midtrans Client Key).",
     )
     @SecurityRequirements
-    fun getPaymentConfig(): StandardResponse<PaymentConfigResponse> {
-        return StandardResponse(
+    fun getPaymentConfig(): ApiResponse<PaymentConfigResponse> {
+        return ApiResponse.success(
             message = "Konfigurasi pembayaran berhasil diambil.",
             data =
                 PaymentConfigResponse(

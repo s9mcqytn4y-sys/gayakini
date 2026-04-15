@@ -1,6 +1,6 @@
 package com.gayakini.api
 
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.web.bind.annotation.GetMapping
@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController
 class HelloController {
     @GetMapping
     @Operation(summary = "Cek status layanan")
-    fun hello(): StandardResponse<String> {
-        return StandardResponse(data = "Halo, layanan gayakini API sudah aktif.", message = "Pesan sambutan")
+    fun hello(): ApiResponse<String> {
+        return ApiResponse.success(data = "Halo, layanan gayakini API sudah aktif.", message = "Pesan sambutan")
     }
 }

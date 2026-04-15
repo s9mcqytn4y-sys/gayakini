@@ -1,15 +1,18 @@
 package com.gayakini.shipping.infrastructure
 
-import com.gayakini.BaseIntegrationTest
+import com.gayakini.BaseWireMockTest
 import com.gayakini.shipping.domain.ShippingItem
-import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.stubFor
+import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.junit5.WireMockTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 
 @WireMockTest(httpPort = 8089)
-class BiteshipShippingProviderWireMockTest : BaseIntegrationTest() {
+class BiteshipShippingProviderWireMockTest : BaseWireMockTest() {
     @Autowired
     private lateinit var shippingProvider: BiteshipShippingProvider
 
@@ -17,7 +20,7 @@ class BiteshipShippingProviderWireMockTest : BaseIntegrationTest() {
     fun `should get rates successfully from biteship via wiremock`() {
         // Given
         stubFor(
-            post(urlEqualTo("/rates/couriers"))
+            post(urlEqualTo("/v1/rates/couriers"))
                 .willReturn(
                     aResponse()
                         .withStatus(200)
