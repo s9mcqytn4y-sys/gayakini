@@ -2,7 +2,7 @@ package com.gayakini.cart.api
 
 import com.gayakini.cart.application.CartService
 import com.gayakini.cart.domain.Cart
-import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.MoneyDto
 import com.gayakini.infrastructure.security.SecurityUtils
 import io.swagger.v3.oas.annotations.Operation
@@ -26,7 +26,7 @@ class CartController(private val cartService: CartService) {
     fun createCart(
         @Parameter(description = "Kode mata uang (misal: IDR, USD)")
         @RequestParam(required = false) currency: String?,
-    ): CartResponse {
+    ): ApiResponse<CartDto> {
         val (cart, rawToken) = cartService.createCart(SecurityUtils.getCurrentUserId(), currency ?: "IDR")
         return mapToResponse(cart, "Keranjang berhasil dibuat.", rawToken)
     }
@@ -44,7 +44,7 @@ class CartController(private val cartService: CartService) {
         @PathVariable cartId: UUID,
         @Parameter(description = "Token akses keranjang untuk tamu")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
-    ): CartResponse {
+    ): ApiResponse<CartDto> {
         val cart = cartService.getValidatedCart(cartId, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Keranjang berhasil diambil.")
     }
@@ -61,7 +61,7 @@ class CartController(private val cartService: CartService) {
         @Parameter(description = "Token akses keranjang untuk tamu")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
         @Valid @RequestBody request: AddCartItemRequest,
-    ): CartResponse {
+    ): ApiResponse<CartDto> {
         val cart =
             cartService.addItem(
                 cartId,
@@ -87,7 +87,7 @@ class CartController(private val cartService: CartService) {
         @Parameter(description = "Token akses keranjang untuk tamu")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
         @Valid @RequestBody request: UpdateCartItemRequest,
-    ): CartResponse {
+    ): ApiResponse<CartDto> {
         val cart = cartService.updateItem(cartId, itemId, request.quantity, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Item keranjang berhasil diperbarui.")
     }
@@ -105,7 +105,7 @@ class CartController(private val cartService: CartService) {
         @PathVariable itemId: UUID,
         @Parameter(description = "Token akses keranjang untuk tamu")
         @RequestHeader(value = "X-Cart-Token", required = false) cartToken: String?,
-    ): CartResponse {
+    ): ApiResponse<CartDto> {
         val cart = cartService.removeItem(cartId, itemId, SecurityUtils.getCurrentUserId(), cartToken)
         return mapToResponse(cart, "Item keranjang berhasil dihapus.")
     }
@@ -114,8 +114,8 @@ class CartController(private val cartService: CartService) {
         cart: Cart,
         message: String,
         rawToken: String? = null,
-    ): CartResponse {
-        return CartResponse(
+    ): ApiResponse<CartDto> {
+        return ApiResponse.success(
             message = message,
             data =
                 CartDto(
@@ -151,7 +151,6 @@ class CartController(private val cartService: CartService) {
                             itemCount = cart.itemCount,
                         ),
                 ),
-            meta = ApiMeta(requestId = UUID.randomUUID().toString()),
         )
     }
 }

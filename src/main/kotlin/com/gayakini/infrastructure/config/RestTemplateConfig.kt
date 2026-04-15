@@ -18,10 +18,11 @@ class RestTemplateConfig {
 
     @Bean
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
-        val httpClient = HttpClient.newBuilder()
-            .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
-            .build()
+        val httpClient =
+            HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
+                .build()
 
         val factory = JdkClientHttpRequestFactory(httpClient)
         factory.setReadTimeout(Duration.ofSeconds(READ_TIMEOUT_SECONDS))

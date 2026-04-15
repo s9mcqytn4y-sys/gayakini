@@ -1,6 +1,8 @@
 package com.gayakini.order.api
 
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.PageMeta
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.order.application.OrderService
@@ -35,9 +37,12 @@ class OrderController(
         checkoutToken: String?,
         @RequestBody
         request: PlaceOrderRequest,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val order = orderService.placeOrderFromCheckout(checkoutId, idempotencyKey, checkoutToken, request)
-        return OrderResponseMapper.toResponse(order, "Pesanan berhasil dibuat.", accessToken = checkoutToken)
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order, accessToken = checkoutToken),
+            message = "Pesanan berhasil dibuat.",
+        )
     }
 
     @GetMapping("/orders/{orderId}")
@@ -50,9 +55,12 @@ class OrderController(
         @Parameter(description = "Token akses pesanan (untuk guest atau via email link)")
         @RequestHeader(value = "X-Order-Token", required = false)
         orderToken: String?,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val order = orderService.getAuthorizedOrder(orderId, orderToken)
-        return OrderResponseMapper.toResponse(order, "Detail pesanan berhasil diambil.", accessToken = orderToken)
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order, accessToken = orderToken),
+            message = "Detail pesanan berhasil diambil.",
+        )
     }
 
     @GetMapping("/me/orders")
@@ -60,13 +68,13 @@ class OrderController(
     fun listMyOrders(
         @Parameter(description = "Halaman") @RequestParam(defaultValue = "1") page: Int,
         @Parameter(description = "Ukuran") @RequestParam(defaultValue = "20") size: Int,
-    ): OrderPageResponse {
+    ): PaginatedResponse<OrderDto> {
         val currentUser =
             SecurityContextHolder.getContext().authentication?.principal as? UserPrincipal
                 ?: throw UnauthorizedException()
         val orders = orderService.listOrders(currentUser.id)
 
-        return OrderPageResponse(
+        return PaginatedResponse(
             message = "Daftar pesanan berhasil diambil.",
             data = orders.map { OrderResponseMapper.toDto(it) },
             meta =
@@ -94,8 +102,11 @@ class OrderController(
         orderToken: String?,
         @RequestBody
         request: CancelOrderRequest,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val order = orderService.cancelOrder(orderId, request.reason, idempotencyKey, orderToken)
-        return OrderResponseMapper.toResponse(order, "Pesanan berhasil dibatalkan.", accessToken = orderToken)
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order, accessToken = orderToken),
+            message = "Pesanan berhasil dibatalkan.",
+        )
     }
 }

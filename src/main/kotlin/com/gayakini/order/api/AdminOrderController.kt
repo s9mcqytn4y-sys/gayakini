@@ -1,6 +1,8 @@
 package com.gayakini.order.api
 
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.PageMeta
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderStatus
@@ -49,14 +51,14 @@ class AdminOrderController(
         @Parameter(description = "Search by order number")
         @RequestParam(required = false)
         orderNumber: String?,
-    ): OrderPageResponse {
+    ): PaginatedResponse<OrderDto> {
         val filtered =
             orderService.listOrdersForAdmin(status, paymentStatus, fulfillmentStatus, orderNumber)
         val fromIndex = ((page - 1).coerceAtLeast(0) * size).coerceAtMost(filtered.size)
         val toIndex = (fromIndex + size).coerceAtMost(filtered.size)
         val slice = filtered.subList(fromIndex, toIndex)
 
-        return OrderPageResponse(
+        return PaginatedResponse(
             message = "Daftar pesanan admin berhasil diambil.",
             data = slice.map { OrderResponseMapper.toDto(it, shippingService.findShipmentByOrderId(it.id)) },
             meta =
@@ -76,12 +78,11 @@ class AdminOrderController(
         @Parameter(description = "Order UUID")
         @PathVariable
         orderId: UUID,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val order = orderService.getOrder(orderId)
-        return OrderResponseMapper.toResponse(
-            order = order,
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order, shippingService.findShipmentByOrderId(order.id)),
             message = "Detail pesanan admin berhasil diambil.",
-            shipment = shippingService.findShipmentByOrderId(order.id),
         )
     }
 
@@ -97,13 +98,12 @@ class AdminOrderController(
         idempotencyKey: String,
         @RequestBody(required = false)
         request: AdminCreateShipmentRequest?,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val shipment = shippingService.bookShipment(orderId, idempotencyKey, request)
         val order = orderService.getOrder(orderId)
-        return OrderResponseMapper.toResponse(
-            order = order,
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order, shipment),
             message = "Pengiriman berhasil dibuat.",
-            shipment = shipment,
         )
     }
 
@@ -119,8 +119,11 @@ class AdminOrderController(
         idempotencyKey: String,
         @RequestBody(required = false)
         request: AdminCancelOrderRequest?,
-    ): OrderResponse {
+    ): ApiResponse<OrderDto> {
         val order = orderService.cancelOrderAsAdmin(orderId, request?.reason, idempotencyKey)
-        return OrderResponseMapper.toResponse(order, "Pesanan berhasil dibatalkan oleh admin.")
+        return ApiResponse.success(
+            data = OrderResponseMapper.toDto(order),
+            message = "Pesanan berhasil dibatalkan oleh admin.",
+        )
     }
 }
