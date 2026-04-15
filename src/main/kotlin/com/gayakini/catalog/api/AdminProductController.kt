@@ -2,7 +2,8 @@ package com.gayakini.catalog.api
 
 import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.Product
-import com.gayakini.common.api.ApiMeta
+import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.inventory.domain.AdjustmentReason
 import io.swagger.v3.oas.annotations.Operation
@@ -34,12 +35,11 @@ class AdminProductController(
     @Operation(summary = "Create new product", description = "Add a new product to the catalog.")
     fun createProduct(
         @Valid @RequestBody request: AdminCreateProductRequest,
-    ): AdminProductResponse {
+    ): ApiResponse<AdminProductData> {
         val saved = productService.createProduct(request)
-        return AdminProductResponse(
+        return ApiResponse(
             message = "Product created successfully.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(),
         )
     }
 
@@ -49,12 +49,11 @@ class AdminProductController(
     fun updateProduct(
         @Parameter(description = "Product UUID") @PathVariable productId: UUID,
         @Valid @RequestBody request: AdminUpdateProductRequest,
-    ): AdminProductResponse {
+    ): ApiResponse<AdminProductData> {
         val saved = productService.updateProduct(productId, request)
-        return AdminProductResponse(
+        return ApiResponse(
             message = "Product updated successfully.",
             data = mapToAdminData(saved),
-            meta = ApiMeta(),
         )
     }
 
@@ -69,7 +68,7 @@ class AdminProductController(
         @Parameter(description = "Idempotency token")
         @RequestHeader(value = "Idempotency-Key", required = false) idempotencyKey: String?,
         @Valid @RequestBody request: StockAdjustmentRequest,
-    ): StockAdjustmentResponse {
+    ): ApiResponse<StockAdjustmentData> {
         val reason =
             try {
                 AdjustmentReason.valueOf(request.reasonCode)
@@ -86,7 +85,7 @@ class AdminProductController(
                 idempotencyKey = idempotencyKey,
             )
 
-        return StockAdjustmentResponse(
+        return ApiResponse(
             message = "Stock updated successfully.",
             data =
                 StockAdjustmentData(
@@ -96,7 +95,6 @@ class AdminProductController(
                     stockAvailable = adjustment.stockOnHandAfter - adjustment.stockReservedAfter,
                     lastAdjustmentId = adjustment.id,
                 ),
-            meta = ApiMeta(),
         )
     }
 
@@ -122,7 +120,7 @@ class AdminProductController(
         @RequestParam(defaultValue = "Product image") altText: String,
         @Parameter(description = "Set as primary image")
         @RequestParam(defaultValue = "false") isPrimary: Boolean,
-    ): AdminProductResponse {
+    ): ApiResponse<AdminProductData> {
         val media =
             productService.uploadProductMedia(
                 productId = productId,
@@ -132,10 +130,9 @@ class AdminProductController(
                 isPrimary = isPrimary,
             )
 
-        return AdminProductResponse(
+        return ApiResponse(
             message = "Product image uploaded successfully.",
             data = mapToAdminData(media.product),
-            meta = ApiMeta(),
         )
     }
 

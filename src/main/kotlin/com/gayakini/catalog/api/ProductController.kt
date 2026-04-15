@@ -5,7 +5,10 @@ import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.PublicProductSummary
 import com.gayakini.catalog.domain.VariantStatus
-import com.gayakini.common.api.*
+import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.MoneyDto
+import com.gayakini.common.api.PageMeta
+import com.gayakini.common.api.PaginatedResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
@@ -78,13 +81,12 @@ class ProductController(private val productService: ProductService) {
     @SecurityRequirements
     fun getProductById(
         @Parameter(description = "UUID unik produk") @PathVariable productId: UUID,
-    ): StandardResponse<ProductDetailDto> {
+    ): ApiResponse<ProductDetailDto> {
         val product = productService.getProduct(productId)
 
-        return StandardResponse(
+        return ApiResponse(
             message = "Detail produk berhasil diambil.",
             data = mapToDetail(product),
-            meta = ApiMeta(),
         )
     }
 
@@ -93,13 +95,12 @@ class ProductController(private val productService: ProductService) {
     @SecurityRequirements
     fun listProductVariants(
         @Parameter(description = "UUID unik produk") @PathVariable productId: UUID,
-    ): StandardResponse<List<ProductVariantDto>> {
+    ): ApiResponse<List<ProductVariantDto>> {
         val product = productService.getProduct(productId)
 
-        return StandardResponse(
+        return ApiResponse(
             message = "Variasi produk berhasil diambil.",
             data = product.variants.map { mapToVariantDto(it) },
-            meta = ApiMeta(),
         )
     }
 
