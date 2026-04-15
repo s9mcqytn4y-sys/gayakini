@@ -13,8 +13,8 @@ COPY settings.gradle.kts .
 COPY gradle.properties .
 
 # Build executable jar using gradle directly
-# We use app.jar as defined in build.gradle.kts bootJar task
-RUN gradle clean bootJar -x test -x detekt -x ktlintCheck --no-daemon
+# We use ciBuild task to ensure all quality gates (tests, coverage, lint, detekt) are passed
+RUN gradle clean ciBuild --no-daemon
 
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jre-alpine

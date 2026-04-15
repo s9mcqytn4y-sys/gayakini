@@ -18,12 +18,14 @@ import com.gayakini.order.domain.OrderShippingAddress
 import com.gayakini.order.domain.OrderShippingSelection
 import com.gayakini.order.domain.OrderStatus
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
 
 @Transactional
+@Tag("integration")
 class OrderStateIntegrationTest : BaseDbIntegrationTest() {
     @Autowired
     private lateinit var orderRepository: OrderRepository

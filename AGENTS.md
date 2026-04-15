@@ -32,3 +32,7 @@ The system handles complex data management and standardization for Indonesian in
    - Use `@WebMvcTest` for controller/security slices.
    - Use `Testcontainers` (PostgreSQL 16) for integration tests. **Never use H2.**
    - All PRs must pass `./gradlew ciBuild`.
+6. **Agent constraints:**
+   - **Verification:** Always run `./gradlew ciBuild` before declaring a task complete.
+   - **Test Logs:** Logs are suppressed on success. Failures use `SHORT` stack traces. Do not re-enable full traces.
+   - **Integration:** Use Spring Boot 3.4 `@ServiceConnection` for Testcontainers.

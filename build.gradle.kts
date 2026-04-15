@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.testing.TestDescriptor
+import org.gradle.api.tasks.testing.TestResult
 
 plugins {
     id("org.springframework.boot") version "3.4.0"
@@ -116,6 +118,8 @@ tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
     systemProperty("spring.profiles.active", "local")
 }
 
+// --- TEST CONFIGURATION ---
+
 tasks.withType<Test> {
     useJUnitPlatform {
         if (project.hasProperty("excludeIntegration")) {
@@ -123,9 +127,49 @@ tasks.withType<Test> {
         }
     }
     testLogging {
-        events("passed", "skipped", "failed")
+        events("failed")
         showStandardStreams = false
-        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT
+    }
+
+    // Clean summary for agents and CI
+    @Suppress("MaxLineLength")
+    afterSuite(KotlinClosure2<TestDescriptor, TestResult, Unit>({ desc, result ->
+        if (desc.parent == null) {
+            val resultsText = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+            val startItem = "|  "
+            val endItem = "  |"
+            val repeatLength = resultsText.length + startItem.length + endItem.length
+            println("\n" + ("-".repeat(repeatLength)))
+            println("$startItem$resultsText$endItem")
+            println("-".repeat(repeatLength) + "\n")
+        }
+    }))
+}
+
+// --- KOVER CONFIGURATION ---
+
+kover {
+    reports {
+        verify {
+            rule {
+                // isEnabled = true // Deprecated/Removed in 0.8.x, enabled by default
+                groupBy.set(kotlinx.kover.gradle.plugin.dsl.GroupingEntityType.APPLICATION)
+                bound {
+                    minValue.set(80)
+                }
+            }
+        }
+        filters {
+            excludes {
+                classes(
+                    "com.gayakini.GayakiniApplicationKt",
+                    "**.*Dto",
+                    "com.gayakini.infrastructure.config.*",
+                    "com.gayakini.common.api.*"
+                )
+            }
+        }
     }
 }
 
@@ -134,5 +178,12 @@ tasks.withType<Test> {
 tasks.register("ciBuild") {
     group = "verification"
     description = "Runs all checks required for CI/CD pipeline"
-    dependsOn("ktlintCheck", "detekt", "koverHtmlReport", "test")
+    dependsOn("ktlintCheck", "detekt", "test", "koverVerify", "koverHtmlReport", "bootJar")
 }
+
+// Deterministic ordering for fail-fast behavior
+tasks.named("detekt") { mustRunAfter("ktlintCheck") }
+tasks.named("test") { mustRunAfter("detekt") }
+tasks.named("koverVerify") { mustRunAfter("test") }
+tasks.named("koverHtmlReport") { mustRunAfter("koverVerify") }
+tasks.named("bootJar") { mustRunAfter("koverHtmlReport") }

@@ -1,25 +1,14 @@
 #!/bin/bash
 set -e
 
-# Gayakini Phase 6 CI Orchestrator
+# Gayakini CI Orchestrator
 # This script mimics the GitHub Actions pipeline for local validation.
 
-echo "🚀 Starting Gayakini CI Pipeline..."
+echo "🚀 Starting Gayakini CI Pipeline (Local Synchronization)..."
 
-# 1. Linting (ktlint)
-echo "🔍 Running Linting (ktlint)..."
-./gradlew ktlintCheck
-
-# 2. Static Analysis (detekt)
-echo "🛡️ Running Static Analysis (detekt)..."
-./gradlew detekt
-
-# 3. Unit & Isolated Tests (No Docker required)
-echo "🧪 Running Fast Tests (Unit + Isolated)..."
-./gradlew test -PexcludeIntegration
-
-# 4. Coverage Report
-echo "📊 Generating Coverage Report..."
-./gradlew koverHtmlReport
+# Use the canonical Gradle task for full verification
+# This includes ktlint, detekt, all tests (Unit + Integration), and Kover coverage gate.
+./gradlew ciBuild
 
 echo "✅ CI Pipeline Passed Successfully!"
+echo "📊 Coverage report available at: build/reports/kover/html/index.html"

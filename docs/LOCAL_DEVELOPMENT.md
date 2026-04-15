@@ -3,7 +3,7 @@
 ## Setup
 
 1. **JDK 17**: Ensure you have JDK 17 installed and `JAVA_HOME` set.
-2. **Docker**: Used for running the PostgreSQL database.
+2. **Docker**: Ensure Docker is running to support PostgreSQL 16 via Testcontainers.
 3. **Environment**: Copy `.env.example` to `.env` and adjust as needed.
 
 ## Running the Application
@@ -16,21 +16,31 @@ The application will start with the `local` profile enabled.
 
 ## Code Quality & Verification
 
-Before pushing any changes, ensure all checks pass:
+The project enforces strict quality gates before any code is considered ready for pull requests.
 
-### Verification
+### The Canonical Gate
 ```bash
 ./gradlew ciBuild
 ```
-This runs `ktlintCheck`, `detekt`, and all tests with coverage analysis.
+This is the ultimate local verification. It runs:
+1.  **KtLint Check**: Kotlin style validation.
+2.  **Detekt**: Static code analysis.
+3.  **Tests**: Unit and integration test suite.
+4.  **Kover**: 80% instruction coverage verification.
+5.  **BootJar**: Assembles the executable JAR.
 
-### Test Coverage
+### Test Coverage Report
 To view the coverage report:
 ```bash
 ./gradlew koverHtmlReport
 ```
 Open `build/reports/kover/html/index.html` in your browser.
 
+### Test Logging Behavior
+-   **Success**: Logs are intentionally suppressed on success to reduce terminal noise.
+-   **Failure**: You will only see failures with `SHORT` stack traces.
+-   **Summary**: A concise result summary is printed at the end.
+
 ## Database Migrations
 We use Flyway for database migrations. New migrations should be placed in `src/main/resources/db/migration/`.
-The migrations are automatically applied on startup.
+Migrations are automatically applied on startup.

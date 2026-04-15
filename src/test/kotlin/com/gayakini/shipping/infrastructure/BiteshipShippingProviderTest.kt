@@ -1,6 +1,5 @@
 package com.gayakini.shipping.infrastructure
 
-import com.gayakini.BaseIntegrationTest
 import com.gayakini.BaseWireMockTest
 import com.gayakini.shipping.domain.ShippingItem
 import org.junit.jupiter.api.Disabled

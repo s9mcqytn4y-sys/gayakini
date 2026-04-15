@@ -1,60 +1,56 @@
-## Testing Strategy
+# Testing Strategy
 
 ## Overview
-We prioritize a stable and reliable test suite using JUnit 5. All tests are executed via the Gradle `test` task. The testing strategy follows a modern pyramid:
+We prioritize a stable, high-coverage, and machine-readable test suite. The build fails-fast if any quality gate is not met.
 
-1. **Pure Unit Tests**: High-speed, deterministic verification of domain logic and utilities. **No Spring context, no DB, no HTTP, no Docker.**
-2. **Web Slice Tests**: `@WebMvcTest` to verify controllers, security, and JSON mapping in isolation.
-3. **Integration Tests**: Full-context tests using **Testcontainers (PostgreSQL)** to ensure parity with production.
+## Testing Pyramid
 
-## Test Tiers
+1.  **Unit Tests**: Standard JUnit 5 and MockK. Located in `src/test/kotlin/**/domain/` or `src/test/kotlin/**/application/`.
+    -   *Constraint*: No Spring context, no Database, no Docker.
+2.  **Web Slice Tests**: `@WebMvcTest` for controller, security, and JSON mapping verification.
+    -   *Standard*: Use `MockMvc` and verify RBAC rules in isolation.
+3.  **Integration Tests**: Full-context tests using **Testcontainers (PostgreSQL 16)**.
+    -   *Infrastructure*: Use Spring Boot 3.4 `@ServiceConnection` for automatic container configuration.
+    -   *Constraint*: **Never use H2.** All persistence tests must run against a real PostgreSQL container.
+4.  **External API Tests**: Stubbed via **WireMock**.
+    -   *Standard*: Mock external providers (e.g., Midtrans, Biteship) to ensure deterministic results.
 
-### 1. Pure Unit Tests
-Located in `src/test/kotlin/**/domain/` or `src/test/kotlin/**/util/`.
-- **Scope**: Entities, value objects, utility classes, and service logic (mocked).
-- **Execution**: Extremely fast (<1s per class).
-- **Frameworks**: JUnit 5, MockK.
-- **Constraints**: 
-    - No `@SpringBootTest`.
-    - No `@ExtendWith(SpringExtension.class)`.
-    - No database or external service calls.
-- **Example**: `OrderTest.kt`, `HashUtilsTest.kt`.
+## Quality Gates & Coverage
 
-### 2. Web Slice Tests
-Located in `src/test/kotlin/**/api/`.
-- **Scope**: API endpoints, security annotations (RBAC), request/response validation, and JSON mapping.
-- **Execution**: Moderate speed (boots a minimal Spring context with `@WebMvcTest`).
-- **Standard**: All web slice tests should extend `BaseWebMvcTest` and use `MockMvc`.
-- **Mocking**: Mocks are used for all underlying services to keep tests focused on the web layer and avoid requiring a database.
-- **Security**: Security behavior is verified using mock JWT tokens (e.g., `valid-admin-token`, `valid-customer-token`) configured in `BaseWebMvcTest.SecurityTestConfig`.
-- **Example**: `ProductControllerTest.kt`, `AdminProductControllerTest.kt`.
+### JetBrains Kover
+We enforce a minimum of **80% instruction coverage** across the application.
+-   **Verification**: The build will fail if coverage falls below 80%.
+-   **Exclusions**: DTOs, application entry points (`*ApplicationKt`), and infrastructure configurations are excluded from the metric.
+-   **Local Report**: Run `./gradlew koverHtmlReport` to generate a report.
+-   **Output**: `build/reports/kover/html/index.html`.
 
-### 3. Integration Tests
-Located in `src/test/kotlin/**/integration/` or specifically named as `*IntegrationTest.kt`.
-- **Scope**: Persistence, transaction boundaries, end-to-end flows.
-- **Base Classes**:
-  - `BaseDbIntegrationTest`: Requires **Testcontainers (PostgreSQL)**. Use this for tests that need a real database.
-  - `BaseWireMockTest`: Mocks external services (Midtrans, Biteship) without requiring a database. Use `application-test-no-db.yml` to skip Docker dependency where possible.
-- **Execution**: Slower (especially `BaseDbIntegrationTest`).
-- **Example**: `OrderStateIntegrationTest.kt`, `BiteshipShippingProviderTest.kt`.
+### Test Logging
+Logs are optimized for both humans and CI agents:
+-   **Success**: Logs are suppressed to reduce noise.
+-   **Failure**: Detailed failure information is shown using `SHORT` stack trace formatting for clarity.
+-   **Summary**: A clean summary block is printed at the end of the test suite execution.
 
-## Running Tests
-- **All Tests**: `./gradlew test` (Requires Docker)
-- **Fast Tests (No Docker)**: `./gradlew test -PexcludeIntegration` (Skips `@Tag("integration")` tests)
-- **CI Pass**: `./gradlew ciBuild` (Runs all checks, linting, and coverage)
-- **Local CI Pipeline**: `./scripts/ci.sh` (Mimics GitHub Actions locally)
-- **Coverage**: `./gradlew koverHtmlReport` (Reports in `build/reports/kover/html`)
+## Execution
+-   **The Canonical Gate**: `./gradlew ciBuild` (Runs Lint -> Detekt -> Test -> Kover -> BootJar).
+-   **Standard Test**: `./gradlew test`.
+-   **Fast Mode**: `./gradlew test -PexcludeIntegration` (Skips Docker-dependent integration tests).
 
-## Key Technologies
-- **Testcontainers**: Provides a real PostgreSQL 16 instance for integration tests via `@Tag("integration")`. **Requirement**: Local Docker daemon must be running for these tests to pass.
-- **MockK**: Idiomatic Kotlin mocking library.
-- **WireMock**: Mocks external HTTP services (Midtrans, Biteship) for isolated provider testing. External providers like `MidtransPaymentProvider` and `BiteshipShippingProvider` use `RestTemplate` to allow transparent redirection to WireMock during tests.
-- **ServiceConnection**: Automatically configures Spring Boot to use containerized services.
+## Integration Test Example (`@ServiceConnection`)
 
-## Best Practices
-- **Standardized Responses**: All controllers must return `ApiResponse<T>` (for single objects) or `PaginatedResponse<T>` (for lists/pages). These are aliases for `StandardResponse<T>` defined in `ApiResponse.kt`.
-- **Database Parity**: Never use H2 for integration tests. Always extend `BaseDbIntegrationTest` if a database is needed.
-- **WireMock for External APIs**: Use `BaseWireMockTest` for testing components that interact with external REST APIs (like Midtrans or Biteship). This avoids `GOAWAY` errors by forcing HTTP/1.1 via `JdkClientHttpRequestFactory`.
-- **Isolation**: Use `@WebMvcTest` for API verification to avoid starting the full database context where not needed.
-- **Mocks**: Prefer `relaxed = true` for MockK only when the specific behavior isn't the focus of the test.
-- **Environment Isolation**: The CI environment may not have Docker available. Ensure unit and web-layer tests are prioritized. Integration tests requiring Docker should be tagged or handled accordingly in CI.
+```kotlin
+@Testcontainers
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+class MyIntegrationTest {
+
+    companion object {
+        @Container
+        @ServiceConnection
+        val postgres = PostgreSQLContainer("postgres:16-alpine")
+    }
+
+    @Test
+    fun `should persist data`() {
+        // ...
+    }
+}
+```
