@@ -1,6 +1,5 @@
 package com.gayakini.webhook.api
 
-import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.ForbiddenException
 import com.gayakini.common.api.WebhookAckResponse
 import com.gayakini.payment.application.PaymentService

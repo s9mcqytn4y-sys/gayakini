@@ -3,7 +3,6 @@ package com.gayakini.catalog.api
 import com.gayakini.catalog.application.ProductService
 import com.gayakini.catalog.domain.Product
 import com.gayakini.common.api.ApiResponse
-import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.inventory.application.InventoryService
 import com.gayakini.inventory.domain.AdjustmentReason
 import io.swagger.v3.oas.annotations.Operation
