@@ -23,6 +23,7 @@ import com.gayakini.finance.domain.LedgerEntryRepository
 import com.gayakini.finance.domain.PayoutDestinationRepository
 import com.gayakini.finance.domain.WithdrawalRequestRepository
 import com.gayakini.inventory.domain.InventoryAdjustmentRepository
+import com.gayakini.inventory.domain.InventoryMovementRepository
 import com.gayakini.inventory.domain.InventoryReservationRepository
 import com.gayakini.location.domain.LocationAreaRepository
 import com.gayakini.order.domain.OrderRepository
@@ -94,6 +95,9 @@ abstract class BaseWireMockTest : BaseIntegrationTest() {
 
     @MockBean
     private lateinit var inventoryAdjustmentRepository: InventoryAdjustmentRepository
+
+    @MockBean
+    private lateinit var inventoryMovementRepository: InventoryMovementRepository
 
     @MockBean
     private lateinit var categoryRepository: CategoryRepository

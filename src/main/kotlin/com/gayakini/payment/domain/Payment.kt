@@ -9,6 +9,8 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.Version
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedBy
@@ -39,6 +41,7 @@ class Payment(
     @Column(name = "preferred_channel")
     var preferredChannel: String? = null,
     @Column(name = "enabled_channels", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     var enabledChannels: String? = null,
     @Column(name = "provider_order_id", nullable = false, unique = true)
     val providerOrderId: String,
@@ -49,8 +52,10 @@ class Payment(
     @Column(name = "raw_provider_status")
     var rawProviderStatus: String? = null,
     @Column(name = "provider_request_payload", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     var providerRequestPayload: String? = null,
     @Column(name = "provider_response_payload", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
     var providerResponsePayload: String? = null,
     @Column(name = "snap_token")
     var snapToken: String? = null,

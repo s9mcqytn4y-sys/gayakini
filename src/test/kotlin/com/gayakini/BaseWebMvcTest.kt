@@ -55,6 +55,12 @@ abstract class BaseWebMvcTest {
                         email = "customer@gayakini.com",
                         role = "CUSTOMER",
                     )
+                every { parseToken("valid-operator-token") } returns
+                    UserPrincipal(
+                        id = UUID.fromString("00000000-0000-0000-0000-000000000003"),
+                        email = "operator@gayakini.com",
+                        role = "OPERATOR",
+                    )
             }
 
         @Bean
@@ -91,12 +97,14 @@ abstract class BaseWebMvcTest {
                     auth
                         .requestMatchers("/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/v1/me/**").hasRole("CUSTOMER")
+                        .requestMatchers("/v1/operations/**").hasAnyRole("ADMIN", "OPERATOR")
                         .anyRequest().permitAll()
                 }
                 .exceptionHandling {
                     it.authenticationEntryPoint(customAuthenticationEntryPoint)
                     it.accessDeniedHandler(customAccessDeniedHandler)
                 }
+                .csrf { it.disable() }
                 .addFilterBefore(
                     requestIdFilter,
                     org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter::class.java,

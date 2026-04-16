@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.repository.CrudRepository
 import org.springframework.stereotype.Repository
 import java.time.Instant
@@ -28,6 +30,7 @@ class PaymentReceipt(
     var fraudStatus: String? = null,
     @Column(name = "received_signature", nullable = false)
     val receivedSignature: String,
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "raw_payload", columnDefinition = "jsonb", nullable = false)
     val rawPayload: String,
     @Enumerated(EnumType.STRING)

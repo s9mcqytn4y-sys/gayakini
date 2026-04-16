@@ -79,6 +79,7 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    testImplementation("com.ninja-squad:springmockk:4.0.2")
     testImplementation("org.wiremock:wiremock-standalone:3.9.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

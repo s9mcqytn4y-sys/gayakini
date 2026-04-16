@@ -345,6 +345,7 @@ class Shipment(
     var trackingUrl: String? = null,
     @jakarta.persistence.Column(length = 300)
     var note: String? = null,
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @jakarta.persistence.Column(name = "provider_response_payload", columnDefinition = "JSONB")
     var providerResponsePayload: String? = null,
     @jakarta.persistence.Column(name = "booked_at")
