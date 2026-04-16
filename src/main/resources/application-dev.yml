@@ -1,18 +1,22 @@
-# Development environment overrides (Shared among team members)
+# Development Overlay (Runs in Docker Dev Stack)
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:gayakini}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
+  mail:
+    host: ${SMTP_HOST:mail}
+    port: ${SMTP_PORT:1025}
+
 gayakini:
   jwt:
-    secret: ${JWT_SECRET:shared-dev-secret-key-that-is-at-least-32-characters}
-  storage:
-    local-path: storage/dev
-  billing:
-    invoice-prefix: INV
-    company:
-      name: GAYAKINI (DEV)
-      address: Jl. Fashion No. 123, Jakarta Selatan
-      phone: +62 21 1234 5678
-      email: billing@gayakini.com
+    secret: ${JWT_SECRET:dev-secret-key-at-least-32-chars-long}
+  midtrans:
+    is-production: false
+    server-key: ${MIDTRANS_SERVER_KEY}
+  biteship:
+    api-key: ${BITESHIP_API_KEY}
 
 logging:
   level:
-    com.gayakini.billing: DEBUG
-    com.gayakini.infrastructure.storage: DEBUG
+    com.gayakini: DEBUG

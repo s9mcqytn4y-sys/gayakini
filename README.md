@@ -10,21 +10,35 @@ Backend architecture for Gayakini, an e-commerce platform for industrial supplie
 - **Spring Boot 3.4.0**
 - **PostgreSQL** (Flyway for migrations)
 
+## Environment Matrix
+
+| Feature             | Local (Host)          | Dev (Docker)          | Staging (Sim)         |
+|---------------------|-----------------------|-----------------------|-----------------------|
+| **Profile**         | `local`               | `dev`                 | `staging`             |
+| **DB Host**         | `localhost`           | `db` (container)      | External / Env        |
+| **Mail Host**       | `localhost` (Mailpit) | `mail` (Mailpit)      | External / Env        |
+| **Memory (JVM)**    | 20% - 50% RAM         | 25% - 60% RAM         | 25% - 70% RAM         |
+| **Secrets Source**  | `.env`                | `.env` / Compose      | Environment Vars      |
+| **Purpose**         | Fast Iteration        | Container Integration | Pre-prod Validation  |
+
 ## Getting Started
 
 ### Prerequisites
 - JDK 17
-- Docker (for PostgreSQL and Mailpit)
+- Docker
 
-### Full Stack (App + Infrastructure)
+### Fast Path (Developer Workflow)
+We provide a helper script for common environment flows:
 ```bash
-docker compose up -d
+./scripts/dev.sh infra-up   # Start DB/Mailpit on host
+./scripts/dev.sh app-run    # Run app via Gradle (Profile: local)
+./scripts/dev.sh dev-stack  # Full containerized stack (Profile: dev)
 ```
 
-### Local Development (Infrastructure Only)
+### Manual Setup
 1. Clone the repository.
 2. Set up environment variables: `cp .env.example .env`.
-3. Start local infrastructure: `docker compose up -d db mail`.
+3. Start local infrastructure: `docker compose up -d`.
 4. Run the application: `./gradlew bootRun`.
 5. Access the application:
     - **API**: `http://localhost:8080`

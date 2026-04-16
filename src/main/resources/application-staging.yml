@@ -1,0 +1,29 @@
+# Staging environment (Pre-production simulation)
+# Strictly reads from environment variables, no sensitive defaults.
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  mail:
+    host: ${SMTP_HOST}
+    port: ${SMTP_PORT}
+    username: ${SMTP_USERNAME}
+    password: ${SMTP_PASSWORD}
+
+gayakini:
+  jwt:
+    secret: ${JWT_SECRET}
+  midtrans:
+    is-production: false # Staging usually uses sandbox
+    server-key: ${MIDTRANS_SERVER_KEY}
+    client-key: ${MIDTRANS_CLIENT_KEY}
+  biteship:
+    api-key: ${BITESHIP_API_KEY}
+    webhook-secret: ${BITESHIP_WEBHOOK_SECRET}
+
+logging:
+  level:
+    root: INFO
+    com.gayakini: INFO
