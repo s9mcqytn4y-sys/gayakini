@@ -3,18 +3,23 @@ FROM gradle:8.11.1-jdk17-alpine AS builder
 
 WORKDIR /app
 
+# Copy gradle wrapper first for better caching
+COPY gradlew .
+COPY gradle gradle
+
 # Copy config folder for Detekt baseline
 COPY config config
 
-# Copy source code
+# Copy source code and other files
 COPY src src
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
 COPY gradle.properties .
 
-# Build executable jar using gradle directly
+# Build executable jar using the wrapper to ensure version consistency
 # We use ciBuild task to ensure all quality gates (tests, coverage, lint, detekt) are passed
-RUN gradle clean ciBuild --no-daemon
+# We skip integration tests to avoid requiring a running database in the build environment
+RUN chmod +x gradlew && ./gradlew clean ciBuild -PexcludeIntegration --no-daemon
 
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jre-alpine

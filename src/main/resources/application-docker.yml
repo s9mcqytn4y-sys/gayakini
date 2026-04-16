@@ -1,25 +1,16 @@
+# Configuration for running the app inside a Docker container (Docker Compose)
 spring:
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gayakini}
+    url: jdbc:postgresql://${DB_HOST:db}:${DB_PORT:5432}/${DB_NAME:gayakini}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false
-    properties:
-      hibernate:
-        format_sql: true
-        default_schema: ${DB_SCHEMA:commerce}
   flyway:
     enabled: true
     default-schema: ${DB_SCHEMA:commerce}
     schemas: ${DB_SCHEMA:commerce}, public
-    create-schemas: true
-    baseline-on-migrate: true
-    validate-on-migrate: true
-    clean-disabled: false
 
 management:
   endpoint:
@@ -27,37 +18,16 @@ management:
       probes:
         enabled: true
       show-details: always
-      group:
-        readiness:
-          include: db
-  health:
-    livenessstate:
-      enabled: true
-    readinessstate:
-      enabled: true
 
 logging:
   level:
     root: INFO
     com.gayakini: DEBUG
-    org.hibernate.SQL: INFO
-    org.hibernate.orm.jdbc.bind: ERROR
-    org.springframework.web: INFO
 
 gayakini:
   jwt:
-    secret: ${JWT_SECRET:super-secret-key-change-this-in-production-at-least-chars-32}
-  cors:
-    allowed-origins:
-      - "http://localhost:3000"
-      - "http://localhost:5173"
+    secret: ${JWT_SECRET:docker-compose-secret-key-at-least-32-characters}
   midtrans:
-    is-production: ${MIDTRANS_IS_PRODUCTION:false}
-    server-key: ${MIDTRANS_SERVER_KEY:your-midtrans-server-key}
-    client-key: ${MIDTRANS_CLIENT_KEY:your-midtrans-client-key}
-    api-url: ${MIDTRANS_API_URL:https://api.sandbox.midtrans.com/v2}
-    snap-url: ${MIDTRANS_SNAP_URL:https://app.sandbox.midtrans.com/snap/v1/transactions}
-  biteship:
-    api-key: ${BITESHIP_API_KEY:your-biteship-api-key}
-    api-url: ${BITESHIP_API_URL:https://api.biteship.com/v1}
-    webhook-secret: ${BITESHIP_WEBHOOK_SECRET:dummy-webhook-secret}
+    is-production: false
+    api-url: https://api.sandbox.midtrans.com/v2
+    snap-url: https://app.sandbox.midtrans.com/snap/v1/transactions

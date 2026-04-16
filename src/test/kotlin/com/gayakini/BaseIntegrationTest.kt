@@ -38,21 +38,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.DynamicPropertyRegistry
+import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
 @Tag("integration")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-abstract class BaseIntegrationTest {
-    @BeforeEach
-    fun resetWireMock() {
-        WireMock.reset()
-    }
-}
+abstract class BaseIntegrationTest
 
 /**
  * Base class for tests that require external provider mocks (WireMock)
@@ -63,6 +57,11 @@ abstract class BaseIntegrationTest {
 @ActiveProfiles("test", "test-no-db")
 @Suppress("UnusedPrivateMember")
 abstract class BaseWireMockTest : BaseIntegrationTest() {
+    @BeforeEach
+    fun resetWireMock() {
+        runCatching { WireMock.reset() }
+    }
+
     @MockBean
     private lateinit var auditRepository: AuditRepository
 
@@ -166,17 +165,50 @@ abstract class BaseWireMockTest : BaseIntegrationTest() {
 /**
  * Base class for full integration tests that require a real PostgreSQL database.
  * Uses Testcontainers and @ServiceConnection for configuration.
+ *
+ * Fallback: If Testcontainers fails (common on Windows), we can rely on a local DB.
  */
-@Testcontainers
 abstract class BaseDbIntegrationTest : BaseIntegrationTest() {
     companion object {
-        @Container
-        @ServiceConnection
-        val postgres =
-            PostgreSQLContainer("postgres:16-alpine").apply {
-                withDatabaseName("testdb")
-                withUsername("test")
-                withPassword("test")
+        private val useTestcontainers =
+            System.getProperty("testcontainers.enabled")?.toBoolean()
+                ?: System.getenv("TESTCONTAINERS_ENABLED")?.toBoolean()
+                ?: true
+
+        @JvmStatic
+        val postgres: PostgreSQLContainer<*>? =
+            if (useTestcontainers) {
+                try {
+                    PostgreSQLContainer("postgres:16-alpine").apply {
+                        withDatabaseName("testdb")
+                        withUsername("test")
+                        withPassword("test")
+                        withStartupTimeout(java.time.Duration.ofMinutes(2))
+                        withStartupAttempts(3)
+                        start()
+                    }
+                } catch (e: Exception) {
+                    println("Failed to start Testcontainers: ${e.message}. Falling back to local DB.")
+                    null
+                }
+            } else {
+                null
             }
+
+        @JvmStatic
+        @DynamicPropertySource
+        fun registerPostgresProperties(registry: DynamicPropertyRegistry) {
+            if (useTestcontainers && postgres != null) {
+                registry.add("spring.datasource.url", postgres::getJdbcUrl)
+                registry.add("spring.datasource.username", postgres::getUsername)
+                registry.add("spring.datasource.password", postgres::getPassword)
+            } else {
+                // Fallback to local Docker Compose DB if Testcontainers is disabled
+                registry.add("spring.datasource.url") { "jdbc:postgresql://localhost:5432/gayakini" }
+                registry.add("spring.datasource.username") { "postgres" }
+                registry.add("spring.datasource.password") { "password" }
+            }
+            registry.add("spring.flyway.enabled") { "true" }
+        }
     }
 }

@@ -3,19 +3,18 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gayakini}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: false                 # Reduced noise
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
-        default_schema: commerce
+        default_schema: ${DB_SCHEMA:commerce}
   flyway:
     enabled: true
-    default-schema: commerce
-    schemas: commerce, public
+    default-schema: ${DB_SCHEMA:commerce}
+    schemas: ${DB_SCHEMA:commerce}, public
     baseline-on-migrate: true
     validate-on-migrate: true
     clean-disabled: false
@@ -36,13 +35,13 @@ logging:
   level:
     root: INFO
     com.gayakini: DEBUG
-    org.hibernate.SQL: INFO        # Only log when explicitly needed
-    org.hibernate.orm.jdbc.bind: ERROR # Kill the trace noise
+    org.hibernate.SQL: INFO
+    org.hibernate.orm.jdbc.bind: ERROR
     org.springframework.web: INFO
 
 gayakini:
   jwt:
-    secret: ${JWT_SECRET:super-secret-key-change-this-in-production-at-least-chars-32}
+    secret: ${JWT_SECRET:dev-secret-key-that-is-at-least-32-characters-long}
   cors:
     allowed-origins:
       - "http://localhost:3000"

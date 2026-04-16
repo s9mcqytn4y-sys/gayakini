@@ -3,8 +3,44 @@
 ## Setup
 
 1. **JDK 17**: Ensure you have JDK 17 installed and `JAVA_HOME` set.
-2. **Docker**: Ensure Docker is running to support PostgreSQL 16 via Testcontainers.
-3. **Environment**: Copy `.env.example` to `.env` and adjust as needed.
+2. **Docker**: Ensure Docker is running to support local infrastructure via Docker Compose and integration tests via Testcontainers.
+3. **Environment**: Copy `.env.example` to `.env`. Adjust `DB_HOST` and `SMTP_HOST` if you are running the app outside of Docker.
+
+## Local Infrastructure
+
+We use Docker Compose to manage local dependencies (PostgreSQL and Mailpit).
+
+### Start the infrastructure (Database & Mail)
+```bash
+docker compose up -d db mail
+```
+This will start:
+- **PostgreSQL 16** (Port 5432, with healthcheck)
+- **Mailpit** (SMTP Port 1025, Web UI Port 8025)
+
+### Start the full stack (Infrastructure + App)
+```bash
+docker compose up -d
+```
+This will build the application image and start it alongside the infrastructure.
+
+You can verify the status with:
+```bash
+docker compose ps
+```
+Ensure `gayakini-db` is `healthy` before starting the application.
+
+### Service Table
+| Service | Internal Port | External Port | Purpose |
+|---------|---------------|---------------|---------|
+| Postgres| 5432          | 5432          | Primary Database |
+| Mailpit | 1025          | 1025          | SMTP Server |
+| Mailpit | 8025          | 8025          | Email Web UI |
+
+### Stop the stack
+```bash
+docker compose down
+```
 
 ## Running the Application
 
@@ -26,8 +62,15 @@ This is the ultimate local verification. It runs:
 1.  **KtLint Check**: Kotlin style validation.
 2.  **Detekt**: Static code analysis.
 3.  **Tests**: Unit and integration test suite.
-4.  **Kover**: 80% instruction coverage verification.
+4.  **Kover**: Coverage verification (Current baseline: 35%).
 5.  **BootJar**: Assembles the executable JAR.
+
+#### Running tests without Testcontainers
+If you are on a system where Testcontainers is slow or unsupported, you can use the local Docker Compose database:
+```bash
+./gradlew ciBuild -Dtestcontainers.enabled=false
+```
+See [Testing Strategy](TESTING.md) for more details.
 
 ### Test Coverage Report
 To view the coverage report:

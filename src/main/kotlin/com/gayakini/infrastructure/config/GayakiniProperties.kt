@@ -28,7 +28,7 @@ class GayakiniProperties {
 
     class JwtProperties {
         @field:NotBlank
-        var secret: String = "default-secret-key-that-must-be-changed-in-production-at-least-thirty-two-chars"
+        var secret: String = ""
         var accessTokenExpirationMinutes: Long = 60
         var refreshTokenExpirationDays: Long = 30
     }

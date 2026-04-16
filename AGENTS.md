@@ -20,7 +20,8 @@ The system handles complex data management and standardization for Indonesian in
 * **Roles:** The system implements a 4-role RBAC model: `CUSTOMER`, `ADMIN`, `FINANCE`, and `OPERATOR`.
 * **Data Processing:** Interactions with structured JSON objects and Excel data formats.
 * **Standardization:** Use centimeter (cm) standards unless specified otherwise.
-* **Security:** All `/v1/admin/**` routes require `ADMIN` role. Finance and Operations have dedicated scopes.
+*   **Phase 9 Implementation**: Implementation of inventory movements, warehouse fulfillment, and centralized business monitoring (`OrderMetrics`).
+*   **RBAC Boundaries**: Secured `/v1/operations/**` for `ADMIN` and `OPERATOR` roles.
 
 ## 📝 Coding Guidelines
 1. **Kotlin Idioms:** Utilize Kotlin's modern features (null safety, extension functions, data classes) to keep the code concise and safe.
@@ -32,7 +33,9 @@ The system handles complex data management and standardization for Indonesian in
    - Use `@WebMvcTest` for controller/security slices.
    - Use `Testcontainers` (PostgreSQL 16) for integration tests. **Never use H2.**
    - All PRs must pass `./gradlew ciBuild`.
+   - **Dockerized Build**: The `Dockerfile` and `ciBuild` task support a `-PexcludeIntegration` flag to skip Docker-dependent tests in isolated build environments.
 6. **Agent constraints:**
-   - **Verification:** Always run `./gradlew ciBuild` before declaring a task complete.
+   - **Verification:** Always run `./gradlew ciBuild` (or `./gradlew ciBuild -PexcludeIntegration` if Docker is unavailable) before declaring a task complete.
    - **Test Logs:** Logs are suppressed on success. Failures use `SHORT` stack traces. Do not re-enable full traces.
    - **Integration:** Use Spring Boot 3.4 `@ServiceConnection` for Testcontainers.
+   - **Kover Coverage**: Maintain a minimum coverage of **35%** (verified via `koverVerify`).

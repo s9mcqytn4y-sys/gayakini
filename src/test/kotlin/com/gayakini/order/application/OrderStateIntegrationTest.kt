@@ -1,11 +1,15 @@
 package com.gayakini.order.application
 
 import com.gayakini.BaseDbIntegrationTest
+import com.gayakini.cart.domain.Cart
+import com.gayakini.cart.domain.CartRepository
 import com.gayakini.catalog.domain.Product
 import com.gayakini.catalog.domain.ProductRepository
 import com.gayakini.catalog.domain.ProductStatus
 import com.gayakini.catalog.domain.ProductVariant
 import com.gayakini.catalog.domain.ProductVariantRepository
+import com.gayakini.checkout.domain.Checkout
+import com.gayakini.checkout.domain.CheckoutRepository
 import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.inventory.domain.InventoryAdjustmentRepository
 import com.gayakini.inventory.domain.InventoryReservationRepository
@@ -41,6 +45,12 @@ class OrderStateIntegrationTest : BaseDbIntegrationTest() {
 
     @Autowired
     private lateinit var variantRepository: ProductVariantRepository
+
+    @Autowired
+    private lateinit var cartRepository: CartRepository
+
+    @Autowired
+    private lateinit var checkoutRepository: CheckoutRepository
 
     @Test
     fun `should complete full order lifecycle and manage inventory correctly`() {
@@ -200,11 +210,12 @@ class OrderStateIntegrationTest : BaseDbIntegrationTest() {
         name: String,
         stock: Int,
     ): Product {
+        val uniqueSuffix = UUID.randomUUID().toString().take(8)
         val product =
             Product(
                 id = UUID.randomUUID(),
-                title = name,
-                slug = name.lowercase().replace(" ", "-"),
+                title = "$name $uniqueSuffix",
+                slug = "${name.lowercase().replace(" ", "-")}-$uniqueSuffix",
                 subtitle = null,
                 brandName = "Test Brand",
                 description = "Test Description",
@@ -226,13 +237,23 @@ class OrderStateIntegrationTest : BaseDbIntegrationTest() {
     }
 
     private fun createTestOrder(variant: ProductVariant): Order {
+        val cart = cartRepository.saveAndFlush(Cart(id = UUID.randomUUID(), accessTokenHash = "test-token"))
+        val checkout =
+            checkoutRepository.saveAndFlush(
+                Checkout(
+                    id = UUID.randomUUID(),
+                    cart = cart,
+                    accessTokenHash = cart.accessTokenHash,
+                ),
+            )
+
         val order =
             Order(
-                orderNumber = "ORD-TEST-${System.currentTimeMillis()}",
-                checkoutId = UUID.randomUUID(),
-                cartId = UUID.randomUUID(),
+                orderNumber = "ORD-TEST-${UUID.randomUUID().toString().take(12).uppercase()}",
+                checkoutId = checkout.id,
+                cartId = cart.id,
                 customerId = null,
-                accessTokenHash = null,
+                accessTokenHash = cart.accessTokenHash,
                 status = OrderStatus.PENDING_PAYMENT,
                 subtotalAmount = variant.priceAmount,
                 shippingCostAmount = 10000,

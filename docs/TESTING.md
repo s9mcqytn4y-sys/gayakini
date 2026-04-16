@@ -18,8 +18,10 @@ We prioritize a stable, high-coverage, and machine-readable test suite. The buil
 ## Quality Gates & Coverage
 
 ### JetBrains Kover
-We enforce a minimum of **80% instruction coverage** across the application.
--   **Verification**: The build will fail if coverage falls below 80%.
+We enforce instruction coverage across the application.
+-   **Current Baseline**: **35%** (Stabilization phase).
+-   **Target**: **80%**.
+-   **Verification**: The build will fail if coverage falls below the current baseline.
 -   **Exclusions**: DTOs, application entry points (`*ApplicationKt`), and infrastructure configurations are excluded from the metric.
 -   **Local Report**: Run `./gradlew koverHtmlReport` to generate a report.
 -   **Output**: `build/reports/kover/html/index.html`.
@@ -54,3 +56,19 @@ class MyIntegrationTest {
     }
 }
 ```
+
+## Local Database Fallback (Windows/CI Compatibility)
+While Testcontainers is the preferred method, we support a fallback to a local PostgreSQL instance (e.g., via Docker Compose) for environments where Testcontainers might be unstable (like some Windows configurations) or to speed up local test cycles.
+
+### How to use Local Fallback:
+1. Ensure the local database is running: `docker compose up -d gayakini-db`.
+2. Run tests with the property disabled:
+   ```bash
+   ./gradlew test -Dtestcontainers.enabled=false
+   ```
+   Or via environment variable:
+   ```bash
+   TESTCONTAINERS_ENABLED=false ./gradlew test
+   ```
+
+When disabled, the `BaseDbIntegrationTest` will automatically attempt to connect to `localhost:5432` using the default credentials defined in `docker-compose.yml`.

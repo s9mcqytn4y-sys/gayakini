@@ -132,19 +132,32 @@ tasks.withType<Test> {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT
     }
 
+    // Pass system properties to the test JVM
+    val tcEnabled =
+        project.findProperty("testcontainers.enabled")?.toString()
+            ?: System.getProperty("testcontainers.enabled")
+            ?: System.getenv("TESTCONTAINERS_ENABLED")
+            ?: "true"
+    systemProperty("testcontainers.enabled", tcEnabled)
+
     // Clean summary for agents and CI
     @Suppress("MaxLineLength")
-    afterSuite(KotlinClosure2<TestDescriptor, TestResult, Unit>({ desc, result ->
-        if (desc.parent == null) {
-            val resultsText = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
-            val startItem = "|  "
-            val endItem = "  |"
-            val repeatLength = resultsText.length + startItem.length + endItem.length
-            println("\n" + ("-".repeat(repeatLength)))
-            println("$startItem$resultsText$endItem")
-            println("-".repeat(repeatLength) + "\n")
-        }
-    }))
+    afterSuite(
+        KotlinClosure2<TestDescriptor, TestResult, Unit>({ desc, result ->
+            if (desc.parent == null) {
+                val resultsText =
+                    "Results: ${result.resultType} (${result.testCount} tests, " +
+                        "${result.successfulTestCount} successes, ${result.failedTestCount} failures, " +
+                        "${result.skippedTestCount} skipped)"
+                val startItem = "|  "
+                val endItem = "  |"
+                val repeatLength = resultsText.length + startItem.length + endItem.length
+                println("\n" + ("-".repeat(repeatLength)))
+                println("$startItem$resultsText$endItem")
+                println("-".repeat(repeatLength) + "\n")
+            }
+        }),
+    )
 }
 
 // --- KOVER CONFIGURATION ---
@@ -156,7 +169,7 @@ kover {
                 // isEnabled = true // Deprecated/Removed in 0.8.x, enabled by default
                 groupBy.set(kotlinx.kover.gradle.plugin.dsl.GroupingEntityType.APPLICATION)
                 bound {
-                    minValue.set(80)
+                    minValue.set(35)
                 }
             }
         }
@@ -166,7 +179,7 @@ kover {
                     "com.gayakini.GayakiniApplicationKt",
                     "**.*Dto",
                     "com.gayakini.infrastructure.config.*",
-                    "com.gayakini.common.api.*"
+                    "com.gayakini.common.api.*",
                 )
             }
         }

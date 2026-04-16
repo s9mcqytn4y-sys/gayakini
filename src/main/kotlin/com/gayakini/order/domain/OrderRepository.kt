@@ -1,5 +1,7 @@
 package com.gayakini.order.domain
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
 import jakarta.persistence.LockModeType
@@ -17,4 +19,9 @@ interface OrderRepository : JpaRepository<Order, UUID> {
 
     @Lock(LockModeType.OPTIMISTIC_FORCE_INCREMENT)
     fun findWithLockById(id: UUID): Optional<Order>
+
+    fun findAllByStatus(
+        status: OrderStatus,
+        pageable: Pageable,
+    ): Page<Order>
 }

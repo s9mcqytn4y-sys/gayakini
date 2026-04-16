@@ -24,8 +24,8 @@ import com.gayakini.payment.domain.PaymentSettledEvent
 import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.promo.application.PromoService
 import com.gayakini.common.util.HashUtils
+import com.gayakini.infrastructure.monitoring.OrderMetrics
 import com.gayakini.common.api.ForbiddenException
-import io.micrometer.core.instrument.MeterRegistry
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -55,7 +55,7 @@ class PaymentServiceUnitTest {
     private val auditContext = mockk<AuditContext>()
     private val storageService = mockk<StorageService>()
     private val financeService = mockk<FinanceService>()
-    private val meterRegistry = mockk<MeterRegistry>(relaxed = true)
+    private val orderMetrics = mockk<OrderMetrics>(relaxed = true)
 
     private val paymentService =
         PaymentService(
@@ -72,7 +72,7 @@ class PaymentServiceUnitTest {
             auditContext,
             storageService,
             financeService,
-            meterRegistry,
+            orderMetrics,
         )
 
     @BeforeEach

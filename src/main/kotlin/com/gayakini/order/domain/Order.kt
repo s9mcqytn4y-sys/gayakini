@@ -22,6 +22,8 @@ import jakarta.persistence.Table
 import jakarta.persistence.Transient
 import jakarta.persistence.EntityListeners
 import jakarta.persistence.Version
+import org.hibernate.annotations.JdbcTypeCode
+import org.hibernate.type.SqlTypes
 import org.springframework.data.annotation.CreatedBy
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedBy
@@ -381,7 +383,8 @@ class OrderShippingSelection(
     val estimatedDaysMin: Int?,
     @Column(name = "estimated_days_max")
     val estimatedDaysMax: Int?,
-    @Column(name = "raw_quote_payload", columnDefinition = "JSONB")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "raw_quote_payload", columnDefinition = "jsonb")
     val rawQuotePayload: String?,
 ) : Persistable<UUID> {
     @CreatedDate

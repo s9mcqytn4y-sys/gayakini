@@ -1,0 +1,66 @@
+# Gayakini Local Infrastructure Foundation (Phase 8)
+# This stack provides a self-contained environment for local development.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gayakini-db
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-gayakini}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-gayakini}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gayakini-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gayakini-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-gayakini}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - SMTP_HOST=mail
+      - SMTP_PORT=1025
+      - JWT_SECRET=${JWT_SECRET:-docker-compose-secret-key-at-least-32-characters}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gayakini-network
+
+  mail:
+    image: axllent/mailpit
+    container_name: gayakini-mail
+    restart: unless-stopped
+    ports:
+      - "${SMTP_PORT:-1025}:1025"  # SMTP
+      - "8025:8025"                 # Web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+    networks:
+      - gayakini-network
+
+networks:
+  gayakini-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

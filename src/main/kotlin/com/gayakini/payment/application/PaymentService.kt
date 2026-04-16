@@ -26,9 +26,9 @@ import com.gayakini.payment.domain.ReceiptProcessingStatus
 import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.finance.application.FinanceService
+import com.gayakini.infrastructure.monitoring.OrderMetrics
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
-import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.context.ApplicationEventPublisher
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -53,7 +53,7 @@ class PaymentService(
     private val auditContext: AuditContext,
     private val storageService: StorageService,
     private val financeService: FinanceService,
-    private val meterRegistry: MeterRegistry,
+    private val orderMetrics: OrderMetrics,
 ) {
     private val logger = LoggerFactory.getLogger(PaymentService::class.java)
 
@@ -475,13 +475,7 @@ class PaymentService(
         if (reconciledStatus == PaymentStatus.PAID) {
             handlePaidOrder(payment, order)
         } else if (isFailedPaymentStatus(reconciledStatus)) {
-            meterRegistry.counter(
-                "gayakini_payment_failure_total",
-                "provider",
-                payment.provider,
-                "status",
-                reconciledStatus.name,
-            ).increment()
+            orderMetrics.recordPaymentFailure(payment.provider, reconciledStatus.name)
             handleFailedOrder(order, reconciledStatus)
         }
 
@@ -490,13 +484,7 @@ class PaymentService(
         val savedOrder = orderRepository.save(order)
 
         if (reconciledStatus == PaymentStatus.PAID) {
-            meterRegistry.counter(
-                "gayakini_payment_processed_total",
-                "provider",
-                payment.provider,
-                "status",
-                "PAID",
-            ).increment()
+            orderMetrics.recordOrderPaid(payment.provider)
             eventPublisher.publishEvent(
                 PaymentSettledEvent(
                     orderId = savedOrder.id,
