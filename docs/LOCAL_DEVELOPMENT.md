@@ -6,13 +6,23 @@
 2. **Docker**: Ensure Docker is running to support local infrastructure via Docker Compose and integration tests via Testcontainers.
 3. **Environment**: Copy `.env.example` to `.env`. Adjust `DB_HOST` and `SMTP_HOST` if you are running the app outside of Docker.
 
+## Quick Start (New)
+
+We provide a helper script for common developer flows:
+```bash
+./scripts/dev.sh infra-up   # Start DB/Mailpit on host (localhost)
+./scripts/dev.sh app-run    # Run app via Gradle (Profile: local)
+./scripts/dev.sh dev-stack  # Full containerized stack (Profile: dev)
+./scripts/dev.sh clean      # Clean build and Docker artifacts
+```
+
 ## Local Infrastructure
 
 We use Docker Compose to manage local dependencies (PostgreSQL and Mailpit).
 
 ### Start the infrastructure (Database & Mail)
 ```bash
-docker compose up -d db mail
+docker-compose up -d
 ```
 This will start:
 - **PostgreSQL 16** (Port 5432, with healthcheck)
@@ -20,9 +30,9 @@ This will start:
 
 ### Start the full stack (Infrastructure + App)
 ```bash
-docker compose up -d
+docker-compose -f docker-compose.dev.yml up -d
 ```
-This will build the application image and start it alongside the infrastructure.
+This will build the application image and start it alongside the infrastructure in a shared network.
 
 You can verify the status with:
 ```bash
