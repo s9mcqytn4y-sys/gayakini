@@ -35,7 +35,7 @@ class GayakiniProperties {
 
     class CorsProperties {
         @field:NotEmpty
-        var allowedOrigins: List<String> = listOf("http://localhost:3000")
+        var allowedOrigins: List<String> = emptyList()
     }
 
     class MidtransProperties {
@@ -48,10 +48,10 @@ class GayakiniProperties {
         var clientKey: String = ""
 
         @field:NotBlank
-        var snapUrl: String = "https://app.sandbox.midtrans.com/snap/v1/transactions"
+        var snapUrl: String = ""
 
         @field:NotBlank
-        var apiUrl: String = "https://api.sandbox.midtrans.com/v2"
+        var apiUrl: String = ""
     }
 
     class BiteshipProperties {
@@ -59,7 +59,7 @@ class GayakiniProperties {
         var apiKey: String = ""
 
         @field:NotBlank
-        var apiUrl: String = "https://api.biteship.com/v1"
+        var apiUrl: String = ""
 
         @field:NotBlank
         var webhookSecret: String = ""

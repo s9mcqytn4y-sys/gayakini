@@ -115,7 +115,9 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    systemProperty("spring.profiles.active", "local")
+    // Default to 'local' if SPRING_PROFILES_ACTIVE is not set in env or .env
+    val activeProfile = System.getenv("SPRING_PROFILES_ACTIVE") ?: "local"
+    systemProperty("spring.profiles.active", activeProfile)
 }
 
 // --- TEST CONFIGURATION ---
