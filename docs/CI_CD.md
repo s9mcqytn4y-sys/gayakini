@@ -15,7 +15,7 @@ Runs on every `push` and `pull_request` to `main` and `develop`.
   1. **KtLint**: Validates code style against project standards.
   2. **Detekt**: Performs static code analysis to catch common Kotlin bugs and smells.
   3. **Tests**: Executes the full suite of unit and integration tests.
-  4. **Kover**: Verifies code coverage against the current baseline (45%).
+  4. **Kover**: Verifies code coverage against the current baseline (35%).
   5. **BootJar**: Assembles the final executable application JAR.
 - **Artifacts**: Uploads the Kover HTML report for every run, regardless of success or failure.
 
@@ -40,5 +40,5 @@ The pipeline will fail if any of the following occur:
 - Any `ktlint` violations.
 - Any `detekt` issues (above the configured threshold).
 - Any failing unit or integration tests.
-- Code coverage falls below the current mandatory baseline (45%).
+- Code coverage falls below the current mandatory baseline (35%).
 - The Spring Boot application fails to package.
