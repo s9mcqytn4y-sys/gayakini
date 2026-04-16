@@ -27,11 +27,13 @@ case "$1" in
     echo "Stopping dev stack..."
     docker-compose -f docker-compose.dev.yml down
     ;;
-  staging-check)
-    echo "Validating staging configuration and build..."
-    export SPRING_PROFILES_ACTIVE=staging
-    ./gradlew bootJar
-    echo "Staging artifact built: build/libs/app.jar"
+  staging-up)
+    echo "Starting staging parity stack..."
+    docker-compose -f docker-compose.staging.yml up -d --build
+    ;;
+  staging-down)
+    echo "Stopping staging stack..."
+    docker-compose -f docker-compose.staging.yml down
     ;;
   clean)
     ./gradlew clean

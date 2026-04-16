@@ -16,10 +16,11 @@ COPY build.gradle.kts .
 COPY settings.gradle.kts .
 COPY gradle.properties .
 
-# Build executable jar using the wrapper to ensure version consistency
-# We use ciBuild task to ensure all quality gates (tests, coverage, lint, detekt) are passed
-# We skip integration tests to avoid requiring a running database in the build environment
-RUN chmod +x gradlew && ./gradlew clean ciBuild -PexcludeIntegration --no-daemon
+# Build executable jar using the wrapper to ensure version consistency.
+# We cap JVM memory for build stability in RAM-constrained CI environments.
+RUN chmod +x gradlew && ./gradlew clean ciBuild -PexcludeIntegration \
+    -Dorg.gradle.jvmargs="-Xmx1536m -XX:+ExitOnOutOfMemoryError" \
+    --no-daemon
 
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jre-alpine
@@ -38,4 +39,4 @@ COPY --from=builder /app/build/libs/app.jar app.jar
 EXPOSE 8080
 
 # Run the app
-ENTRYPOINT ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java ${JAVA_TOOL_OPTIONS} -Djava.security.egd=file:/dev/./urandom -jar app.jar"]

@@ -6,8 +6,11 @@ import com.gayakini.catalog.domain.ProductVariantRepository
 import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.inventory.domain.InventoryAdjustment
 import com.gayakini.inventory.domain.InventoryAdjustmentRepository
+import com.gayakini.inventory.domain.InventoryMovement
+import com.gayakini.inventory.domain.InventoryMovementRepository
 import com.gayakini.inventory.domain.InventoryReservation
 import com.gayakini.inventory.domain.InventoryReservationRepository
+import com.gayakini.inventory.domain.MovementType
 import com.gayakini.inventory.domain.ReservationStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,9 +23,60 @@ class InventoryService(
     private val variantRepository: ProductVariantRepository,
     private val reservationRepository: InventoryReservationRepository,
     private val adjustmentRepository: InventoryAdjustmentRepository,
+    private val movementRepository: InventoryMovementRepository,
     private val auditContext: AuditContext,
     private val eventPublisher: org.springframework.context.ApplicationEventPublisher,
 ) {
+    @Transactional
+    fun recordMovement(
+        variantId: UUID,
+        quantity: Int,
+        source: String,
+        destination: String,
+        type: MovementType,
+        referenceId: String? = null,
+        notes: String? = null,
+    ): InventoryMovement {
+        val variant =
+            variantRepository.findById(variantId)
+                .orElseThrow { NoSuchElementException("Varian produk tidak ditemukan.") }
+
+        val movement =
+            InventoryMovement(
+                variant = variant,
+                quantity = quantity,
+                sourceLocation = source,
+                destinationLocation = destination,
+                movementType = type,
+                referenceId = referenceId,
+                notes = notes,
+            )
+
+        val savedMovement = movementRepository.save(movement)
+
+        val (actorId, actorRole) = auditContext.getCurrentActor()
+        eventPublisher.publishEvent(
+            AuditEvent(
+                actorId = actorId,
+                actorRole = actorRole,
+                entityType = "INVENTORY_MOVEMENT",
+                entityId = savedMovement.id.toString(),
+                eventType = "MOVEMENT_RECORDED",
+                newState =
+                    mapOf(
+                        "variantSku" to variant.sku,
+                        "quantity" to quantity,
+                        "source" to source,
+                        "destination" to destination,
+                        "type" to type,
+                    ),
+                reason = notes,
+            ),
+        )
+
+        return savedMovement
+    }
+
     @Transactional
     fun adjustStock(
         variantId: UUID,
@@ -302,6 +356,17 @@ class InventoryService(
             )
         adjustmentRepository.save(adjustment)
 
+        // Record movement from storage to packing area
+        recordMovement(
+            variantId = variant.id,
+            quantity = reservation.quantity,
+            source = "STORAGE",
+            destination = "PACKING",
+            type = MovementType.WAREHOUSE_PICKING,
+            referenceId = orderItemId.toString(),
+            notes = "Picked for order item $orderItemId",
+        )
+
         val (auditId, auditRole) = auditContext.getCurrentActor()
         eventPublisher.publishEvent(
             AuditEvent(
@@ -353,6 +418,17 @@ class InventoryService(
                     stockReservedAfter = variant.stockReserved,
                 )
             adjustmentRepository.save(adjustment)
+
+            // Record movement from customer/unknown back to storage
+            recordMovement(
+                variantId = variant.id,
+                quantity = reservation.quantity,
+                source = "EXTERNAL",
+                destination = "STORAGE",
+                type = MovementType.RESTOCKING,
+                referenceId = orderId.toString(),
+                notes = "Restock: $note (Order $orderId)",
+            )
 
             val (auditId, auditRole) = auditContext.getCurrentActor()
             eventPublisher.publishEvent(
@@ -411,6 +487,17 @@ class InventoryService(
             )
         adjustmentRepository.save(adjustment)
 
+        // Record movement from returns area to storage
+        recordMovement(
+            variantId = variant.id,
+            quantity = reservation.quantity,
+            source = "RETURNS_QC",
+            destination = "STORAGE",
+            type = MovementType.RETURNS,
+            referenceId = orderItemId.toString(),
+            notes = "QC Pass Restock: $note",
+        )
+
         val (auditId, auditRole) = auditContext.getCurrentActor()
         eventPublisher.publishEvent(
             AuditEvent(
@@ -430,8 +517,5 @@ class InventoryService(
                 reason = note ?: "QC Restock for order $orderId item $orderItemId",
             ),
         )
-
-        // Optionally mark the reservation as RESTOCKED or similar if needed for future tracking
-        // For now, keeping it as CONSUMED is fine since the adjustment records the fact it was returned to stock
     }
 }

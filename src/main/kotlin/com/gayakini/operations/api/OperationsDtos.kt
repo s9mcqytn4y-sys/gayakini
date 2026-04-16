@@ -1,5 +1,6 @@
 package com.gayakini.operations.api
 
+import java.time.Instant
 import java.util.UUID
 
 /**
@@ -18,5 +19,21 @@ data class PackingResponse(
     val orderId: UUID,
     val orderNumber: String,
     val status: String,
-    val packedAt: java.time.Instant,
+    val packedAt: Instant,
+)
+
+/**
+ * Request to process QC for a returned item and restock it.
+ */
+data class RestockQCRequest(
+    val note: String? = null,
+)
+
+/**
+ * Response summarizing the QC restock result.
+ */
+data class RestockQCResponse(
+    val orderId: UUID,
+    val orderItemId: UUID,
+    val status: String = "RESTOCKED",
 )

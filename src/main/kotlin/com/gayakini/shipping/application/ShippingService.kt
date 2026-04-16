@@ -29,6 +29,7 @@ class ShippingService(
     private val merchantOriginRepository: MerchantShippingOriginRepository,
     private val shippingProvider: ShippingProvider,
     private val customerRepository: CustomerRepository,
+    private val inventoryService: com.gayakini.inventory.application.InventoryService,
     private val idempotencyService: IdempotencyService,
     private val auditContext: AuditContext,
     private val eventPublisher: org.springframework.context.ApplicationEventPublisher,
@@ -251,6 +252,19 @@ class ShippingService(
                 shipment.status = FulfillmentStatus.IN_TRANSIT
                 shipment.shippedAt = shipment.shippedAt ?: Instant.now()
                 order.markAsShipped()
+
+                // Record movement from packing area to customer (EXTERNAL)
+                order.items.forEach { item ->
+                    inventoryService.recordMovement(
+                        variantId = item.variant.id,
+                        quantity = item.quantity,
+                        source = "PACKING",
+                        destination = "EXTERNAL",
+                        type = com.gayakini.inventory.domain.MovementType.INTERNAL_TRANSFER,
+                        referenceId = shipment.id.toString(),
+                        notes = "Shipped to customer via ${shipment.courierName}",
+                    )
+                }
             }
             "delivered" -> {
                 shipment.status = FulfillmentStatus.DELIVERED
@@ -260,6 +274,19 @@ class ShippingService(
             "returned" -> {
                 shipment.status = FulfillmentStatus.RETURNED
                 order.markAsReturned()
+
+                // Record movement from customer (EXTERNAL) to returns QC area
+                order.items.forEach { item ->
+                    inventoryService.recordMovement(
+                        variantId = item.variant.id,
+                        quantity = item.quantity,
+                        source = "EXTERNAL",
+                        destination = "RETURNS_QC",
+                        type = com.gayakini.inventory.domain.MovementType.RETURNS,
+                        referenceId = shipment.id.toString(),
+                        notes = "Returned by customer, awaiting QC",
+                    )
+                }
             }
             "cancelled" -> {
                 shipment.status = FulfillmentStatus.CANCELLED

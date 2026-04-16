@@ -114,10 +114,51 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveFileName.set("app.jar")
 }
 
+fun loadDotEnv(): Map<String, String> {
+    val envFile = file(".env")
+    if (!envFile.exists()) return emptyMap()
+
+    val env = mutableMapOf<String, String>()
+    envFile.readLines().forEach { line ->
+        val trimmed = line.trim()
+        if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
+            val parts = trimmed.split("=", limit = 2)
+            if (parts.size == 2) {
+                env[parts[0].trim()] = parts[1].trim().removeSurrounding("\"", "'")
+            }
+        }
+    }
+    return env
+}
+
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    // Default to 'local' if SPRING_PROFILES_ACTIVE is not set in env or .env
-    val activeProfile = System.getenv("SPRING_PROFILES_ACTIVE") ?: "local"
+    val dotEnv = loadDotEnv()
+
+    // 1. Resolve Active Profile (Priority: System Env > .env > Default to local if nothing found)
+    val activeProfile =
+        System.getenv("SPRING_PROFILES_ACTIVE")
+            ?: dotEnv["SPRING_PROFILES_ACTIVE"]
+            ?: dotEnv["APP_ENV"]
+            ?: "local"
+
+    // 2. Resolve JVM Options (Memory Management)
+    // Default: Small footprint for local development, allowing Docker/Env to override.
+    val javaToolOptions =
+        System.getenv("JAVA_TOOL_OPTIONS")
+            ?: dotEnv["JAVA_TOOL_OPTIONS"]
+            ?: "-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=50 -XX:+ExitOnOutOfMemoryError"
+
     systemProperty("spring.profiles.active", activeProfile)
+    environment("JAVA_TOOL_OPTIONS", javaToolOptions)
+
+    // 3. Inject all .env variables into the process environment if not already present
+    dotEnv.forEach { (k, v) ->
+        if (System.getenv(k) == null) {
+            environment(k, v)
+        }
+    }
+
+    println("Starting Gayakini with Profile: [$activeProfile]")
 }
 
 // --- TEST CONFIGURATION ---

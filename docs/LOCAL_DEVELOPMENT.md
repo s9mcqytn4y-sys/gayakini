@@ -10,10 +10,14 @@
 
 We provide a helper script for common developer flows:
 ```bash
-./scripts/dev.sh infra-up   # Start DB/Mailpit on host (localhost)
-./scripts/dev.sh app-run    # Run app via Gradle (Profile: local)
-./scripts/dev.sh dev-stack  # Full containerized stack (Profile: dev)
-./scripts/dev.sh clean      # Clean build and Docker artifacts
+./scripts/dev.sh infra-up      # Start DB/Mailpit on host (localhost)
+./scripts/dev.sh infra-down    # Stop DB/Mailpit
+./scripts/dev.sh app-run       # Run app via Gradle (Profile: local)
+./scripts/dev.sh dev-stack     # Full containerized stack (Profile: dev)
+./scripts/dev.sh dev-down      # Stop dev stack
+./scripts/dev.sh staging-up    # Full containerized staging parity (Profile: staging)
+./scripts/dev.sh staging-down  # Stop staging stack
+./scripts/dev.sh clean         # Clean build and Docker artifacts
 ```
 
 ## Local Infrastructure

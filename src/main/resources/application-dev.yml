@@ -10,12 +10,19 @@ spring:
 
 gayakini:
   jwt:
-    secret: ${JWT_SECRET:dev-secret-key-at-least-32-chars-long}
+    secret: ${JWT_SECRET}
   midtrans:
     is-production: false
     server-key: ${MIDTRANS_SERVER_KEY}
+    client-key: ${MIDTRANS_CLIENT_KEY}
+    api-url: ${MIDTRANS_API_URL:https://api.sandbox.midtrans.com/v2}
+    snap-url: ${MIDTRANS_SNAP_URL:https://app.sandbox.midtrans.com/snap/v1/transactions}
   biteship:
     api-key: ${BITESHIP_API_KEY}
+    api-url: ${BITESHIP_API_URL:https://api.biteship.com/v1}
+    webhook-secret: ${BITESHIP_WEBHOOK_SECRET}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
 logging:
   level:

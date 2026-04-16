@@ -9,6 +9,7 @@ import com.gayakini.inventory.domain.InventoryAdjustmentRepository
 import com.gayakini.inventory.domain.InventoryReservation
 import com.gayakini.inventory.domain.InventoryReservationRepository
 import com.gayakini.inventory.domain.ReservationStatus
+import com.gayakini.inventory.domain.InventoryMovementRepository
 import com.gayakini.audit.domain.AuditEvent
 import io.mockk.every
 import io.mockk.mockk
@@ -23,6 +24,7 @@ class InventoryServiceUnitTest {
     private val variantRepository = mockk<ProductVariantRepository>()
     private val reservationRepository = mockk<InventoryReservationRepository>()
     private val adjustmentRepository = mockk<InventoryAdjustmentRepository>()
+    private val movementRepository = mockk<InventoryMovementRepository>()
     private val auditContext = mockk<AuditContext>()
     private val eventPublisher = mockk<ApplicationEventPublisher>()
 
@@ -31,6 +33,7 @@ class InventoryServiceUnitTest {
             variantRepository,
             reservationRepository,
             adjustmentRepository,
+            movementRepository,
             auditContext,
             eventPublisher,
         )
@@ -103,9 +106,11 @@ class InventoryServiceUnitTest {
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
+        every { variantRepository.findById(variant.id) } returns Optional.of(variant)
         every { variantRepository.save(any()) } returns variant
         every { reservationRepository.save(any()) } returns reservation
         every { adjustmentRepository.save(any()) } returns mockk()
+        every { movementRepository.save(any()) } answers { firstArg() }
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "USER")
         every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
@@ -133,9 +138,11 @@ class InventoryServiceUnitTest {
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
+        every { variantRepository.findById(variant.id) } returns Optional.of(variant)
         every { variantRepository.save(any()) } returns variant
         every { reservationRepository.save(any()) } returns reservation
         every { adjustmentRepository.save(any()) } returns mockk()
+        every { movementRepository.save(any()) } answers { firstArg() }
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "USER")
         every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 
@@ -163,8 +170,10 @@ class InventoryServiceUnitTest {
 
         every { reservationRepository.findByOrderItemId(orderItemId) } returns Optional.of(reservation)
         every { variantRepository.findWithLockById(variant.id) } returns Optional.of(variant)
+        every { variantRepository.findById(variant.id) } returns Optional.of(variant)
         every { variantRepository.save(any()) } returns variant
         every { adjustmentRepository.save(any()) } returns mockk()
+        every { movementRepository.save(any()) } answers { firstArg() }
         every { auditContext.getCurrentActor() } returns (UUID.randomUUID().toString() to "ADMIN")
         every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
 

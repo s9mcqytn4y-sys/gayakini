@@ -5,8 +5,11 @@ import com.gayakini.audit.domain.AuditEvent
 import com.gayakini.infrastructure.monitoring.OrderMetrics
 import com.gayakini.operations.api.PackOrderRequest
 import com.gayakini.operations.api.PackingResponse
+import com.gayakini.operations.api.RestockQCRequest
+import com.gayakini.operations.api.RestockQCResponse
 import com.gayakini.order.domain.OrderRepository
 import com.gayakini.order.domain.OrderStatus
+import com.gayakini.inventory.application.InventoryService
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.Page
@@ -19,6 +22,7 @@ import java.util.UUID
 @Service
 class WarehouseService(
     private val orderRepository: OrderRepository,
+    private val inventoryService: InventoryService,
     private val eventPublisher: ApplicationEventPublisher,
     private val auditContext: AuditContext,
     private val orderMetrics: OrderMetrics,
@@ -46,6 +50,19 @@ class WarehouseService(
 
         check(order.status == OrderStatus.PAID) {
             "Order harus dalam status PAID untuk diproses di gudang. Status saat ini: ${order.status}"
+        }
+
+        // Physical validation
+        request.weightInGrams?.let {
+            require(it > 0) { "Berat paket harus lebih besar dari 0 gram." }
+        }
+        request.dimensionCm?.let {
+            val dimensions = it.split("x")
+            val expectedDimensionParts = 3
+            require(dimensions.size == expectedDimensionParts) { "Format dimensi harus PxLxT (contoh: 10x10x10)." }
+            dimensions.forEach { dim ->
+                require(dim.trim().toInt() > 0) { "Setiap dimensi harus lebih besar dari 0 cm." }
+            }
         }
 
         val previousState = mapOf("status" to order.status)
@@ -83,6 +100,30 @@ class WarehouseService(
             orderNumber = savedOrder.orderNumber,
             status = savedOrder.status.name,
             packedAt = Instant.now(),
+        )
+    }
+
+    /**
+     * Processes an item that has been returned and passed QC, moving it back to STORAGE.
+     */
+    @Transactional
+    fun processReturnQC(
+        orderId: UUID,
+        orderItemId: UUID,
+        request: RestockQCRequest,
+    ): RestockQCResponse {
+        logger.info("Processing QC restock for order {} item {}", orderId, orderItemId)
+
+        // Delegate to InventoryService which handles the movement and stock update
+        inventoryService.restockOrderItemAfterQC(
+            orderId = orderId,
+            orderItemId = orderItemId,
+            note = request.note,
+        )
+
+        return RestockQCResponse(
+            orderId = orderId,
+            orderItemId = orderItemId,
         )
     }
 }

@@ -43,7 +43,12 @@ services:
       - SMTP_HOST=mail
       - SMTP_PORT=1025
       - JWT_SECRET=${JWT_SECRET}
-      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=60
+      # Container-aware percentages: 25% of 1024MB init, 65% max (665MB).
+      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=65 -XX:+ExitOnOutOfMemoryError
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
     depends_on:
       db:
         condition: service_healthy

@@ -9,11 +9,15 @@ import com.gayakini.order.api.AdminCreateShipmentRequest
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.Order
 import com.gayakini.order.domain.OrderRepository
+import com.gayakini.catalog.domain.Product
+import com.gayakini.catalog.domain.ProductVariant
+import com.gayakini.order.domain.OrderItem
 import com.gayakini.order.domain.OrderShippingAddress
 import com.gayakini.order.domain.OrderShippingSelection
 import com.gayakini.order.domain.OrderStatus
 import com.gayakini.shipping.domain.MerchantShippingOrigin
 import com.gayakini.shipping.domain.MerchantShippingOriginRepository
+import com.gayakini.inventory.application.InventoryService
 import com.gayakini.shipping.domain.ShipmentBooking
 import com.gayakini.shipping.domain.ShippingProvider
 import io.mockk.every
@@ -30,6 +34,7 @@ class ShippingServiceUnitTest {
     private val merchantOriginRepository = mockk<MerchantShippingOriginRepository>()
     private val shippingProvider = mockk<ShippingProvider>()
     private val customerRepository = mockk<CustomerRepository>()
+    private val inventoryService = mockk<InventoryService>()
     private val idempotencyService = mockk<IdempotencyService>()
     private val auditContext = mockk<AuditContext>()
     private val eventPublisher = mockk<ApplicationEventPublisher>()
@@ -41,6 +46,7 @@ class ShippingServiceUnitTest {
             merchantOriginRepository,
             shippingProvider,
             customerRepository,
+            inventoryService,
             idempotencyService,
             auditContext,
             eventPublisher,
@@ -93,6 +99,33 @@ class ShippingServiceUnitTest {
                 estimatedDaysMax = 3,
                 rawQuotePayload = "{}",
             )
+
+        val product = mockk<Product>()
+        val variant =
+            ProductVariant(
+                id = UUID.randomUUID(),
+                product = product,
+                sku = "SKU-1",
+                priceAmount = 100000L,
+                weightGrams = 500,
+                color = "Black",
+                sizeCode = "M",
+                stockOnHand = 10,
+                stockReserved = 0,
+            )
+        order.items.add(
+            OrderItem(
+                order = order,
+                product = product,
+                variant = variant,
+                skuSnapshot = "SKU-1",
+                titleSnapshot = "Product 1",
+                color = "Black",
+                sizeCode = "M",
+                quantity = 1,
+                unitPriceAmount = 100000L,
+            ),
+        )
         return order
     }
 
@@ -164,6 +197,7 @@ class ShippingServiceUnitTest {
         every { shipmentRepository.save(any()) } answers { it.invocation.args[0] as Shipment }
         every { auditContext.getCurrentActor() } returns ("SYSTEM" to "SYSTEM")
         every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
+        every { inventoryService.recordMovement(any(), any(), any(), any(), any(), any(), any()) } returns mockk()
 
         shippingService.processBiteshipWebhook(payload)
 
@@ -194,10 +228,65 @@ class ShippingServiceUnitTest {
         every { shipmentRepository.save(any()) } answers { it.invocation.args[0] as Shipment }
         every { auditContext.getCurrentActor() } returns ("SYSTEM" to "SYSTEM")
         every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
+        every { inventoryService.recordMovement(any(), any(), any(), any(), any(), any(), any()) } returns mockk()
 
         shippingService.processBiteshipWebhook(payload)
 
         assertEquals(FulfillmentStatus.RETURNED, shipment.status)
         assertEquals(FulfillmentStatus.RETURNED, order.fulfillmentStatus)
+
+        verify {
+            inventoryService.recordMovement(
+                variantId = any(),
+                quantity = any(),
+                source = "EXTERNAL",
+                destination = "RETURNS_QC",
+                type = com.gayakini.inventory.domain.MovementType.RETURNS,
+                referenceId = shipment.id.toString(),
+                notes = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `processBiteshipWebhook should update shipment for shipped event and record movement`() {
+        val order = createOrder(OrderStatus.READY_TO_SHIP)
+        order.fulfillmentStatus = FulfillmentStatus.BOOKED
+        val orderId = order.id
+        val shipment = Shipment(orderId = orderId, status = FulfillmentStatus.BOOKED)
+
+        val payload =
+            mapOf(
+                "event" to "order.status",
+                "order_id" to orderId.toString(),
+                "status" to "shipped",
+            )
+
+        every { shipmentRepository.findByProviderOrderId(orderId.toString()) } returns Optional.empty()
+        every { shipmentRepository.findByOrderId(orderId) } returns Optional.of(shipment)
+        every { orderRepository.findById(orderId) } returns Optional.of(order)
+
+        every { orderRepository.save(any()) } returnsArgument 0
+        every { shipmentRepository.save(any()) } answers { it.invocation.args[0] as Shipment }
+        every { auditContext.getCurrentActor() } returns ("SYSTEM" to "SYSTEM")
+        every { eventPublisher.publishEvent(any<AuditEvent>()) } returns Unit
+        every { inventoryService.recordMovement(any(), any(), any(), any(), any(), any(), any()) } returns mockk()
+
+        shippingService.processBiteshipWebhook(payload)
+
+        assertEquals(FulfillmentStatus.IN_TRANSIT, shipment.status)
+        assertEquals(OrderStatus.SHIPPED, order.status)
+
+        verify {
+            inventoryService.recordMovement(
+                variantId = any(),
+                quantity = any(),
+                source = "PACKING",
+                destination = "EXTERNAL",
+                type = com.gayakini.inventory.domain.MovementType.INTERNAL_TRANSFER,
+                referenceId = shipment.id.toString(),
+                notes = any(),
+            )
+        }
     }
 }

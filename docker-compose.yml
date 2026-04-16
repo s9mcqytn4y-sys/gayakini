@@ -5,7 +5,7 @@ services:
     container_name: gayakini-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-gayakini}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
@@ -23,10 +23,13 @@ services:
     container_name: gayakini-mail
     restart: unless-stopped
     ports:
-      - "1025:1025"  # SMTP
+      - "${SMTP_PORT:-1025}:1025"  # SMTP
       - "8025:8025"  # Web UI
     environment:
       MP_MAX_MESSAGES: 500
+
+volumes:
+  postgres_data:
 
 volumes:
   postgres_data:

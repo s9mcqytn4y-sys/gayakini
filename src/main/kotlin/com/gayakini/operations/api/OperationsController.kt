@@ -26,12 +26,13 @@ class OperationsController(
         return warehouseService.getOrdersToPack(pageable)
     }
 
-    @PostMapping("/orders/{orderId}/pack")
-    @Operation(summary = "Mark an order as packed and ready to ship")
-    fun packOrder(
+    @PostMapping("/orders/{orderId}/items/{orderItemId}/qc-restock")
+    @Operation(summary = "Process QC for a returned item and restock it to STORAGE")
+    fun restockAfterQC(
         @PathVariable orderId: UUID,
-        @RequestBody request: PackOrderRequest,
-    ): PackingResponse {
-        return warehouseService.packOrder(orderId, request)
+        @PathVariable orderItemId: UUID,
+        @RequestBody request: RestockQCRequest,
+    ): RestockQCResponse {
+        return warehouseService.processReturnQC(orderId, orderItemId, request)
     }
 }

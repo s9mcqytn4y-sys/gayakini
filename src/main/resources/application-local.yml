@@ -14,8 +14,15 @@ gayakini:
   midtrans:
     is-production: false
     server-key: ${MIDTRANS_SERVER_KEY:SB-Mid-server-local}
+    client-key: ${MIDTRANS_CLIENT_KEY:SB-Mid-client-local}
+    api-url: ${MIDTRANS_API_URL:https://api.sandbox.midtrans.com/v2}
+    snap-url: ${MIDTRANS_SNAP_URL:https://app.sandbox.midtrans.com/snap/v1/transactions}
   biteship:
     api-key: ${BITESHIP_API_KEY:biteship_local}
+    api-url: ${BITESHIP_API_URL:https://api.biteship.com/v1}
+    webhook-secret: ${BITESHIP_WEBHOOK_SECRET:local-webhook-secret}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
 
 logging:
   level:
