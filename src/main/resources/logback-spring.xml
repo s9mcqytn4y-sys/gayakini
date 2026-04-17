@@ -37,15 +37,15 @@
         </root>
     </springProfile>
 
-    <!-- Staging/Prod/Dev Environment: Console + Rolling File -->
-    <springProfile name="dev, staging, prod">
+    <!-- Staging/Dev Environment: Console + Rolling File -->
+    <springProfile name="dev, staging">
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
             <appender-ref ref="FILE"/>
         </root>
     </springProfile>
 
-    <!-- Production: JSON logging to standard out for log aggregators -->
+    <!-- Production: JSON logging to standard out for log aggregators + File backup -->
     <springProfile name="prod">
         <appender name="JSON_CONSOLE" class="net.logstash.logback.appender.LogstashConsoleAppender">
             <encoder class="net.logstash.logback.encoder.LogstashEncoder">
@@ -54,6 +54,9 @@
                 <fieldNames>
                     <timestamp>timestamp</timestamp>
                     <level>severity</level>
+                    <thread>thread</thread>
+                    <logger>logger</logger>
+                    <message>message</message>
                 </fieldNames>
             </encoder>
         </appender>

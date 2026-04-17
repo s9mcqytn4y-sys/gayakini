@@ -25,18 +25,31 @@ RUN chmod +x gradlew && ./gradlew clean ciBuild -PexcludeIntegration \
 # ---------- RUNTIME STAGE ----------
 FROM eclipse-temurin:17-jre-alpine
 
+# Metadata
+LABEL maintainer="Gayakini Dev Team <dev@gayakini.com>"
+LABEL org.opencontainers.image.title="Gayakini Backend"
+LABEL org.opencontainers.image.description="Industrial Supplier E-commerce Backend"
+
 # Security: Run as non-root user
 RUN addgroup -S spring && adduser -S spring -G spring
 
 WORKDIR /app
-RUN chown -R spring:spring /app
+
+# Ensure correct permissions
+COPY --from=builder --chown=spring:spring /app/build/libs/app.jar app.jar
+
 USER spring:spring
 
-# Copy built artifact - carefully select the bootable jar
-COPY --from=builder /app/build/libs/app.jar app.jar
+# Performance: JVM optimizations for containers
+# InitialRAMPercentage=25, MaxRAMPercentage=75, G1GC for low latency
+ENV JAVA_TOOL_OPTIONS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
 
 # Expose port
 EXPOSE 8080
 
+# Health Check: Ensure the application is up and responding
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1
+
 # Run the app
-ENTRYPOINT ["sh", "-c", "java ${JAVA_TOOL_OPTIONS} -Djava.security.egd=file:/dev/./urandom -jar app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

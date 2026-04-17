@@ -62,7 +62,18 @@ private const val AUTH_SCHEME_NAME = "Bearer Authentication"
 )
 class OpenApiConfig {
     @Bean
-    fun gayakiniOpenApi(): OpenAPI = OpenAPI()
+    fun gayakiniOpenApi(): OpenAPI =
+        OpenAPI()
+            .addServersItem(
+                io.swagger.v3.oas.models.servers.Server()
+                    .url("/")
+                    .description("Default Server URL"),
+            )
+            .addServersItem(
+                io.swagger.v3.oas.models.servers.Server()
+                    .url("https://api.gayakini.com")
+                    .description("Production Server"),
+            )
 
     @Bean
     fun defaultOpenApiCustomizer(): OpenApiCustomizer =

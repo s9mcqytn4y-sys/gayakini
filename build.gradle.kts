@@ -12,6 +12,7 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1"
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
     id("org.jetbrains.kotlinx.kover") version "0.9.0"
+    id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
 group = "com.gayakini"
@@ -247,3 +248,12 @@ tasks.named("test") { mustRunAfter("detekt") }
 tasks.named("koverVerify") { mustRunAfter("test") }
 tasks.named("koverHtmlReport") { mustRunAfter("koverVerify") }
 tasks.named("bootJar") { mustRunAfter("koverHtmlReport") }
+
+// --- OPENAPI CONFIGURATION ---
+
+openApi {
+    apiDocsUrl.set("http://localhost:8080/api-docs")
+    outputDir.set(file("$projectDir/docs/openapi"))
+    outputFileName.set("openapi.yaml")
+    waitTimeInSeconds.set(30)
+}

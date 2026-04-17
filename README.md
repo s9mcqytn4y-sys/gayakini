@@ -58,6 +58,7 @@ The build lifecycle is designed to be explicit.
 - `./gradlew detekt`: Performs static code analysis.
 - `./gradlew koverHtmlReport`: Generates a coverage report in `build/reports/kover/html/index.html`.
 - `./gradlew bootJar`: Assembles the executable JAR.
+- `./gradlew generateOpenApiDocs`: Generates a static OpenAPI specification at `docs/openapi/openapi.yaml`.
 
 ## Quality Gates & CI
 
