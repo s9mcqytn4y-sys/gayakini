@@ -38,4 +38,4 @@ The system handles complex data management and standardization for Indonesian in
    - **Verification:** Always run `./gradlew ciBuild` (or `./gradlew ciBuild -PexcludeIntegration` if Docker is unavailable) before declaring a task complete.
    - **Test Logs:** Logs are suppressed on success. Failures use `SHORT` stack traces. Do not re-enable full traces.
    - **Integration:** Use Spring Boot 3.4 `@ServiceConnection` for Testcontainers.
-   - **Kover Coverage**: Maintain a minimum coverage of **42%** (verified via `koverVerify`).
+   - **Kover Coverage**: Maintain a minimum coverage of **43%** (verified via `koverVerify`).

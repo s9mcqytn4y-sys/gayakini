@@ -74,7 +74,7 @@ This is the ultimate local verification. It runs:
 1.  **KtLint Check**: Kotlin style validation.
 2.  **Detekt**: Static code analysis.
 3.  **Tests**: Unit and integration test suite.
-4.  **Kover**: Coverage verification (Current baseline: 42%).
+4.  **Kover**: Coverage verification (Current baseline: 43%).
 5.  **BootJar**: Assembles the executable JAR.
 
 #### Running tests without Testcontainers

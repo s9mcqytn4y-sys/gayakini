@@ -79,4 +79,4 @@ The `Dockerfile` also uses the `ciBuild` task to ensure that no image is built w
 - [Testing Strategy](docs/TESTING.md)
 - [CI/CD Pipeline](docs/CI_CD.md)
 - [Security & RBAC Model](docs/security-rbac.md)
-- [Release Checklist](docs/RELEASE_CHECKLIST.md)
+- [Deploy Readiness Checklist](docs/DEPLOY_READINESS_CHECKLIST.md)

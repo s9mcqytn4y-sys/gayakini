@@ -10,6 +10,8 @@ import org.springframework.validation.annotation.Validated
 @Validated
 @ConfigurationProperties(prefix = "gayakini")
 class GayakiniProperties {
+    var isProduction: Boolean = false
+
     @field:Valid
     @field:NotNull
     var jwt: JwtProperties = JwtProperties()

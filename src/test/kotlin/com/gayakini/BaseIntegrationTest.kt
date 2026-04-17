@@ -183,7 +183,7 @@ abstract class BaseDbIntegrationTest : BaseIntegrationTest() {
         val postgres: PostgreSQLContainer<*>? =
             if (useTestcontainers) {
                 try {
-                    PostgreSQLContainer("postgres:16-alpine").apply {
+                    PostgreSQLContainer("postgres:17-alpine").apply {
                         withDatabaseName("testdb")
                         withUsername("test")
                         withPassword("test")

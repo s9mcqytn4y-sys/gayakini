@@ -66,3 +66,6 @@ springdoc:
     operations-sorter: alpha
     tags-sorter: alpha
   show-actuator: false
+
+gayakini:
+  is-production: ${GAYAKINI_IS_PRODUCTION:false}

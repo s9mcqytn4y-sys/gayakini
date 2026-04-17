@@ -62,6 +62,7 @@ dependencies {
     // Documentation & Metrics
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
     implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
     // PDF Generation
     implementation("io.github.openhtmltopdf:openhtmltopdf-pdfbox:1.1.24") {
@@ -215,7 +216,7 @@ kover {
                 // isEnabled = true // Deprecated/Removed in 0.8.x, enabled by default
                 groupBy.set(kotlinx.kover.gradle.plugin.dsl.GroupingEntityType.APPLICATION)
                 bound {
-                    minValue.set(42)
+                    minValue.set(43)
                 }
             }
         }

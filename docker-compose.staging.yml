@@ -2,7 +2,7 @@
 # This stack simulates a real deployment with strict environment variable enforcement.
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: gayakini-db-staging
     restart: unless-stopped
     environment:
@@ -52,7 +52,7 @@ services:
       - BITESHIP_WEBHOOK_SECRET=${BITESHIP_WEBHOOK_SECRET}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
       # Staging Parity: 50% init (fast startup), 75% max. 1.5GB limit = ~1.1GB Heap.
-      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=50 -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError
+      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError
     deploy:
       resources:
         limits:

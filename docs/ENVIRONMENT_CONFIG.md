@@ -26,6 +26,11 @@ Gayakini uses a layered Spring Boot profile approach to separate infrastructure 
     - **Rule**: Strictly reads from environment variables.
     - **Rule**: Validates production-like configuration integrity.
 
+5.  **`application-prod.yml` (Production)**:
+    - Final production settings.
+    - **Rule**: Forces `is-production: true` for third-party SDKs.
+    - **Rule**: Most restrictive logging (WARN/ERROR).
+
 ## Environment Matrix
 
 | Feature             | Local (Host)          | Dev (Docker)          | Staging (Sim)         |
@@ -33,15 +38,15 @@ Gayakini uses a layered Spring Boot profile approach to separate infrastructure 
 | **Profile**         | `local`               | `dev`                 | `staging`             |
 | **DB Host**         | `localhost`           | `db` (container)      | External / Env        |
 | **Mail Host**       | `localhost` (Mailpit) | `mail` (Mailpit)      | External / Env        |
-| **Memory (JVM)**    | 20% - 50% RAM         | 25% - 60% RAM         | 25% - 70% RAM         |
+| **Memory (JVM)**    | 25% - 50% RAM         | 25% - 65% RAM         | 25% - 75% RAM         |
 | **Secrets Source**  | `.env`                | `.env` / Compose      | Environment Vars      |
 
 ## JVM Memory Management
 Memory policies are enforced via `JAVA_TOOL_OPTIONS`. 
 
-- **Local**: `-XX:InitialRAMPercentage=20 -XX:MaxRAMPercentage=50`
-- **Dev**: `-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=60`
-- **Staging**: `-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=70`
+- **Local**: `-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=50`
+- **Dev**: `-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=65`
+- **Staging/Prod**: `-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75`
 
 ## Environment Variables
 All secrets and environment-specific overrides must be provided via environment variables.
@@ -53,6 +58,7 @@ All secrets and environment-specific overrides must be provided via environment 
 | `DB_PASSWORD` | Database password | All |
 | `JWT_SECRET` | Secret key for JWT signing (min 32 chars) | All |
 | `MIDTRANS_SERVER_KEY` | Midtrans API Server Key | sandbox/prod |
+| `GAYAKINI_IS_PRODUCTION` | Toggles error masking and production SDK modes | All |
 
 ## Security Rules
 - **No Hardcoded Secrets**: Critical properties in `GayakiniProperties.kt` must not have default values that could be used in production.

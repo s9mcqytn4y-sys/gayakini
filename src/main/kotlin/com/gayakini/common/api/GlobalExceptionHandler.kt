@@ -17,7 +17,9 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException
 import java.util.NoSuchElementException
 
 @RestControllerAdvice
-class GlobalExceptionHandler {
+class GlobalExceptionHandler(
+    private val properties: com.gayakini.infrastructure.config.GayakiniProperties,
+) {
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(NoSuchElementException::class)
@@ -119,7 +121,13 @@ class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     fun handleAllExceptions(e: Exception): ApiResponse<Unit> {
         logger.error("Unhandled exception: ", e)
-        return ApiResponse.error(e.message ?: "Terjadi kesalahan pada server", "ERR_INTERNAL")
+        val message =
+            if (properties.isProduction) {
+                "Terjadi kesalahan pada server"
+            } else {
+                e.message ?: "Terjadi kesalahan pada server"
+            }
+        return ApiResponse.error(message, "ERR_INTERNAL")
     }
 
     private fun badRequestResponse(message: String): ResponseEntity<ApiResponse<Unit>> =

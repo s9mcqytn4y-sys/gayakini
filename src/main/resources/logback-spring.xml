@@ -45,8 +45,22 @@
         </root>
     </springProfile>
 
-    <!-- Optional JSON structure block for future integration -->
+    <!-- Production: JSON logging to standard out for log aggregators -->
     <springProfile name="prod">
-        <!-- Add JSON logging for production if needed -->
+        <appender name="JSON_CONSOLE" class="net.logstash.logback.appender.LogstashConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <includeMdc>true</includeMdc>
+                <includeContext>true</includeContext>
+                <fieldNames>
+                    <timestamp>timestamp</timestamp>
+                    <level>severity</level>
+                </fieldNames>
+            </encoder>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
     </springProfile>
 </configuration>
