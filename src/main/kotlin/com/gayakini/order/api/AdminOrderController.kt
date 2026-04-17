@@ -1,6 +1,7 @@
 package com.gayakini.order.api
 
 import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderStatus
@@ -9,7 +10,6 @@ import com.gayakini.shipping.application.ShippingService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
@@ -48,9 +48,12 @@ class AdminOrderController(
         orderNumber: String?,
         @Parameter(hidden = true)
         pageable: Pageable,
-    ): Page<OrderDto> {
-        return orderService.listOrdersForAdmin(status, paymentStatus, fulfillmentStatus, orderNumber, pageable)
-            .map { OrderResponseMapper.toDto(it, shippingService.findShipmentByOrderId(it.id)) }
+    ): PaginatedResponse<OrderDto> {
+        val page =
+            orderService.listOrdersForAdmin(status, paymentStatus, fulfillmentStatus, orderNumber, pageable)
+                .map { OrderResponseMapper.toDto(it, shippingService.findShipmentByOrderId(it.id)) }
+
+        return PaginatedResponse.from("Daftar pesanan berhasil diambil.", page)
     }
 
     @GetMapping("/{orderId}")

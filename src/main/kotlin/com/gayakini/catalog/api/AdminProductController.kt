@@ -36,7 +36,7 @@ class AdminProductController(
         @Valid @RequestBody request: AdminCreateProductRequest,
     ): ApiResponse<AdminProductData> {
         val saved = productService.createProduct(request)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Product created successfully.",
             data = mapToAdminData(saved),
         )
@@ -50,7 +50,7 @@ class AdminProductController(
         @Valid @RequestBody request: AdminUpdateProductRequest,
     ): ApiResponse<AdminProductData> {
         val saved = productService.updateProduct(productId, request)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Product updated successfully.",
             data = mapToAdminData(saved),
         )
@@ -84,7 +84,7 @@ class AdminProductController(
                 idempotencyKey = idempotencyKey,
             )
 
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Stock updated successfully.",
             data =
                 StockAdjustmentData(
@@ -129,7 +129,7 @@ class AdminProductController(
                 isPrimary = isPrimary,
             )
 
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Product image uploaded successfully.",
             data = mapToAdminData(media.product),
         )

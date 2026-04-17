@@ -1,5 +1,6 @@
 package com.gayakini.reporting.api
 
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.reporting.application.ReportingService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -21,14 +22,14 @@ class AdminReportingController(private val reportingService: ReportingService) {
     fun getSummary(
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate?,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
-    ): DashboardSummaryResponse {
+    ): ApiResponse<DashboardSummaryDto> {
         val summary =
             if (startDate != null && endDate != null) {
                 reportingService.getDashboardSummary(startDate, endDate)
             } else {
                 reportingService.getDashboardSummary()
             }
-        return DashboardSummaryResponse(data = summary)
+        return ApiResponse.success("Dashboard summary retrieved.", summary)
     }
 
     @GetMapping("/best-sellers")
@@ -37,13 +38,13 @@ class AdminReportingController(private val reportingService: ReportingService) {
         @RequestParam(defaultValue = "10") limit: Int,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate?,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate?,
-    ): BestSellersResponse {
+    ): ApiResponse<List<ProductPerformanceDto>> {
         val bestSellers =
             if (startDate != null && endDate != null) {
                 reportingService.getBestSellers(limit, startDate, endDate)
             } else {
                 reportingService.getBestSellers(limit)
             }
-        return BestSellersResponse(data = bestSellers)
+        return ApiResponse.success("Best sellers retrieved.", bestSellers)
     }
 }

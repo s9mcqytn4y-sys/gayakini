@@ -6,6 +6,8 @@ import com.gayakini.catalog.domain.*
 import com.gayakini.common.util.UuidV7Generator
 import com.gayakini.infrastructure.storage.StorageCategory
 import com.gayakini.infrastructure.storage.StorageService
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
@@ -24,6 +26,7 @@ class ProductService(
     private val storageService: StorageService,
 ) {
     @Transactional
+    @CacheEvict(cacheNames = ["products", "product_summaries"], allEntries = true)
     fun createProduct(request: AdminCreateProductRequest): Product {
         val category =
             categoryRepository.findBySlug(request.categorySlug)
@@ -53,6 +56,7 @@ class ProductService(
     }
 
     @Transactional
+    @CacheEvict(cacheNames = ["products", "product_summaries"], allEntries = true)
     fun updateProduct(
         id: UUID,
         request: AdminUpdateProductRequest,
@@ -87,6 +91,12 @@ class ProductService(
         return productRepository.save(product)
     }
 
+    @Cacheable(
+        cacheNames = ["product_summaries"],
+        key =
+            "{#page, #size, #sort, #q, #categorySlug, #collectionSlug, #color, #sizeCode, #minPrice, " +
+                "#maxPrice, #inStock}",
+    )
     fun searchProducts(
         page: Int,
         size: Int,
@@ -121,6 +131,7 @@ class ProductService(
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = ["products"], key = "#id")
     fun getProduct(id: UUID): Product {
         return productRepository.findById(id)
             .orElseThrow { NoSuchElementException("Produk tidak ditemukan.") }

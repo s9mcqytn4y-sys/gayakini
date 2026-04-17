@@ -22,67 +22,67 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(NoSuchElementException::class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    fun handleNotFound(e: NoSuchElementException): StandardResponse<Unit> {
-        return StandardResponse.error(e.message ?: "Data tidak ditemukan.", "ERR_NOT_FOUND")
+    fun handleNotFound(e: NoSuchElementException): ApiResponse<Unit> {
+        return ApiResponse.error(e.message ?: "Data tidak ditemukan.", "ERR_NOT_FOUND")
     }
 
     @ExceptionHandler(ForbiddenException::class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    fun handleForbiddenException(e: ForbiddenException): StandardResponse<Unit> {
+    fun handleForbiddenException(e: ForbiddenException): ApiResponse<Unit> {
         logger.warn("Forbidden access: {}", e.message)
-        return StandardResponse.error(e.message ?: "Akses ditolak", "ERR_FORBIDDEN")
+        return ApiResponse.error(e.message ?: "Akses ditolak", "ERR_FORBIDDEN")
     }
 
     @ExceptionHandler(UnauthorizedException::class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    fun handleUnauthorizedException(e: UnauthorizedException): StandardResponse<Unit> {
+    fun handleUnauthorizedException(e: UnauthorizedException): ApiResponse<Unit> {
         logger.warn("Unauthorized access: {}", e.message)
-        return StandardResponse.error(e.message ?: "Silakan login terlebih dahulu", "ERR_UNAUTHORIZED")
+        return ApiResponse.error(e.message ?: "Silakan login terlebih dahulu", "ERR_UNAUTHORIZED")
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException::class)
-    fun handleMaxSizeException(e: MaxUploadSizeExceededException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleMaxSizeException(e: MaxUploadSizeExceededException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Upload size exceeded: {}", e.message)
         return ResponseEntity
             .status(HttpStatus.PAYLOAD_TOO_LARGE)
-            .body(StandardResponse.error("Ukuran file melebihi batas 5MB", "ERR_FILE_TOO_LARGE"))
+            .body(ApiResponse.error("Ukuran file melebihi batas 5MB", "ERR_FILE_TOO_LARGE"))
     }
 
     @ExceptionHandler(IllegalArgumentException::class)
-    fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleIllegalArgument(e: IllegalArgumentException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Invalid argument: {}", e.message)
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(StandardResponse.error(e.message ?: "Permintaan tidak valid", "ERR_INVALID_REQUEST"))
+            .body(ApiResponse.error(e.message ?: "Permintaan tidak valid", "ERR_INVALID_REQUEST"))
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleMethodArgumentNotValid(e: MethodArgumentNotValidException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleMethodArgumentNotValid(e: MethodArgumentNotValidException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Validation failed: {}", e.message)
         return badRequestResponse(buildValidationMessage(e.bindingResult.allErrors.mapNotNull { it.defaultMessage }))
     }
 
     @ExceptionHandler(BindException::class)
-    fun handleBindException(e: BindException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleBindException(e: BindException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Binding failed: {}", e.message)
         return badRequestResponse(buildValidationMessage(e.bindingResult.allErrors.mapNotNull { it.defaultMessage }))
     }
 
     @ExceptionHandler(ConstraintViolationException::class)
-    fun handleConstraintViolation(e: ConstraintViolationException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleConstraintViolation(e: ConstraintViolationException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Constraint violation: {}", e.message)
         val messages = e.constraintViolations.map { violation -> violation.message }
         return badRequestResponse(buildValidationMessage(messages))
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleHttpMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleHttpMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Unreadable request body: {}", e.message)
         return badRequestResponse("Body permintaan tidak valid atau tidak dapat diproses.")
     }
 
     @ExceptionHandler(MissingRequestHeaderException::class)
-    fun handleMissingHeader(e: MissingRequestHeaderException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleMissingHeader(e: MissingRequestHeaderException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Missing request header: {}", e.message)
         return badRequestResponse("Header ${e.headerName} wajib dikirim.")
     }
@@ -90,7 +90,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(MissingServletRequestParameterException::class)
     fun handleMissingRequestParameter(
         e: MissingServletRequestParameterException,
-    ): ResponseEntity<StandardResponse<Unit>> {
+    ): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Missing request parameter: {}", e.message)
         return badRequestResponse("Parameter ${e.parameterName} wajib dikirim.")
     }
@@ -98,38 +98,38 @@ class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
     fun handleMethodArgumentTypeMismatch(
         e: MethodArgumentTypeMismatchException,
-    ): ResponseEntity<StandardResponse<Unit>> {
+    ): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Argument type mismatch: {}", e.message)
         return badRequestResponse("Parameter ${e.name} memiliki format yang tidak valid.")
     }
 
     @ExceptionHandler(SecurityException::class)
-    fun handleSecurityException(e: SecurityException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleSecurityException(e: SecurityException): ResponseEntity<ApiResponse<Unit>> {
         logger.error("Security violation: {}", e.message)
         return ResponseEntity
             .status(HttpStatus.FORBIDDEN)
-            .body(StandardResponse.error("Akses ditolak", "ERR_ACCESS_DENIED"))
+            .body(ApiResponse.error("Akses ditolak", "ERR_ACCESS_DENIED"))
     }
 
     @ExceptionHandler(IllegalStateException::class)
-    fun handleIllegalState(e: IllegalStateException): ResponseEntity<StandardResponse<Unit>> {
+    fun handleIllegalState(e: IllegalStateException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Illegal state: {}", e.message)
         return ResponseEntity
             .status(HttpStatus.CONFLICT)
-            .body(StandardResponse.error(e.message ?: "Terjadi kesalahan konflik data", "ERR_CONFLICT"))
+            .body(ApiResponse.error(e.message ?: "Terjadi kesalahan konflik data", "ERR_CONFLICT"))
     }
 
     @ExceptionHandler(Exception::class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    fun handleAllExceptions(e: Exception): StandardResponse<Unit> {
+    fun handleAllExceptions(e: Exception): ApiResponse<Unit> {
         logger.error("Unhandled exception: ", e)
-        return StandardResponse.error(e.message ?: "Terjadi kesalahan pada server", "ERR_INTERNAL")
+        return ApiResponse.error(e.message ?: "Terjadi kesalahan pada server", "ERR_INTERNAL")
     }
 
-    private fun badRequestResponse(message: String): ResponseEntity<StandardResponse<Unit>> =
+    private fun badRequestResponse(message: String): ResponseEntity<ApiResponse<Unit>> =
         ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
-            .body(StandardResponse.error(message, "ERR_INVALID_REQUEST"))
+            .body(ApiResponse.error(message, "ERR_INVALID_REQUEST"))
 
     private fun buildValidationMessage(messages: List<String>): String {
         val normalized = messages.map { it.trim() }.filter { it.isNotBlank() }.distinct()

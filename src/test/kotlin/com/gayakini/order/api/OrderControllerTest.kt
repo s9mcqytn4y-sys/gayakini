@@ -148,7 +148,7 @@ class OrderControllerTest : BaseWebMvcTest() {
             header("Authorization", "Bearer valid-customer-token")
         }.andExpect {
             status { isOk() }
-            jsonPath("$.content") { isArray() }
+            jsonPath("$.data") { isArray() }
         }
     }
 }

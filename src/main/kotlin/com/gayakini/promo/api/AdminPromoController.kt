@@ -33,7 +33,7 @@ class AdminPromoController(
     @Operation(summary = "Get all promos", description = "Retrieve a list of all promotions.")
     fun getAllPromos(): ApiResponse<List<PromoResponse>> {
         val promos = promoService.getAllPromos()
-        return ApiResponse(
+        return ApiResponse.success(
             message = "All promos retrieved successfully.",
             data = promos,
         )
@@ -49,7 +49,7 @@ class AdminPromoController(
         @PathVariable id: UUID,
     ): ApiResponse<PromoResponse> {
         val promo = promoService.getPromoById(id)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Promo details retrieved successfully.",
             data = promo,
         )
@@ -62,7 +62,7 @@ class AdminPromoController(
         @RequestBody @Valid request: CreatePromoRequest,
     ): ApiResponse<PromoResponse> {
         val promo = promoService.createPromo(request)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Promo created successfully.",
             data = promo,
         )
@@ -76,7 +76,7 @@ class AdminPromoController(
         @RequestBody @Valid request: UpdatePromoRequest,
     ): ApiResponse<PromoResponse> {
         val promo = promoService.updatePromo(id, request)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Promo updated successfully.",
             data = promo,
         )
@@ -104,7 +104,7 @@ class AdminPromoController(
         @RequestBody @Valid request: AddExclusionRequest,
     ): ApiResponse<Unit> {
         promoService.addExclusion(id, request)
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Promo exclusion added successfully.",
         )
     }

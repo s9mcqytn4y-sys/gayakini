@@ -1,6 +1,7 @@
 package com.gayakini.order.api
 
 import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.order.application.OrderService
@@ -9,7 +10,6 @@ import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.context.SecurityContextHolder
@@ -70,11 +70,12 @@ class OrderController(
     fun listMyOrders(
         @Parameter(hidden = true)
         pageable: Pageable,
-    ): Page<OrderDto> {
+    ): PaginatedResponse<OrderDto> {
         val currentUser =
             SecurityContextHolder.getContext().authentication?.principal as? UserPrincipal
                 ?: throw UnauthorizedException()
-        return orderService.listOrders(currentUser.id, pageable).map { OrderResponseMapper.toDto(it) }
+        val page = orderService.listOrders(currentUser.id, pageable).map { OrderResponseMapper.toDto(it) }
+        return PaginatedResponse.from("Daftar pesanan berhasil diambil.", page)
     }
 
     @PostMapping("/orders/{orderId}/cancellations")

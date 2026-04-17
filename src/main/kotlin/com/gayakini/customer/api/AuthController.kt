@@ -1,6 +1,6 @@
 package com.gayakini.customer.api
 
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.customer.application.CustomerService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
@@ -19,9 +19,9 @@ class AuthController(private val customerService: CustomerService) {
     @SecurityRequirements // Menandai endpoint ini sebagai publik di OpenAPI
     fun register(
         @Valid @RequestBody request: RegisterRequest,
-    ): StandardResponse<AuthTokensData> {
+    ): ApiResponse<AuthTokensData> {
         val data = customerService.register(request)
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Akun berhasil dibuat.",
             data = data,
         )
@@ -32,9 +32,9 @@ class AuthController(private val customerService: CustomerService) {
     @SecurityRequirements
     fun login(
         @Valid @RequestBody request: LoginRequest,
-    ): StandardResponse<AuthTokensData> {
+    ): ApiResponse<AuthTokensData> {
         val data = customerService.login(request)
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Login berhasil.",
             data = data,
         )
@@ -45,8 +45,8 @@ class AuthController(private val customerService: CustomerService) {
     @SecurityRequirements
     fun refresh(
         @Valid @RequestBody request: RefreshTokenRequest,
-    ): StandardResponse<AuthTokensData> {
-        return StandardResponse(
+    ): ApiResponse<AuthTokensData> {
+        return ApiResponse.success(
             message = "Sesi login berhasil diperbarui.",
             data = customerService.refresh(request),
         )

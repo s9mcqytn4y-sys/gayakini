@@ -40,7 +40,7 @@ class AdminInventoryController(
                 idempotencyKey = idempotencyKey ?: request.idempotencyKey,
             )
 
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Stock adjustment recorded successfully.",
             data = InventoryAdjustmentResponse.fromEntity(adjustment),
         )

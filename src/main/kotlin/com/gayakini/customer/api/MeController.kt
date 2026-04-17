@@ -1,6 +1,6 @@
 package com.gayakini.customer.api
 
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.customer.application.CustomerService
 import com.gayakini.infrastructure.security.SecurityUtils
@@ -26,9 +26,9 @@ import org.springframework.web.multipart.MultipartFile
 class MeController(private val customerService: CustomerService) {
     @GetMapping
     @Operation(summary = "Ambil profil saya", description = "Mengambil data detail profil pengguna yang sedang login.")
-    fun getMyProfile(): StandardResponse<CustomerProfileResponse> {
+    fun getMyProfile(): ApiResponse<CustomerProfileResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Profil berhasil diambil.",
             data = customerService.getProfile(currentUser.id),
         )
@@ -39,9 +39,9 @@ class MeController(private val customerService: CustomerService) {
     fun updateMyProfile(
         @Valid @RequestBody
         request: UpdateProfileRequest,
-    ): StandardResponse<CustomerProfileResponse> {
+    ): ApiResponse<CustomerProfileResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Profil berhasil diperbarui.",
             data = customerService.updateProfile(currentUser.id, request),
         )
@@ -63,7 +63,7 @@ class MeController(private val customerService: CustomerService) {
             ],
         )
         @RequestParam("file") file: MultipartFile,
-    ): StandardResponse<CustomerProfileResponse> {
+    ): ApiResponse<CustomerProfileResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
 
         customerService.updateProfilePicture(
@@ -72,7 +72,7 @@ class MeController(private val customerService: CustomerService) {
             originalFilename = file.originalFilename ?: "profile.jpg",
         )
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Foto profil berhasil diunggah.",
             data = customerService.getProfile(currentUser.id),
         )

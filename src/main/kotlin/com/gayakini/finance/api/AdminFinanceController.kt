@@ -1,7 +1,6 @@
 package com.gayakini.finance.api
 
-import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.finance.application.FinanceService
 import com.gayakini.finance.domain.WithdrawalRequest
 import io.swagger.v3.oas.annotations.Operation
@@ -29,22 +28,20 @@ class AdminFinanceController(
     @GetMapping("/balance")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get balance", description = "View total balance available for withdrawal.")
-    fun getBalance(): StandardResponse<BalanceResponse> {
-        return StandardResponse(
+    fun getBalance(): ApiResponse<BalanceResponse> {
+        return ApiResponse.success(
             message = "Balance retrieved successfully.",
             data = BalanceResponse(availableBalance = financeService.getAvailableBalance()),
-            meta = ApiMeta(),
         )
     }
 
     @GetMapping("/withdrawals")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "List withdrawals", description = "View history of all withdrawal requests.")
-    fun listWithdrawals(): StandardResponse<List<WithdrawalResponse>> {
-        return StandardResponse(
+    fun listWithdrawals(): ApiResponse<List<WithdrawalResponse>> {
+        return ApiResponse.success(
             message = "Withdrawal list retrieved successfully.",
             data = financeService.listWithdrawals().map { mapToResponse(it) },
-            meta = ApiMeta(),
         )
     }
 
@@ -54,12 +51,11 @@ class AdminFinanceController(
     fun approveWithdrawal(
         @Parameter(description = "Withdrawal UUID") @PathVariable id: UUID,
         @Valid @RequestBody request: ApproveWithdrawalRequest,
-    ): StandardResponse<WithdrawalResponse> {
+    ): ApiResponse<WithdrawalResponse> {
         val approved = financeService.approveWithdrawal(id, request.notes)
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Withdrawal approved.",
             data = mapToResponse(approved),
-            meta = ApiMeta(),
         )
     }
 
@@ -68,12 +64,11 @@ class AdminFinanceController(
     @Operation(summary = "Process withdrawal", description = "Mark withdrawal as processed/disbursed.")
     fun processWithdrawal(
         @Parameter(description = "Withdrawal UUID") @PathVariable id: UUID,
-    ): StandardResponse<WithdrawalResponse> {
+    ): ApiResponse<WithdrawalResponse> {
         val processed = financeService.processWithdrawal(id)
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Withdrawal processed successfully (Sandbox Mock).",
             data = mapToResponse(processed),
-            meta = ApiMeta(),
         )
     }
 
@@ -83,8 +78,8 @@ class AdminFinanceController(
         summary = "List payout destinations",
         description = "View list of registered bank accounts for withdrawals.",
     )
-    fun getPayoutDestinations(): StandardResponse<List<PayoutDestinationDto>> {
-        return StandardResponse(
+    fun getPayoutDestinations(): ApiResponse<List<PayoutDestinationDto>> {
+        return ApiResponse.success(
             message = "Payout destinations retrieved successfully.",
             data =
                 financeService.getPayoutDestinations().map {
@@ -96,7 +91,6 @@ class AdminFinanceController(
                         branch = it.branch,
                     )
                 },
-            meta = ApiMeta(),
         )
     }
 
@@ -108,20 +102,19 @@ class AdminFinanceController(
     )
     fun createWithdrawal(
         @Valid @RequestBody request: WithdrawalRequestInput,
-    ): StandardResponse<WithdrawalResponse> {
+    ): ApiResponse<WithdrawalResponse> {
         val created = financeService.requestWithdrawal(request.amount, request.payoutDestinationId)
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Withdrawal request created successfully.",
             data = mapToResponse(created),
-            meta = ApiMeta(),
         )
     }
 
     @GetMapping("/ledger-entries")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "List ledger entries", description = "View all financial transactions in the ledger.")
-    fun listLedgerEntries(): StandardResponse<List<LedgerEntryDto>> {
-        return StandardResponse(
+    fun listLedgerEntries(): ApiResponse<List<LedgerEntryDto>> {
+        return ApiResponse.success(
             message = "Ledger entries retrieved successfully.",
             data =
                 financeService.listLedgerEntries().map {
@@ -136,7 +129,6 @@ class AdminFinanceController(
                         postedAt = it.postedAt,
                     )
                 },
-            meta = ApiMeta(),
         )
     }
 

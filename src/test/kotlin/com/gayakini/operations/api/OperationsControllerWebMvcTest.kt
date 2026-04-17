@@ -37,7 +37,7 @@ class OperationsControllerWebMvcTest : BaseWebMvcTest() {
             content = """{"note": "Test restock"}"""
         }.andExpect {
             status { isOk() }
-            jsonPath("$.orderId") { value(orderId.toString()) }
+            jsonPath("$.data.orderId") { value(orderId.toString()) }
         }
     }
 

@@ -1,12 +1,11 @@
-package com.gayakini.audit.web.v1
-
 import com.gayakini.audit.api.AuditLogDto
 import com.gayakini.audit.api.AuditMapper
 import com.gayakini.audit.application.AuditService
+import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.PaginatedResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -33,7 +32,8 @@ class AdminAuditController(
         entityId: String?,
         @Parameter(hidden = true)
         pageable: Pageable,
-    ): Page<AuditLogDto> {
-        return auditService.getAudits(entityType, entityId, pageable).map { AuditMapper.toDto(it) }
+    ): PaginatedResponse<AuditLogDto> {
+        val page = auditService.getAudits(entityType, entityId, pageable).map { AuditMapper.toDto(it) }
+        return PaginatedResponse.from("Audit logs retrieved successfully.", page)
     }
 }

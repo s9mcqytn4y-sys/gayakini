@@ -1,11 +1,12 @@
 package com.gayakini.operations.api
 
+import com.gayakini.common.api.ApiResponse
+import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.operations.application.WarehouseService
 import com.gayakini.order.api.OrderDto
 import com.gayakini.order.api.OrderResponseMapper
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
-import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -24,8 +25,9 @@ class OperationsController(
 ) {
     @GetMapping("/orders/to-pack")
     @Operation(summary = "Get list of orders ready to be packed")
-    fun getOrdersToPack(pageable: Pageable): Page<OrderDto> {
-        return warehouseService.getOrdersToPack(pageable).map { OrderResponseMapper.toDto(it) }
+    fun getOrdersToPack(pageable: Pageable): PaginatedResponse<OrderDto> {
+        val page = warehouseService.getOrdersToPack(pageable).map { OrderResponseMapper.toDto(it) }
+        return PaginatedResponse.from("Orders to pack retrieved successfully", page)
     }
 
     @PostMapping("/orders/{orderId}/items/{orderItemId}/qc-restock")
@@ -36,7 +38,8 @@ class OperationsController(
         @Valid
         @RequestBody
         request: RestockQCRequest,
-    ): RestockQCResponse {
-        return warehouseService.processReturnQC(orderId, orderItemId, request)
+    ): ApiResponse<RestockQCResponse> {
+        val response = warehouseService.processReturnQC(orderId, orderItemId, request)
+        return ApiResponse.success("QC and restock process completed.", response)
     }
 }

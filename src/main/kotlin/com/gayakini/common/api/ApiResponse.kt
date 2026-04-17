@@ -114,7 +114,7 @@ data class ApiErrorResponse(
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Struktur respons sukses standar.")
-data class StandardResponse<T>(
+data class ApiResponse<T>(
     @Schema(description = "Indikator keberhasilan", example = "true")
     val success: Boolean = true,
     @Schema(description = "Pesan informasi", example = "Data berhasil diambil.")
@@ -127,12 +127,12 @@ data class StandardResponse<T>(
         fun <T> success(
             message: String,
             data: T? = null,
-        ) = StandardResponse(true, message, data)
+        ) = ApiResponse(true, message, data)
 
         fun <T> error(
             message: String,
             code: String? = null,
-        ) = StandardResponse<T>(
+        ) = ApiResponse<T>(
             success = false,
             message = message,
             data = null,
@@ -141,7 +141,7 @@ data class StandardResponse<T>(
     }
 }
 
-typealias ApiResponse<T> = StandardResponse<T>
+typealias StandardResponse<T> = ApiResponse<T>
 
 /**
  * Standard Paginated Response as per OpenAPI Contract
@@ -156,7 +156,24 @@ data class PaginatedResponse<T>(
     @Schema(description = "Daftar konten data")
     val data: List<T>,
     val meta: PageMeta,
-)
+) {
+    companion object {
+        fun <T> from(
+            message: String,
+            page: org.springframework.data.domain.Page<T>,
+        ) = PaginatedResponse(
+            message = message,
+            data = page.content,
+            meta =
+                PageMeta(
+                    page = page.number,
+                    size = page.size,
+                    totalElements = page.totalElements,
+                    totalPages = page.totalPages,
+                ),
+        )
+    }
+}
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Struktur respons acknowledgement webhook.")

@@ -85,7 +85,7 @@ class ProductController(private val productService: ProductService) {
     ): ApiResponse<ProductDetailDto> {
         val product = productService.getProduct(productId)
 
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Detail produk berhasil diambil.",
             data = mapToDetail(product),
         )
@@ -99,7 +99,7 @@ class ProductController(private val productService: ProductService) {
     ): ApiResponse<List<ProductVariantDto>> {
         val product = productService.getProduct(productId)
 
-        return ApiResponse(
+        return ApiResponse.success(
             message = "Variasi produk berhasil diambil.",
             data = product.variants.map { mapToVariantDto(it) },
         )

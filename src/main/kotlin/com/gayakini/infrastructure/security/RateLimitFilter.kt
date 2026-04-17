@@ -19,12 +19,12 @@ class RateLimitFilter : OncePerRequestFilter() {
     private val globalBuckets = ConcurrentHashMap<String, Bucket>()
 
     private fun createAuthBucket(): Bucket {
-        val limit = Bandwidth.classic(10, Refill.intervally(10, Duration.ofMinutes(1)))
+        val limit = Bandwidth.classic(10, Refill.greedy(10, Duration.ofMinutes(1)))
         return Bucket.builder().addLimit(limit).build()
     }
 
     private fun createCheckoutBucket(): Bucket {
-        val limit = Bandwidth.classic(20, Refill.intervally(20, Duration.ofMinutes(1)))
+        val limit = Bandwidth.classic(20, Refill.greedy(20, Duration.ofMinutes(1)))
         return Bucket.builder().addLimit(limit).build()
     }
 

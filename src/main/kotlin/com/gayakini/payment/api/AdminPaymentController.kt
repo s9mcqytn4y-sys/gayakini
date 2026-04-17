@@ -1,7 +1,6 @@
 package com.gayakini.payment.api
 
-import com.gayakini.common.api.ApiMeta
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.payment.application.PaymentService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -43,7 +42,7 @@ class AdminPaymentController(
             ],
         )
         @RequestParam("file") file: MultipartFile,
-    ): StandardResponse<Map<String, String>> {
+    ): ApiResponse<Map<String, String>> {
         val proofUrl =
             paymentService.uploadPaymentProof(
                 paymentId = paymentId,
@@ -51,10 +50,9 @@ class AdminPaymentController(
                 originalFilename = file.originalFilename ?: "proof.jpg",
             )
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Bukti pembayaran berhasil diunggah.",
             data = mapOf("proofUrl" to proofUrl),
-            meta = ApiMeta(),
         )
     }
 }

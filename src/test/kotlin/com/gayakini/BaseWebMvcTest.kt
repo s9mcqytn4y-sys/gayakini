@@ -20,7 +20,7 @@ import java.util.UUID
 @ActiveProfiles("test")
 @EnableConfigurationProperties(GayakiniProperties::class)
 abstract class BaseWebMvcTest {
-    fun ResultActionsDsl.andExpectStandardResponse(
+    fun ResultActionsDsl.andExpectApiResponse(
         expectedStatus: Int = 200,
         success: Boolean = true,
         message: String? = null,
@@ -33,6 +33,13 @@ abstract class BaseWebMvcTest {
             }
         }
     }
+
+    @Deprecated("Use andExpectApiResponse instead", ReplaceWith("andExpectApiResponse(expectedStatus, success, message)"))
+    fun ResultActionsDsl.andExpectStandardResponse(
+        expectedStatus: Int = 200,
+        success: Boolean = true,
+        message: String? = null,
+    ): ResultActionsDsl = andExpectApiResponse(expectedStatus, success, message)
 
     @TestConfiguration
     class SecurityTestConfig {

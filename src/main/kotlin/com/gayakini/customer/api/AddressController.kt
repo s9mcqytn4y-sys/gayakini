@@ -1,6 +1,6 @@
 package com.gayakini.customer.api
 
-import com.gayakini.common.api.StandardResponse
+import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.customer.application.CustomerService
 import com.gayakini.infrastructure.security.SecurityUtils
@@ -29,11 +29,11 @@ class AddressController(private val customerService: CustomerService) {
         summary = "Daftar alamat saya",
         description = "Mengambil semua alamat pengiriman yang terdaftar untuk akun ini.",
     )
-    fun listMyAddresses(): StandardResponse<List<AddressResponse>> {
+    fun listMyAddresses(): ApiResponse<List<AddressResponse>> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
         val addresses = customerService.getAddresses(currentUser.id)
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Daftar alamat berhasil diambil.",
             data = addresses.map { mapToResponse(it) },
         )
@@ -44,12 +44,12 @@ class AddressController(private val customerService: CustomerService) {
     @Operation(summary = "Tambah alamat baru", description = "Menambahkan alamat pengiriman baru ke buku alamat.")
     fun createAddress(
         @Valid @RequestBody request: AddressUpsertRequest,
-    ): StandardResponse<AddressResponse> {
+    ): ApiResponse<AddressResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
 
         val saved = customerService.upsertAddress(currentUser.id, request)
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Alamat berhasil disimpan.",
             data = mapToResponse(saved),
         )
@@ -60,11 +60,11 @@ class AddressController(private val customerService: CustomerService) {
     fun updateAddress(
         @Parameter(description = "ID unik alamat") @PathVariable addressId: UUID,
         @Valid @RequestBody request: AddressUpsertRequest,
-    ): StandardResponse<AddressResponse> {
+    ): ApiResponse<AddressResponse> {
         val currentUser = SecurityUtils.getCurrentUser() ?: throw UnauthorizedException()
         val saved = customerService.updateAddress(currentUser.id, addressId, request)
 
-        return StandardResponse(
+        return ApiResponse.success(
             message = "Alamat berhasil diperbarui.",
             data = mapToResponse(saved),
         )
