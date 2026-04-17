@@ -3,17 +3,21 @@ package com.gayakini.order.domain
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Lock
 import jakarta.persistence.LockModeType
 import java.util.Optional
 import java.util.UUID
 
-interface OrderRepository : JpaRepository<Order, UUID> {
+interface OrderRepository : JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
     fun findByOrderNumber(orderNumber: String): Optional<Order>
 
     fun findByCheckoutId(checkoutId: UUID): Optional<Order>
 
-    fun findAllByCustomerIdOrderByCreatedAtDesc(customerId: UUID): List<Order>
+    fun findAllByCustomerIdOrderByCreatedAtDesc(
+        customerId: UUID,
+        pageable: Pageable,
+    ): Page<Order>
 
     fun findAllByOrderByCreatedAtDesc(): List<Order>
 

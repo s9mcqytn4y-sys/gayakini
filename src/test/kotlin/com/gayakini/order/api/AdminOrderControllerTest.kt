@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.data.domain.PageImpl
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import java.time.Instant
@@ -46,11 +47,11 @@ class AdminOrderControllerTest : BaseWebMvcTest() {
 
     @Test
     fun `listOrders should return 200 for admins`() {
-        every { orderService.listOrdersForAdmin(any(), any(), any(), any()) } returns emptyList()
+        every { orderService.listOrdersForAdmin(any(), any(), any(), any(), any()) } returns PageImpl(mutableListOf())
 
         mockMvc.get("/v1/admin/orders") {
             header("Authorization", "Bearer valid-admin-token")
-        }.andExpectStandardResponse(200)
+        }.andExpect { status { isOk() } }
     }
 
     @Test

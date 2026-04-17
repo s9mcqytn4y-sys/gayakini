@@ -15,7 +15,7 @@ plugins {
 }
 
 group = "com.gayakini"
-version = "0.0.1-SNAPSHOT"
+version = "1.0.0-SNAPSHOT"
 
 java {
     toolchain {
@@ -51,6 +51,8 @@ dependencies {
     implementation("org.springframework:spring-aspects")
     implementation("com.github.f4b6a3:uuid-creator:6.0.0")
     implementation("org.apache.tika:tika-core:2.9.2")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.2.3")
+    implementation("com.bucket4j:bucket4j-core:8.10.1")
 
     // Security & JWT
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")

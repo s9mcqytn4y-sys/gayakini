@@ -79,6 +79,7 @@ class ProductController(private val productService: ProductService) {
     @GetMapping("/{productId}")
     @Operation(summary = "Mendapatkan detail produk lengkap berdasarkan ID")
     @SecurityRequirements
+    @org.springframework.cache.annotation.Cacheable(value = ["products"], key = "#productId")
     fun getProductById(
         @Parameter(description = "UUID unik produk") @PathVariable productId: UUID,
     ): ApiResponse<ProductDetailDto> {

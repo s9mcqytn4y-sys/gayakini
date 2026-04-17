@@ -23,6 +23,7 @@ class SecurityConfig(
     private val properties: GayakiniProperties,
     private val jwtService: JwtService,
     private val requestIdFilter: RequestIdFilter,
+    private val rateLimitFilter: RateLimitFilter,
     private val customAuthenticationEntryPoint: CustomAuthenticationEntryPoint,
     private val customAccessDeniedHandler: CustomAccessDeniedHandler,
 ) {
@@ -76,6 +77,10 @@ class SecurityConfig(
             }
             .addFilterBefore(
                 requestIdFilter,
+                UsernamePasswordAuthenticationFilter::class.java,
+            )
+            .addFilterBefore(
+                rateLimitFilter,
                 UsernamePasswordAuthenticationFilter::class.java,
             )
             .addFilterBefore(

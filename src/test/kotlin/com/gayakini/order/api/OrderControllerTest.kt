@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.context.annotation.Import
+import org.springframework.data.domain.PageImpl
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
@@ -141,13 +142,13 @@ class OrderControllerTest : BaseWebMvcTest() {
 
     @Test
     fun `listMyOrders should return 200 when authenticated`() {
-        every { orderService.listOrders(any()) } returns emptyList()
+        every { orderService.listOrders(any(), any()) } returns PageImpl(mutableListOf())
 
         mockMvc.get("/v1/me/orders") {
             header("Authorization", "Bearer valid-customer-token")
-        }.andExpectStandardResponse(200)
-            .andExpect {
-                jsonPath("$.data") { isArray() }
-            }
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.content") { isArray() }
+        }
     }
 }

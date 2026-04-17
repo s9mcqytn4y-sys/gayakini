@@ -19,6 +19,10 @@ import com.gayakini.inventory.application.InventoryService
 import com.gayakini.inventory.domain.AdjustmentReason
 import com.gayakini.order.api.PlaceOrderRequest
 import com.gayakini.order.domain.*
+import jakarta.persistence.criteria.Predicate
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.domain.Specification
 import org.springframework.security.core.context.SecurityContextHolder
 import com.gayakini.audit.application.AuditContext
 import com.gayakini.audit.domain.AuditEvent
@@ -266,25 +270,39 @@ class OrderService(
         return order
     }
 
-    fun listOrders(customerId: UUID?): List<Order> {
+    fun listOrders(
+        customerId: UUID?,
+        pageable: Pageable,
+    ): Page<Order> {
         return if (customerId != null) {
-            orderRepository.findAllByCustomerIdOrderByCreatedAtDesc(customerId)
+            orderRepository.findAllByCustomerIdOrderByCreatedAtDesc(customerId, pageable)
         } else {
-            orderRepository.findAllByOrderByCreatedAtDesc()
+            orderRepository.findAll(pageable)
         }
     }
 
+    @Suppress("SpreadOperator")
     fun listOrdersForAdmin(
         status: OrderStatus?,
         paymentStatus: PaymentStatus?,
         fulfillmentStatus: FulfillmentStatus?,
         orderNumber: String?,
-    ): List<Order> {
-        return orderRepository.findAllByOrderByCreatedAtDesc()
-            .filter { status == null || it.status == status }
-            .filter { paymentStatus == null || it.paymentStatus == paymentStatus }
-            .filter { fulfillmentStatus == null || it.fulfillmentStatus == fulfillmentStatus }
-            .filter { orderNumber.isNullOrBlank() || it.orderNumber.contains(orderNumber.trim(), ignoreCase = true) }
+        pageable: Pageable,
+    ): Page<Order> {
+        val spec =
+            Specification<Order> { root, _, cb ->
+                val predicates = mutableListOf<Predicate>()
+                status?.let { predicates.add(cb.equal(root.get<OrderStatus>("status"), it)) }
+                paymentStatus?.let { predicates.add(cb.equal(root.get<PaymentStatus>("paymentStatus"), it)) }
+                fulfillmentStatus?.let {
+                    predicates.add(cb.equal(root.get<FulfillmentStatus>("fulfillmentStatus"), it))
+                }
+                orderNumber?.takeIf { it.isNotBlank() }?.let {
+                    predicates.add(cb.like(cb.lower(root.get("orderNumber")), "%${it.trim().lowercase()}%"))
+                }
+                cb.and(*predicates.toTypedArray<Predicate>())
+            }
+        return orderRepository.findAll(spec, pageable)
     }
 
     @Transactional

@@ -28,6 +28,7 @@ class LocationController(private val areaRepository: LocationAreaRepository) {
         description = "Mencari area (kecamatan, kota, provinsi) berdasarkan kata kunci.",
     )
     @SecurityRequirements
+    @org.springframework.cache.annotation.Cacheable(value = ["locations"], key = "#input + '-' + #limit")
     fun searchAreas(
         @Parameter(description = "Kata kunci pencarian (min 2 karakter)", example = "Gambir")
         @RequestParam input: String,

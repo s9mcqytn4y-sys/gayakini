@@ -1,7 +1,8 @@
 package com.gayakini.audit.web.v1
 
+import com.gayakini.audit.api.AuditLogDto
+import com.gayakini.audit.api.AuditMapper
 import com.gayakini.audit.application.AuditService
-import com.gayakini.audit.domain.AuditLog
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -32,7 +33,7 @@ class AdminAuditController(
         entityId: String?,
         @Parameter(hidden = true)
         pageable: Pageable,
-    ): Page<AuditLog> {
-        return auditService.getAudits(entityType, entityId, pageable)
+    ): Page<AuditLogDto> {
+        return auditService.getAudits(entityType, entityId, pageable).map { AuditMapper.toDto(it) }
     }
 }

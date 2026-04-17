@@ -1,8 +1,6 @@
 package com.gayakini.order.api
 
 import com.gayakini.common.api.ApiResponse
-import com.gayakini.common.api.PageMeta
-import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.common.api.UnauthorizedException
 import com.gayakini.infrastructure.security.UserPrincipal
 import com.gayakini.order.application.OrderService
@@ -10,6 +8,9 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.*
@@ -35,6 +36,7 @@ class OrderController(
         @Parameter(description = "Token otorisasi checkout (wajib untuk guest)")
         @RequestHeader(value = "X-Checkout-Token", required = false)
         checkoutToken: String?,
+        @Valid
         @RequestBody
         request: PlaceOrderRequest,
     ): ApiResponse<OrderDto> {
@@ -66,25 +68,13 @@ class OrderController(
     @GetMapping("/me/orders")
     @Operation(summary = "Daftar pesanan milik user yang sedang login (Role: CUSTOMER)")
     fun listMyOrders(
-        @Parameter(description = "Halaman") @RequestParam(defaultValue = "1") page: Int,
-        @Parameter(description = "Ukuran") @RequestParam(defaultValue = "20") size: Int,
-    ): PaginatedResponse<OrderDto> {
+        @Parameter(hidden = true)
+        pageable: Pageable,
+    ): Page<OrderDto> {
         val currentUser =
             SecurityContextHolder.getContext().authentication?.principal as? UserPrincipal
                 ?: throw UnauthorizedException()
-        val orders = orderService.listOrders(currentUser.id)
-
-        return PaginatedResponse(
-            message = "Daftar pesanan berhasil diambil.",
-            data = orders.map { OrderResponseMapper.toDto(it) },
-            meta =
-                PageMeta(
-                    page = page,
-                    size = size,
-                    totalElements = orders.size.toLong(),
-                    totalPages = 1,
-                ),
-        )
+        return orderService.listOrders(currentUser.id, pageable).map { OrderResponseMapper.toDto(it) }
     }
 
     @PostMapping("/orders/{orderId}/cancellations")
@@ -100,6 +90,7 @@ class OrderController(
         @Parameter(description = "Token akses pesanan")
         @RequestHeader(value = "X-Order-Token", required = false)
         orderToken: String?,
+        @Valid
         @RequestBody
         request: CancelOrderRequest,
     ): ApiResponse<OrderDto> {

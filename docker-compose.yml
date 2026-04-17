@@ -1,4 +1,8 @@
-# Gayakini Infrastructure Only (Local Host Development)
+# Gayakini Environment Architecture
+# Usage:
+#   Local (infra only): docker compose up -d
+#   Full (app + infra): docker compose --profile full up -d
+
 services:
   db:
     image: postgres:16-alpine
@@ -17,6 +21,8 @@ services:
       retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gayakini-network
 
   mail:
     image: axllent/mailpit
@@ -27,9 +33,43 @@ services:
       - "8025:8025"  # Web UI
     environment:
       MP_MAX_MESSAGES: 500
+    networks:
+      - gayakini-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gayakini-app
+    restart: unless-stopped
+    profiles: ["full"]
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-gayakini}
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - SMTP_HOST=mail
+      - SMTP_PORT=1025
+      - JWT_SECRET=${JWT_SECRET}
+      # Container-aware percentages: 25% of 1024MB init, 65% max (665MB).
+      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=65 -XX:+ExitOnOutOfMemoryError
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gayakini-network
 
 volumes:
   postgres_data:
 
-volumes:
-  postgres_data:
+networks:
+  gayakini-network:
+    driver: bridge

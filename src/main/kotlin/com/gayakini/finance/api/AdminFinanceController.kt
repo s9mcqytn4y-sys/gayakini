@@ -7,6 +7,7 @@ import com.gayakini.finance.domain.WithdrawalRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.Valid
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -52,7 +53,7 @@ class AdminFinanceController(
     @Operation(summary = "Approve withdrawal", description = "Approve a withdrawal request.")
     fun approveWithdrawal(
         @Parameter(description = "Withdrawal UUID") @PathVariable id: UUID,
-        @RequestBody request: ApproveWithdrawalRequest,
+        @Valid @RequestBody request: ApproveWithdrawalRequest,
     ): StandardResponse<WithdrawalResponse> {
         val approved = financeService.approveWithdrawal(id, request.notes)
         return StandardResponse(
@@ -106,7 +107,7 @@ class AdminFinanceController(
         description = "Submit a request to withdraw funds to a specific account.",
     )
     fun createWithdrawal(
-        @RequestBody request: WithdrawalRequestInput,
+        @Valid @RequestBody request: WithdrawalRequestInput,
     ): StandardResponse<WithdrawalResponse> {
         val created = financeService.requestWithdrawal(request.amount, request.payoutDestinationId)
         return StandardResponse(

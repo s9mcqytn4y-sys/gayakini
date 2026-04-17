@@ -15,8 +15,6 @@ We provide a helper script for common developer flows:
 ./scripts/dev.sh app-run       # Run app via Gradle (Profile: local)
 ./scripts/dev.sh dev-stack     # Full containerized stack (Profile: dev)
 ./scripts/dev.sh dev-down      # Stop dev stack
-./scripts/dev.sh staging-up    # Full containerized staging parity (Profile: staging)
-./scripts/dev.sh staging-down  # Stop staging stack
 ./scripts/dev.sh clean         # Clean build and Docker artifacts
 ```
 
@@ -34,13 +32,13 @@ This will start:
 
 ### Start the full stack (Infrastructure + App)
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+docker compose --profile full up -d
 ```
 This will build the application image and start it alongside the infrastructure in a shared network.
 
 You can verify the status with:
 ```bash
-docker compose ps
+docker compose --profile full ps
 ```
 Ensure `gayakini-db` is `healthy` before starting the application.
 

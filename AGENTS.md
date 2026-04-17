@@ -20,7 +20,7 @@ The system handles complex data management and standardization for Indonesian in
 * **Roles:** The system implements a 4-role RBAC model: `CUSTOMER`, `ADMIN`, `FINANCE`, and `OPERATOR`.
 * **Data Processing:** Interactions with structured JSON objects and Excel data formats.
 * **Standardization:** Use centimeter (cm) standards unless specified otherwise.
-*   **Phase 9 Implementation**: Implementation of inventory movements, warehouse fulfillment, and centralized business monitoring (`OrderMetrics`).
+*   **Phase 9 Implementation**: Implementation of inventory movements, warehouse fulfillment, and centralized business monitoring (`OrderMetrics`). This includes `InventoryMovement` tracking across `STORAGE`, `PACKING`, and `EXTERNAL` locations.
 *   **RBAC Boundaries**: Secured `/v1/operations/**` for `ADMIN` and `OPERATOR` roles.
 
 ## 📝 Coding Guidelines

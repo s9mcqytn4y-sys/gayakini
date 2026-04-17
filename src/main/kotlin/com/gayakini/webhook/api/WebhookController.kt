@@ -10,7 +10,9 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
+import org.springframework.security.crypto.codec.Utf8
 import org.springframework.web.bind.annotation.*
+import java.security.MessageDigest
 
 @RestController
 @RequestMapping("/v1/webhooks")
@@ -24,6 +26,18 @@ class WebhookController(
     private val properties: com.gayakini.infrastructure.config.GayakiniProperties,
 ) {
     private val logger = LoggerFactory.getLogger(WebhookController::class.java)
+
+    companion object {
+        /**
+         * Verifies two byte arrays in constant time to prevent timing attacks.
+         */
+        fun safeEqual(
+            a: ByteArray,
+            b: ByteArray,
+        ): Boolean {
+            return MessageDigest.isEqual(a, b)
+        }
+    }
 
     @PostMapping("/midtrans")
     @Operation(
@@ -76,9 +90,13 @@ class WebhookController(
 
         // Verify Biteship signature if webhook secret is configured
         val webhookSecret = properties.biteship.webhookSecret
-        if (webhookSecret != "dummy-webhook-secret" && signature != null) {
-            // Constant-time verification logic should go here if Biteship provides a signature mechanism
-            // For now, we enforce a basic secret check if provided in headers or as a token
+        if (webhookSecret.isNotBlank() && webhookSecret != "dummy-webhook-secret" && signature != null) {
+            val expected = Utf8.encode(webhookSecret)
+            val actual = Utf8.encode(signature)
+            if (!safeEqual(expected, actual)) {
+                logger.warn("Invalid Biteship webhook signature detected")
+                throw ForbiddenException("Invalid signature")
+            }
         }
 
         val payloadMap =

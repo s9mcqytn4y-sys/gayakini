@@ -1,8 +1,6 @@
 package com.gayakini.order.api
 
 import com.gayakini.common.api.ApiResponse
-import com.gayakini.common.api.PageMeta
-import com.gayakini.common.api.PaginatedResponse
 import com.gayakini.order.application.OrderService
 import com.gayakini.order.domain.FulfillmentStatus
 import com.gayakini.order.domain.OrderStatus
@@ -11,10 +9,13 @@ import com.gayakini.shipping.application.ShippingService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
@@ -33,12 +34,6 @@ class AdminOrderController(
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "List all orders with filters")
     fun listOrders(
-        @Parameter(description = "Page number")
-        @RequestParam(defaultValue = "1")
-        page: Int,
-        @Parameter(description = "Page size")
-        @RequestParam(defaultValue = "20")
-        size: Int,
         @Parameter(description = "Filter by order status")
         @RequestParam(required = false)
         status: OrderStatus?,
@@ -51,24 +46,11 @@ class AdminOrderController(
         @Parameter(description = "Search by order number")
         @RequestParam(required = false)
         orderNumber: String?,
-    ): PaginatedResponse<OrderDto> {
-        val filtered =
-            orderService.listOrdersForAdmin(status, paymentStatus, fulfillmentStatus, orderNumber)
-        val fromIndex = ((page - 1).coerceAtLeast(0) * size).coerceAtMost(filtered.size)
-        val toIndex = (fromIndex + size).coerceAtMost(filtered.size)
-        val slice = filtered.subList(fromIndex, toIndex)
-
-        return PaginatedResponse(
-            message = "Daftar pesanan admin berhasil diambil.",
-            data = slice.map { OrderResponseMapper.toDto(it, shippingService.findShipmentByOrderId(it.id)) },
-            meta =
-                PageMeta(
-                    page = page,
-                    size = size,
-                    totalElements = filtered.size.toLong(),
-                    totalPages = if (filtered.isEmpty()) 0 else ((filtered.size + size - 1) / size),
-                ),
-        )
+        @Parameter(hidden = true)
+        pageable: Pageable,
+    ): Page<OrderDto> {
+        return orderService.listOrdersForAdmin(status, paymentStatus, fulfillmentStatus, orderNumber, pageable)
+            .map { OrderResponseMapper.toDto(it, shippingService.findShipmentByOrderId(it.id)) }
     }
 
     @GetMapping("/{orderId}")
@@ -96,6 +78,7 @@ class AdminOrderController(
         @Parameter(description = "Idempotency token")
         @RequestHeader("Idempotency-Key")
         idempotencyKey: String,
+        @Valid
         @RequestBody(required = false)
         request: AdminCreateShipmentRequest?,
     ): ApiResponse<OrderDto> {
@@ -117,6 +100,7 @@ class AdminOrderController(
         @Parameter(description = "Idempotency token")
         @RequestHeader("Idempotency-Key")
         idempotencyKey: String,
+        @Valid
         @RequestBody(required = false)
         request: AdminCancelOrderRequest?,
     ): ApiResponse<OrderDto> {
