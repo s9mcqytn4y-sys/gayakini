@@ -27,7 +27,7 @@ We use Docker Compose to manage local dependencies (PostgreSQL and Mailpit).
 docker-compose up -d
 ```
 This will start:
-- **PostgreSQL 16** (Port 5432, with healthcheck)
+- **PostgreSQL 17** (Port 5432, with healthcheck)
 - **Mailpit** (SMTP Port 1025, Web UI Port 8025)
 
 ### Start the full stack (Infrastructure + App)
@@ -74,7 +74,7 @@ This is the ultimate local verification. It runs:
 1.  **KtLint Check**: Kotlin style validation.
 2.  **Detekt**: Static code analysis.
 3.  **Tests**: Unit and integration test suite.
-4.  **Kover**: Coverage verification (Current baseline: 35%).
+4.  **Kover**: Coverage verification (Current baseline: 42%).
 5.  **BootJar**: Assembles the executable JAR.
 
 #### Running tests without Testcontainers
