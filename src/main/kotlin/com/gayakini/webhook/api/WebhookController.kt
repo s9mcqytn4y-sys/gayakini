@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.Valid
 import org.slf4j.LoggerFactory
-import org.springframework.security.crypto.codec.Utf8
 import org.springframework.web.bind.annotation.*
 import java.security.MessageDigest
 
@@ -24,6 +23,7 @@ class WebhookController(
     private val paymentService: PaymentService,
     private val shippingService: ShippingService,
     private val properties: com.gayakini.infrastructure.config.GayakiniProperties,
+    private val objectMapper: com.fasterxml.jackson.databind.ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(WebhookController::class.java)
 
@@ -78,26 +78,19 @@ class WebhookController(
     @PostMapping("/biteship")
     @Operation(
         summary = "Biteship Webhook",
-        description = "Receive shipping status notifications from Biteship.",
+        description = "Receive shipping status notifications from Biteship. Security is verified via HMAC-SHA256.",
     )
     @SecurityRequirements
     fun handleBiteshipWebhook(
-        @Valid @RequestBody payload: BiteshipWebhookPayload,
-        @Parameter(description = "Biteship signature for integrity validation")
+        @Parameter(hidden = true) @RequestBody requestBody: String,
+        @Parameter(description = "Biteship signature (HMAC-SHA256 of request body)")
         @RequestHeader("X-Biteship-Signature", required = false) signature: String?,
     ): WebhookAckResponse {
-        logger.info("Biteship webhook event received: {} for Order: {}", payload.event, payload.orderId)
+        verifyBiteshipSignature(requestBody, signature)
 
-        // Verify Biteship signature if webhook secret is configured
-        val webhookSecret = properties.biteship.webhookSecret
-        if (webhookSecret.isNotBlank() && webhookSecret != "dummy-webhook-secret" && signature != null) {
-            val expected = Utf8.encode(webhookSecret)
-            val actual = Utf8.encode(signature)
-            if (!safeEqual(expected, actual)) {
-                logger.warn("Invalid Biteship webhook signature detected")
-                throw ForbiddenException("Invalid signature")
-            }
-        }
+        val payload = parseBiteshipPayload(requestBody)
+
+        logger.info("Biteship webhook event received: {} for Order: {}", payload.event, payload.orderId)
 
         val payloadMap =
             mutableMapOf<String, Any>(
@@ -110,5 +103,33 @@ class WebhookController(
         shippingService.processBiteshipWebhook(payloadMap)
 
         return WebhookAckResponse()
+    }
+
+    private fun parseBiteshipPayload(requestBody: String): BiteshipWebhookPayload {
+        return try {
+            objectMapper.readValue(requestBody, BiteshipWebhookPayload::class.java)
+        } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
+            logger.error("Failed to parse Biteship payload", e)
+            throw IllegalArgumentException("Invalid payload format")
+        }
+    }
+
+    private fun verifyBiteshipSignature(
+        requestBody: String,
+        signature: String?,
+    ) {
+        val webhookSecret = properties.biteship.webhookSecret
+        if (webhookSecret.isNotBlank() && webhookSecret != "dummy-webhook-secret") {
+            if (signature == null) {
+                logger.warn("Missing Biteship signature")
+                throw ForbiddenException("Missing signature")
+            }
+
+            val expected = com.gayakini.common.util.WebhookSecurity.hmacSha256(webhookSecret, requestBody)
+            if (!com.gayakini.common.util.WebhookSecurity.safeEqual(expected, signature)) {
+                logger.warn("Invalid Biteship webhook signature detected")
+                throw ForbiddenException("Invalid signature")
+            }
+        }
     }
 }

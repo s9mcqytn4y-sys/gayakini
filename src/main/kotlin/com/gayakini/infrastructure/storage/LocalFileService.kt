@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter
 @Service
 class LocalFileService(
     @Value("\${gayakini.storage.local-path:storage}") private val storageRoot: String,
+    private val fileValidator: FileValidator,
 ) : StorageService {
     private val logger = LoggerFactory.getLogger(LocalFileService::class.java)
 
@@ -21,6 +22,11 @@ class LocalFileService(
         filename: String,
         category: StorageCategory,
     ): String {
+        // 1. Validation: Scan file signature (MIME type)
+        // We need a reusable stream or read it into memory because Tika consumes it
+        val bytes = inputStream.readAllBytes()
+        fileValidator.validate(bytes.inputStream(), category)
+
         val relativeDir = getRelativeDirectory(category)
         val targetDir = Paths.get(storageRoot, category.subDir, relativeDir)
 
@@ -28,18 +34,24 @@ class LocalFileService(
             Files.createDirectories(targetDir)
         }
 
-        // Sanitize filename to prevent directory traversal
-        val sanitizedFilename = Paths.get(filename).fileName.toString()
-        val targetPath = targetDir.resolve(sanitizedFilename)
+        // 2. Security: Generate unique UUID filename to prevent collisions and path injection
+        val extension = getExtension(filename)
+        val uniqueFilename = "${com.gayakini.common.util.UuidV7Generator.generate()}$extension"
+        val targetPath = targetDir.resolve(uniqueFilename)
 
         Files.newOutputStream(targetPath).use { outputStream ->
-            inputStream.copyTo(outputStream)
+            outputStream.write(bytes)
         }
 
         logger.info("File stored successfully in {}: {}", category.name, targetPath)
 
         // Relative path returned for storage in database
-        return if (relativeDir.isEmpty()) "$sanitizedFilename" else "$relativeDir/$sanitizedFilename"
+        return if (relativeDir.isEmpty()) uniqueFilename else "$relativeDir/$uniqueFilename"
+    }
+
+    private fun getExtension(filename: String): String {
+        val dotIndex = filename.lastIndexOf('.')
+        return if (dotIndex >= 0) filename.substring(dotIndex).lowercase() else ""
     }
 
     override fun loadAsPath(

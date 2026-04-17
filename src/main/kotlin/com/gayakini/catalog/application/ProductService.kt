@@ -46,7 +46,7 @@ class ProductService(
                 subtitle = request.subtitle,
                 brandName = request.brandName,
                 category = category,
-                description = request.description,
+                description = com.gayakini.common.util.HtmlSanitizer.sanitize(request.description),
                 status = request.status,
             ).apply {
                 this.collections.addAll(collections)
@@ -67,7 +67,7 @@ class ProductService(
         request.slug?.let { product.slug = it }
         request.subtitle?.let { product.subtitle = it }
         request.brandName?.let { product.brandName = it }
-        request.description?.let { product.description = it }
+        request.description?.let { product.description = com.gayakini.common.util.HtmlSanitizer.sanitize(it) }
         request.status?.let { product.status = it }
 
         request.categorySlug?.let { slug ->

@@ -54,6 +54,7 @@ dependencies {
     implementation("org.apache.tika:tika-core:2.9.2")
     implementation("com.github.ben-manes.caffeine:caffeine:3.2.3")
     implementation("com.bucket4j:bucket4j-core:8.10.1")
+    implementation("org.jsoup:jsoup:1.18.1")
 
     // Security & JWT
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
