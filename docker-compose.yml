@@ -55,12 +55,15 @@ services:
       - SMTP_HOST=mail
       - SMTP_PORT=1025
       - JWT_SECRET=${JWT_SECRET}
-      # Container-aware percentages: 25% of 1024MB init, 65% max (665MB).
-      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=65 -XX:+ExitOnOutOfMemoryError
+      # Container-aware percentages: 25% of 1024MB init, 75% max (768MB).
+      # G1GC for low latency, OOM Exit for stability, NMT for monitoring.
+      - JAVA_TOOL_OPTIONS=-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:NativeMemoryTracking=summary -XshowSettings:vm
     deploy:
       resources:
         limits:
           memory: 1024M
+        reservations:
+          memory: 512M
     depends_on:
       db:
         condition: service_healthy

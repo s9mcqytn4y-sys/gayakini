@@ -42,7 +42,7 @@ USER spring:spring
 
 # Performance: JVM optimizations for containers
 # InitialRAMPercentage=25, MaxRAMPercentage=75, G1GC for low latency
-ENV JAVA_TOOL_OPTIONS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_TOOL_OPTIONS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError -XX:NativeMemoryTracking=summary -XshowSettings:vm -Djava.security.egd=file:/dev/./urandom"
 
 # Expose port
 EXPOSE 8080

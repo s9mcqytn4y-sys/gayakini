@@ -30,6 +30,21 @@
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
     <logger name="org.springframework.web" level="INFO"/>
 
+    <!-- Performance: Async Appenders for Production -->
+    <appender name="ASYNC_CONSOLE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="CONSOLE" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="FILE" />
+        <queueSize>512</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <includeCallerData>false</includeCallerData>
+    </appender>
+
     <!-- Local Development: Console Only -->
     <springProfile name="local">
         <root level="INFO">
@@ -37,11 +52,11 @@
         </root>
     </springProfile>
 
-    <!-- Staging/Dev Environment: Console + Rolling File -->
+    <!-- Staging/Dev Environment: Async Console + Async File -->
     <springProfile name="dev, staging">
         <root level="INFO">
-            <appender-ref ref="CONSOLE"/>
-            <appender-ref ref="FILE"/>
+            <appender-ref ref="ASYNC_CONSOLE"/>
+            <appender-ref ref="ASYNC_FILE"/>
         </root>
     </springProfile>
 
@@ -61,9 +76,15 @@
             </encoder>
         </appender>
 
+        <appender name="ASYNC_JSON" class="ch.qos.logback.classic.AsyncAppender">
+            <appender-ref ref="JSON_CONSOLE" />
+            <queueSize>1024</queueSize>
+            <includeCallerData>false</includeCallerData>
+        </appender>
+
         <root level="INFO">
-            <appender-ref ref="JSON_CONSOLE"/>
-            <appender-ref ref="FILE"/>
+            <appender-ref ref="ASYNC_JSON"/>
+            <appender-ref ref="ASYNC_FILE"/>
         </root>
     </springProfile>
 </configuration>
