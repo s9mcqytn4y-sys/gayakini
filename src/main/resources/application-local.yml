@@ -13,6 +13,7 @@ gayakini:
     secret: ${JWT_SECRET:local-secret-key-at-least-32-chars-long}
   midtrans:
     is-production: false
+    merchant-id: ${MIDTRANS_MERCHANT_ID:G357841497}
     server-key: ${MIDTRANS_SERVER_KEY:SB-Mid-server-local}
     client-key: ${MIDTRANS_CLIENT_KEY:SB-Mid-client-local}
     api-url: ${MIDTRANS_API_URL:https://api.sandbox.midtrans.com/v2}

@@ -50,6 +50,9 @@ class GayakiniProperties {
         var clientKey: String = ""
 
         @field:NotBlank
+        var merchantId: String = ""
+
+        @field:NotBlank
         var snapUrl: String = ""
 
         @field:NotBlank

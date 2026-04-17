@@ -17,6 +17,7 @@ gayakini:
     secret: ${JWT_SECRET}
   midtrans:
     is-production: true
+    merchant-id: ${MIDTRANS_MERCHANT_ID}
     server-key: ${MIDTRANS_SERVER_KEY}
     client-key: ${MIDTRANS_CLIENT_KEY}
     api-url: ${MIDTRANS_API_URL:https://api.midtrans.com/v2}
