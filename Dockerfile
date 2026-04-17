@@ -16,9 +16,9 @@ COPY build.gradle.kts .
 COPY settings.gradle.kts .
 COPY gradle.properties .
 
-# Build executable jar using the wrapper to ensure version consistency.
+# Build executable jar using the installed Gradle in the image.
 # We cap JVM memory for build stability in RAM-constrained CI environments.
-RUN chmod +x gradlew && ./gradlew clean ciBuild -PexcludeIntegration \
+RUN gradle clean ciBuild -PexcludeIntegration \
     -Dorg.gradle.jvmargs="-Xmx1536m -XX:+ExitOnOutOfMemoryError" \
     --no-daemon
 

@@ -28,11 +28,20 @@ Backend architecture for Gayakini, an e-commerce platform for industrial supplie
 - Docker
 
 ### Fast Path (Developer Workflow)
-We provide a helper script for common environment flows:
+We provide helper scripts for common environment flows:
+
+**Linux/macOS:**
 ```bash
 ./scripts/dev.sh infra-up   # Start DB/Mailpit on host
 ./scripts/dev.sh app-run    # Run app via Gradle (Profile: local)
 ./scripts/dev.sh dev-stack  # Full containerized stack (Profile: dev)
+```
+
+**Windows (PowerShell):**
+```powershell
+.\dev.ps1 infra-up          # Start DB/Mailpit on host
+.\dev.ps1 app-run           # Run app via Gradle (Profile: local)
+.\dev.ps1 dev-stack         # Full containerized stack (Profile: dev)
 ```
 
 ### Manual Setup
