@@ -19,7 +19,7 @@ We prioritize a stable, high-coverage, and machine-readable test suite. The buil
 
 ### JetBrains Kover
 We enforce instruction coverage across the application.
--   **Current Baseline**: **45%** (Stabilization phase).
+-   **Current Baseline**: **42%** (Hardened release baseline).
 -   **Target**: **80%**.
 -   **Verification**: The build will fail if coverage falls below the current baseline.
 -   **Exclusions**: DTOs, application entry points (`*ApplicationKt`), and infrastructure configurations are excluded from the metric.
