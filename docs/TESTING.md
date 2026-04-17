@@ -9,7 +9,7 @@ We prioritize a stable, high-coverage, and machine-readable test suite. The buil
     -   *Constraint*: No Spring context, no Database, no Docker.
 2.  **Web Slice Tests**: `@WebMvcTest` for controller, security, and JSON mapping verification.
     -   *Standard*: Use `MockMvc` and verify RBAC rules in isolation.
-3.  **Integration Tests**: Full-context tests using **Testcontainers (PostgreSQL 16)**.
+3.  **Integration Tests**: Full-context tests using **Testcontainers (PostgreSQL 17)**.
     -   *Infrastructure*: Use Spring Boot 3.4 `@ServiceConnection` for automatic container configuration.
     -   *Constraint*: **Never use H2.** All persistence tests must run against a real PostgreSQL container.
 4.  **External API Tests**: Stubbed via **WireMock**.
@@ -47,7 +47,7 @@ class MyIntegrationTest {
     companion object {
         @Container
         @ServiceConnection
-        val postgres = PostgreSQLContainer("postgres:16-alpine")
+        val postgres = PostgreSQLContainer("postgres:17-alpine")
     }
 
     @Test

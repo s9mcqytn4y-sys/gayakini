@@ -1,7 +1,6 @@
 import com.gayakini.audit.api.AuditLogDto
 import com.gayakini.audit.api.AuditMapper
 import com.gayakini.audit.application.AuditService
-import com.gayakini.common.api.ApiResponse
 import com.gayakini.common.api.PaginatedResponse
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter

@@ -31,11 +31,11 @@ The system handles complex data management and standardization for Indonesian in
 5. **Testing Pyramid:**
    - Use `MockK` for unit tests.
    - Use `@WebMvcTest` for controller/security slices.
-   - Use `Testcontainers` (PostgreSQL 16) for integration tests. **Never use H2.**
+   - Use `Testcontainers` (PostgreSQL 17) for integration tests. **Never use H2.**
    - All PRs must pass `./gradlew ciBuild`.
    - **Dockerized Build**: The `Dockerfile` and `ciBuild` task support a `-PexcludeIntegration` flag to skip Docker-dependent tests in isolated build environments.
 6. **Agent constraints:**
    - **Verification:** Always run `./gradlew ciBuild` (or `./gradlew ciBuild -PexcludeIntegration` if Docker is unavailable) before declaring a task complete.
    - **Test Logs:** Logs are suppressed on success. Failures use `SHORT` stack traces. Do not re-enable full traces.
    - **Integration:** Use Spring Boot 3.4 `@ServiceConnection` for Testcontainers.
-   - **Kover Coverage**: Maintain a minimum coverage of **35%** (verified via `koverVerify`).
+   - **Kover Coverage**: Maintain a minimum coverage of **42%** (verified via `koverVerify`).

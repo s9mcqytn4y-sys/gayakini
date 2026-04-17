@@ -88,17 +88,13 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MissingServletRequestParameterException::class)
-    fun handleMissingRequestParameter(
-        e: MissingServletRequestParameterException,
-    ): ResponseEntity<ApiResponse<Unit>> {
+    fun handleMissingRequestParameter(e: MissingServletRequestParameterException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Missing request parameter: {}", e.message)
         return badRequestResponse("Parameter ${e.parameterName} wajib dikirim.")
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException::class)
-    fun handleMethodArgumentTypeMismatch(
-        e: MethodArgumentTypeMismatchException,
-    ): ResponseEntity<ApiResponse<Unit>> {
+    fun handleMethodArgumentTypeMismatch(e: MethodArgumentTypeMismatchException): ResponseEntity<ApiResponse<Unit>> {
         logger.warn("Argument type mismatch: {}", e.message)
         return badRequestResponse("Parameter ${e.name} memiliki format yang tidak valid.")
     }

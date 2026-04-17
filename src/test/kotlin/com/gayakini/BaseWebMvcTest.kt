@@ -34,7 +34,10 @@ abstract class BaseWebMvcTest {
         }
     }
 
-    @Deprecated("Use andExpectApiResponse instead", ReplaceWith("andExpectApiResponse(expectedStatus, success, message)"))
+    @Deprecated(
+        "Use andExpectApiResponse instead",
+        ReplaceWith("andExpectApiResponse(expectedStatus, success, message)"),
+    )
     fun ResultActionsDsl.andExpectStandardResponse(
         expectedStatus: Int = 200,
         success: Boolean = true,

@@ -215,7 +215,7 @@ kover {
                 // isEnabled = true // Deprecated/Removed in 0.8.x, enabled by default
                 groupBy.set(kotlinx.kover.gradle.plugin.dsl.GroupingEntityType.APPLICATION)
                 bound {
-                    minValue.set(35)
+                    minValue.set(42)
                 }
             }
         }
